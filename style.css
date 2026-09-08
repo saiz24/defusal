@@ -1,0 +1,1100 @@
+/* ==========================================================================
+   DEFUSAL
+   A calm, chunky, two-sided device. The front carries the modules and the
+   clock; the noisy business — wiring, payload, battery — lives on the back,
+   where it says "bomb" without shouting over the puzzles.
+
+   The whole case is laid out at a fixed design size and scaled to the
+   viewport in one transform, so nothing ever reflows.
+   ========================================================================== */
+
+:root {
+  --bg:      #070d11;
+  --bg-2:    #16262f;
+  --ink:     #1a2429;   /* outlines on the lit faces */
+  --ink-2:   #7c8f98;   /* quiet labels */
+  --paper:   #eceff0;   /* module faces stay lit and legible */
+  --soft:    #d7dedf;
+  --case:    #2c383e;   /* the shell */
+  --case-d:  #1a2429;
+  --rim:     #6fd7e8;   /* the light that is not ours */
+  --amber:   #ffc861;
+  --red:     #d0574f;
+  --blue:    #4180ae;
+  --green:   #4f9d5d;
+  --yellow:  #ddb63f;
+  --violet:  #7a6bb0;
+  --text:    #cfdde2;
+  --round: "Courier New", ui-rounded, "SF Pro Rounded",
+           "Hiragino Maru Gothic ProN", Avenir, "Trebuchet MS",
+           system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: radial-gradient(ellipse at 50% 12%, var(--bg-2) 0%, var(--bg) 62%, #04080a 100%);
+  color: var(--text);
+  font-family: var(--round);
+  font-size: 15px;
+  overflow: hidden;
+}
+
+[hidden] { display: none !important; }
+.screen { position: fixed; inset: 0; }
+
+/* ======================= menu / result ================================== */
+
+.menu { display: grid; place-items: center; padding: 24px; overflow: auto; }
+.sheet { width: min(auto, 100%); text-align: center; }
+
+.title {
+  margin: 0 0 20px;
+  font-size: clamp(46px, 8vw, 84px);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: .42em; text-indent: .42em;
+  color: #e7f3f6;
+  text-shadow: 0 0 46px rgba(111, 215, 232, .35);
+}
+
+/* --- the campaign -------------------------------------------------------- */
+
+.freeplay { margin-top: 22px; }
+.progress { margin: 24px 0 6px; font-size: 12px; letter-spacing: .14em;
+            color: var(--ink-2); }
+
+.choices { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.choices.two { grid-template-columns: repeat(2, 190px); justify-content: center; }
+
+.key {
+  display: grid; gap: 5px; justify-items: center;
+  padding: 16px 10px;
+  font-family: var(--round); color: var(--text);
+  background: #17242b;
+  border: 1px solid #2c4048;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform .12s ease, border-color .18s ease, background .18s ease;
+}
+.key b { font-size: 15px; font-weight: 400; letter-spacing: .12em; }
+.key:hover { transform: translateY(-2px); border-color: var(--rim); background: #1e2f38; }
+.key:active { transform: none; }
+.key.on { border-color: var(--rim); }
+
+.practice {
+  margin-top: 18px; padding: 16px;
+  display: flex; gap: 20px; align-items: center; justify-content: center;
+  flex-wrap: wrap;
+  border: 1px solid #2c4048; border-radius: 10px;
+  background: #17242b;
+}
+.field { display: inline-flex; align-items: center; gap: 9px; }
+.field span { font-size: 12px; color: var(--ink-2); }
+.field input, .answer input {
+  font-family: var(--round); font-size: 20px; text-align: center;
+  width: 84px; padding: 8px;
+  color: var(--ink); background: #fff;
+  border: 2px solid var(--ink); border-radius: 7px;
+  transition: box-shadow .15s ease;
+}
+.field input:focus, .answer input:focus {
+  outline: none; box-shadow: 0 0 0 3px var(--rim);
+}
+
+.sound {
+  margin-top: 24px;
+  font-family: var(--round); font-size: 12px;
+  color: var(--ink-2); background: transparent;
+  border: 1px solid #2c4048; border-radius: 8px;
+  padding: 8px 15px; cursor: pointer; letter-spacing: .12em;
+}
+.sound:hover { color: var(--text); border-color: var(--rim); }
+.sound.off { color: #4a5a61; }
+
+.verdict {
+  margin: 0 0 10px;
+  font-size: clamp(44px, 8vw, 88px); line-height: 1;
+  letter-spacing: .07em; text-indent: .07em;
+  font-weight: 300; letter-spacing: .3em; text-indent: .3em;
+  color: #e7f3f6;
+  text-shadow: 0 0 40px rgba(111,215,232,.3);
+}
+.verdict.good { color: #8fe0a4; }
+.verdict.bad  { color: #e9a49c; }
+.cause { display: none; }   /* the verdict speaks for itself */
+.stats { display: grid; gap: 8px; max-width: 380px; margin: 0 auto 26px; }
+.stats .row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 16px;
+  background: #17242b;
+  border: 1px solid #2c4048; border-radius: 9px;
+}
+.stats .k { font-size: 12px; color: var(--ink-2); }
+.stats .v { font-size: 18px; color: var(--text); }
+.seed { margin-top: 22px; font-size: 11px; color: #46595f; }
+
+/* ======================= the case ======================================== */
+
+/* Named for itself, not "stage": a generic class here once collided with a
+   menu button rule and made every mousedown scale the whole screen. */
+.deck { overflow: hidden; perspective: 2200px; perspective-origin: 50% 46%; }
+
+/* a scaled element that overflows the viewport cannot be centred by grid or
+   flex alignment, so it is placed absolutely */
+.bomb {
+  width: 1696px; height: 1042px;   /* replaced per round in script */
+  position: absolute; left: 50%; top: 50%;
+  transform-origin: center center;
+  transform-style: preserve-3d;
+  transition: transform .16s ease-out;
+}
+
+/* two faces on one shell */
+.flipper {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 1s cubic-bezier(.45,.05,.3,1);
+}
+.bomb.flipped .flipper { transform: rotateY(180deg); }
+
+/* six pieces of a real box: two faces and four rims, so turning it over
+   shows the thickness instead of a flat card */
+.face, .edge {
+  position: absolute; left: 50%; top: 50%;
+  backface-visibility: hidden;
+}
+.face, .face > .casing, .bays { transform-style: preserve-3d; }
+.face > .casing, .bays, .bay, .panel, .scrim { backface-visibility: hidden; }
+.face.back { }
+.edge {
+  pointer-events: none;      /* decoration; never eats a click */
+  border: 3px solid #0e1519;
+  border-radius: 6px;
+  box-shadow: inset 0 0 30px rgba(0,0,0,.5);
+  /* four leads run the length of each rim: visible only as the case turns */
+  background:
+    linear-gradient(90deg, transparent 0 16%, #d0574f 16% 22%, transparent 22% 36%,
+      #ddb63f 36% 42%, transparent 42% 58%, #4180ae 58% 64%, transparent 64% 78%,
+      #4f9d5d 78% 84%, transparent 84%),
+    linear-gradient(90deg, #35444b, #26333a 60%, #1d282e);
+}
+.edge.tb {
+  background:
+    linear-gradient(180deg, transparent 0 16%, #d0574f 16% 22%, transparent 22% 36%,
+      #ddb63f 36% 42%, transparent 42% 58%, #4180ae 58% 64%, transparent 64% 78%,
+      #4f9d5d 78% 84%, transparent 84%),
+    linear-gradient(180deg, #3a4a52, #222e34);
+}
+
+/* the reverse: a stamped plate where the clock would be */
+.strip.plate-only { flex-direction: column; gap: 6px; padding: 16px 34px; }
+.stamp { font-family: var(--mono); font-size: 30px; letter-spacing: .3em;
+         text-indent: .3em; color: var(--rim); }
+.stamp-sub { font-size: 11px; letter-spacing: .34em; color: #4a5a61; }
+
+.key.locked, .key.locked:hover {
+  background: #101a1f; border-color: #1e2a30; color: #364750;
+  cursor: default; transform: none;
+}
+
+
+.casing {
+  position: absolute; inset: 0;
+  border-radius: 28px;
+  background:
+    radial-gradient(120% 80% at 24% -12%, rgba(255,255,255,.16), transparent 58%),
+    linear-gradient(180deg, rgba(255,255,255,.13) 0 10px, transparent 10px),
+    linear-gradient(0deg, rgba(0,0,0,.3) 0 18px, transparent 18px),
+    linear-gradient(162deg, #46575f 0%, var(--case) 46%, #17222a 100%);
+  border: 3px solid #0b1115;
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.22),
+    inset 2px 0 0 rgba(255,255,255,.07),
+    inset -2px 0 0 rgba(0,0,0,.4),
+    inset 0 -4px 0 rgba(0,0,0,.5),
+    inset 0 0 0 1px rgba(111,215,232,.12),
+    0 10px 0 var(--case-d), 0 15px 0 #0b1115,
+    0 44px 76px rgba(0,0,0,.7);
+}
+.chassis { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.chassis svg { display: block; width: 100%; height: 100%; }
+
+/* Deliberately outside the 3D tree. Hit-testing inside a rotated preserve-3d
+   subtree is fragile, and this control has to work every time. */
+.flip-btn {
+  position: absolute; top: 22px; right: 26px; z-index: 80;
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 9px;
+  background: var(--paper); color: var(--ink);
+  border: 3px solid var(--ink); border-radius: 12px;
+  cursor: pointer; box-shadow: 0 4px 0 var(--ink);
+}
+.flip-btn span { font-size: 11px; letter-spacing: .18em; }
+.flip-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor;
+                stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.flip-btn:hover { background: #fffdf7; }
+.flip-btn:active { transform: scale(.94); }
+
+/* the control strip: clock, drain bar, strikes, serial and counter, carried
+   on the top rail of both faces so turning the case over costs nothing */
+.panel {
+  position: absolute; left: 0; right: 0; top: 0; height: 208px;
+  display: grid; place-items: center;
+  z-index: 45;                     /* stays lit above the focus scrim */
+  pointer-events: none;
+}
+.panel .strip {
+  pointer-events: auto;
+  display: flex; align-items: center; gap: 30px;
+  padding: 14px 26px;
+  margin-top: 44px;
+  background: linear-gradient(180deg, #22323b, #101c22);
+  border: 2px solid #0b1115; border-radius: 16px;
+  transform: translateZ(22px);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.16),
+    inset 0 0 0 1px rgba(111,215,232,.22),
+    0 8px 14px rgba(0,0,0,.6), 0 18px 30px rgba(0,0,0,.45);
+}
+.panel .clock { display: flex; flex-direction: column; gap: 8px; }
+.panel .gauges { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.panel .tail { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+
+.bays {
+  position: absolute;
+  top: 208px; right: 88px; bottom: 118px; left: 88px;
+  display: grid;
+  gap: 14px;   /* template set per round in script */
+  padding: 10px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #12191e, #1a242b);
+  box-shadow:
+    inset 0 4px 10px rgba(0,0,0,.75),
+    inset 0 -2px 0 rgba(255,255,255,.05),
+    0 1px 0 rgba(255,255,255,.08);
+}
+
+.bay {
+  position: relative;
+  transition: transform .4s cubic-bezier(.2,.85,.25,1),
+              border-color .35s ease, background .35s ease, opacity .3s ease;
+  min-width: 0; min-height: 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f6f8f8 0%, var(--paper) 34%, #dfe5e6 100%);
+  border: 2px solid #0b1115;
+  transform: translateZ(14px);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.95),
+    inset 0 -3px 0 rgba(0,0,0,.14),
+    0 5px 9px rgba(0,0,0,.5),
+    0 12px 22px rgba(0,0,0,.4);
+}
+
+/* --- hardware bolted into a slot no module uses -------------------------- */
+.bay.fitting {
+  transform: translateZ(8px);
+  background: linear-gradient(180deg, #3d4d56, #26333a);
+  border-color: #162025;
+  overflow: hidden;
+  display: grid; place-items: center;
+}
+.bay.fitting .art { width: 100%; }
+
+/* --- an unused slot ------------------------------------------------------ */
+.bay.blank {
+  transform: translateZ(4px);
+  background: linear-gradient(180deg, #2e3d45, #1c262c);
+  border-color: #162025;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.06),
+              inset 0 -2px 0 rgba(0,0,0,.25);
+}
+
+/* --- a module ------------------------------------------------------------ */
+.bay.module {
+  padding: 16px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+  overflow: hidden;
+}
+.bay.module > * { flex: none; }
+
+.led {
+  position: absolute; top: 11px; right: 11px;
+  width: 17px; height: 17px; border-radius: 50%;
+  background: #ddd6c7;
+  border: 3px solid var(--ink);
+  transition: background .3s ease;
+}
+/* solved: the whole outline turns green */
+.bay.solved { border-color: var(--green); background: #eef7ee; }
+.bay.solved .led { background: var(--green); border-color: #a6e8b4;
+  box-shadow: 0 0 12px 3px rgba(79,157,93,.85), inset 0 1px 0 rgba(255,255,255,.6); }
+.bay.solved .led::after {
+  content: ''; position: absolute; left: 3px; top: 0;
+  width: 4px; height: 8px;
+  border: solid #fff; border-width: 0 2.5px 2.5px 0;
+  transform: rotate(42deg);
+}
+.bay.solved .body { opacity: .4; pointer-events: none; }
+
+/* press progress, always in the same corner of every bay */
+.dots { position: absolute; left: 14px; bottom: 12px; display: flex; gap: 5px; }
+.dots i {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--rim); border: 2.5px solid var(--ink);
+  animation: pop .3s cubic-bezier(.2,1.5,.4,1);
+}
+
+.bay.striking::after {
+  content: ''; position: absolute; inset: 0;
+  background: rgba(208,87,79,.4);
+  box-shadow: inset 0 0 0 6px var(--red);
+  animation: flash .6s ease-out forwards; pointer-events: none;
+}
+@keyframes flash { from { opacity: 1; } to { opacity: 0; } }
+
+.body { display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 10px; width: 100%;
+        transition: opacity .5s ease; }
+.art { width: 100%; height: auto; display: block; }
+/* wide modules lay their art beside their controls */
+.split { display: flex; align-items: center; gap: 16px; width: 100%;
+         justify-content: center; }
+.split > .art { height: 248px; width: auto; flex: none; }
+.side { display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 14px; flex: none; }
+.uc > .side input { width: 106px; }
+
+/* --- the clock ------------------------------------------------------------ */
+.lcd {
+  position: relative; overflow: hidden;
+  width: 320px; padding: 12px 0 14px;
+  text-align: center;
+  font-size: 76px; line-height: 1;
+  letter-spacing: .03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--amber); font-family: var(--mono);
+  text-shadow: 0 0 18px rgba(255,200,97,.6);
+  background: #060c0f;
+  border: 2px solid #0e1519; border-radius: 10px;
+}
+.lcd.urgent { animation: pulse 1s steps(2, end) infinite; }
+@keyframes pulse { 50% { color: #7a4a30; } }
+
+.fuse {
+  width: 320px; height: 26px;
+  background: #0b1418;
+  border: 2px solid #0e1519; border-radius: 11px;
+  overflow: hidden;
+}
+.fuse i {
+  display: block; height: 100%; width: 100%;
+  background: var(--green);
+  border-radius: 0 8px 8px 0;
+  transition: width .25s linear, background .5s ease;
+}
+.fuse.warn i { background: var(--yellow); }
+.fuse.danger i { background: var(--red); }
+
+.strike-row { display: flex; gap: 16px; }
+.strike-row i {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #0b1418; border: 2px solid #33454d;
+}
+.strike-row i.lit {
+  background: var(--red);
+  box-shadow: 0 0 14px 4px rgba(208,87,79,.8), inset 0 1px 0 rgba(255,255,255,.5);
+  animation: ledPunch .45s cubic-bezier(.2,1.6,.4,1);
+}
+
+.plate {
+  padding: 6px 18px;
+  font-size: 30px; letter-spacing: .15em; text-indent: .15em;
+  color: var(--rim); background: #0b1418; font-family: var(--mono);
+  border: 2px solid #0e1519; border-radius: 7px;
+}
+.panel .count { font-size: 28px; color: #74c98c; font-family: var(--mono); }
+.abort {
+  font-family: var(--round); font-size: 12px;
+  color: #ffe4e0; background: #b8443c;
+  border: 2px solid #7d2a24; border-radius: 8px;
+  text-shadow: 0 1px 0 rgba(0,0,0,.35);
+  padding: 8px 18px; font-size: 14px; cursor: pointer;
+  box-shadow: 0 3px 0 var(--ink);
+}
+.abort:hover { background: #cc4d44; }
+.abort:active { transform: scale(.94); }
+
+/* ======================= shared module widgets =========================== */
+
+.answer { display: flex; gap: 10px; align-items: center; justify-content: center; }
+.answer input { width: 92px; font-size: 22px; padding: 11px 8px; }
+.answer input.narrow { width: 70px; }
+.answer input:disabled { color: #35714a; background: #e7f2e7; }
+
+.go-btn, .press-btn, .null-btn {
+  font-family: var(--round); color: var(--ink);
+  border: 3px solid var(--ink); border-radius: 11px;
+  cursor: pointer; box-shadow: 0 4px 0 var(--ink);
+  transition: transform .1s ease, box-shadow .1s ease, filter .15s ease;
+}
+.go-btn { font-size: 15px; padding: 12px 17px; background: #8fc79a; }
+.press-btn { font-size: 15px; padding: 17px 19px; background: #e2d7bf; }
+.null-btn { font-size: 24px; padding: 5px 17px; background: var(--paper); }
+.go-btn:hover, .press-btn:hover, .null-btn:hover { filter: brightness(1.05); }
+.go-btn:active, .press-btn:active, .null-btn:active {
+  transform: translateY(3px); box-shadow: 0 1px 0 var(--ink);
+}
+.go-btn:disabled, .press-btn:disabled { opacity: .45; transform: none; }
+
+/* opacity rather than filter: a filter on a group inside the 3D tree forces
+   the whole panel to re-rasterise on every hover */
+.hit { cursor: pointer; transition: opacity .12s ease; }
+.hit:hover { opacity: .82; }
+.hit:active { opacity: .62; }
+
+/* sequences */
+.strip {
+  padding: 14px;
+  background: #ece5d4;
+  border: 3px solid var(--ink); border-radius: 14px;
+}
+.terms { display: flex; gap: 8px; justify-content: center; }
+.terms div {
+  width: 82px; height: 148px; line-height: 148px; text-align: center;
+  font-size: 46px;
+  color: var(--ink); background: var(--paper);
+  border: 3px solid var(--ink); border-radius: 10px;
+}
+.terms div.gap { color: var(--blue); background: #dceaf3; border-style: dashed; }
+
+/* rationality */
+.readout {
+  min-width: 186px; padding: 7px 20px; text-align: center;
+  font-size: 40px; line-height: 1.15;
+  color: var(--ink); background: #ece5d4;
+  border: 3px solid var(--ink); border-radius: 12px;
+}
+
+/* venn */
+.expr {
+  font-size: 22px; letter-spacing: .04em;
+  color: var(--ink); padding: 8px 15px;
+  background: #dceaf3;
+  border: 3px solid var(--ink); border-radius: 11px;
+}
+.venn-num.taken circle { fill: var(--green); stroke: var(--ink); }
+.venn-num.taken text { fill: #fff; }
+.venn-num circle, .venn-num text { transition: fill .25s ease, stroke .25s ease; }
+.venn-num.taken { animation: pop .32s cubic-bezier(.2,1.4,.4,1); }
+
+/* angles */
+.swatch {
+  width: 152px; height: 56px; border-radius: 12px;
+  border: 3px solid var(--ink);
+  background: #ccc;
+  transition: background .3s ease;
+}
+
+/* unit conversions */
+.uc { display: flex; gap: 12px; width: 100%; align-items: stretch; }
+.uc-lamps { display: flex; flex-direction: column; justify-content: space-evenly;
+            padding: 4px 0; }
+.uc-lamps i {
+  width: 21px; height: 21px; border-radius: 5px;
+  background: #ddd6c7; border: 3px solid var(--ink);
+}
+.uc-lamps i.on { background: var(--rim); animation: lampOn .7s ease-out both;
+  box-shadow: 0 0 11px 3px rgba(111,215,232,.7), inset 0 1px 0 rgba(255,255,255,.5); }
+.uc-stack { flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px;
+            min-width: 0; }
+.uc-pane {
+  background: #e9eef0;
+  border: 3px solid var(--ink); border-radius: 10px; overflow: hidden;
+}
+.uc-pane.dark { background: #8d959a; }
+.uc-pane svg { width: 100%; height: auto; display: block; }
+
+/* ======================= focus view ====================================== */
+
+.zoom {
+  position: absolute; top: 10px; left: 10px; z-index: 6;
+  width: 26px; height: 26px; padding: 0;
+  display: grid; place-items: center;
+  background: var(--paper); border: 3px solid var(--ink); border-radius: 8px;
+  color: var(--ink); cursor: pointer; opacity: .7;
+  transition: opacity .15s ease, background .15s ease;
+}
+.zoom svg { width: 14px; height: 14px; fill: none; stroke: currentColor;
+            stroke-width: 2.4; stroke-linecap: round; }
+.bay:hover .zoom { opacity: 1; }
+.zoom:hover { background: var(--rim); }
+.bay.focused .zoom { opacity: 1; background: var(--rim); }
+.zoom .out { display: none; }
+.bay.focused .zoom .in { display: none; }
+.bay.focused .zoom .out { display: block; }
+
+.scrim {
+  position: absolute; inset: 0; z-index: 40;
+  background: rgba(30, 38, 42, .68);
+  opacity: 0; pointer-events: none;
+  transition: opacity .34s ease;
+}
+.casing.focusing .scrim { opacity: 1; pointer-events: auto; }
+
+.bay.focused { z-index: 60; box-shadow: 0 18px 0 rgba(0,0,0,.2); }
+.bay.ducked { z-index: 50; }
+
+/* ======================= debug =========================================== */
+
+.answer-tag { display: none; }
+body.debug .answer-tag {
+  display: block;
+  position: absolute; left: 8px; right: 8px; bottom: 7px;
+  padding: 3px 6px;
+  font-size: 11px; line-height: 1.25; text-align: center;
+  color: var(--ink); background: var(--rim);
+  border: 2px solid var(--ink); border-radius: 7px;
+  z-index: 5;
+}
+
+/* ==========================================================================
+   MOTION — presentation only; state always changes synchronously.
+   ========================================================================== */
+
+@keyframes pop      { 0% { transform: scale(.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes ledPunch { 0% { transform: scale(1); } 32% { transform: scale(1.45); } 100% { transform: scale(1); } }
+@keyframes lampOn   { 0% { opacity: .3; } 18% { opacity: 1; } 26% { opacity: .4; } 44% { opacity: 1; }
+                      56% { opacity: .6; } 100% { opacity: 1; } }
+
+@keyframes screenIn  { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes screenOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(1.03); } }
+.screen.entering { animation: screenIn .38s cubic-bezier(.2,.85,.25,1) both; }
+.screen.leaving  { animation: screenOut .28s ease-in both; pointer-events: none; }
+
+.flash { position: fixed; inset: 0; z-index: 90; pointer-events: none; opacity: 0; }
+@keyframes strikeWash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
+.flash.strike {
+  background: radial-gradient(120% 90% at 50% 50%, transparent 36%, rgba(208,87,79,.6) 100%);
+  animation: strikeWash .5s ease-out forwards;
+}
+@keyframes detonate {
+  0% { opacity: 0; background: #fff; } 4% { opacity: 1; background: #fff; }
+  22% { opacity: 1; background: #f0d08a; } 55% { opacity: .78; background: #c9603a; }
+  100% { opacity: 0; background: #d8b39a; }
+}
+.flash.boom { animation: detonate 1.1s ease-out forwards; }
+@keyframes safeWash { 0% { opacity: 0; } 18% { opacity: .85; } 100% { opacity: 0; } }
+.flash.safe {
+  background: radial-gradient(120% 90% at 50% 50%, rgba(79,157,93,.55) 0%, transparent 65%);
+  animation: safeWash .8s ease-out forwards;
+}
+
+@keyframes titleIn { from { opacity: 0; transform: translateY(20px) scale(.9); }
+                     to   { opacity: 1; transform: none; } }
+.menu.entering .title { animation: titleIn .5s cubic-bezier(.2,1.1,.35,1) both; }
+
+@keyframes riseIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.menu.entering .key { animation: riseIn .42s cubic-bezier(.2,1.1,.35,1) both; }
+.menu.entering .key:nth-child(1) { animation-delay: .10s; }
+.menu.entering .key:nth-child(2) { animation-delay: .16s; }
+.menu.entering .key:nth-child(3) { animation-delay: .22s; }
+.menu.entering .key:nth-child(4) { animation-delay: .28s; }
+.menu.entering .key:nth-child(5) { animation-delay: .34s; }
+.menu.entering .sound { animation: riseIn .5s ease-out .44s both; }
+
+@keyframes panelDrop { from { opacity: 0; transform: translateY(-10px) scaleY(.9); }
+                       to   { opacity: 1; transform: none; } }
+.practice { transform-origin: top center; animation: panelDrop .26s cubic-bezier(.2,1.1,.35,1); }
+
+@keyframes casingIn { from { opacity: 0; transform: translateY(32px) scale(.96); }
+                      to   { opacity: 1; transform: none; } }
+.casing.arming { animation: casingIn .55s cubic-bezier(.16,1.05,.3,1) both; }
+
+/* the arming push: a long, slow close on the working view */
+.bomb.arming-zoom { transition: transform 1.15s cubic-bezier(.42,.02,.18,1); }
+/* nothing is touchable until the case is in frame */
+.bomb.arming .bays, .bomb.arming .panel { pointer-events: none; }
+
+@keyframes bayIn { 0% { opacity: 0; transform: scale(.82); }
+                   60% { opacity: 1; transform: scale(1.03); }
+                   100% { opacity: 1; transform: none; } }
+@keyframes bayCharge { 0% { opacity: .7; } 70% { opacity: .2; } 100% { opacity: 0; } }
+.casing.arming .bay { animation: bayIn .46s cubic-bezier(.2,1.2,.35,1) both;
+                      animation-delay: var(--d, 0ms); }
+.casing.arming .bay::before {
+  content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  background: radial-gradient(80% 60% at 50% 50%, rgba(255,255,255,.85), transparent 70%);
+  animation: bayCharge .5s ease-out both;
+  animation-delay: var(--d, 0ms);
+}
+.casing.arming .bay.solved::before { animation: bayCharge .5s ease-out both; }
+
+@keyframes lcdBoot {
+  0% { opacity: 0; } 8% { opacity: 1; } 13% { opacity: .1; } 21% { opacity: 1; }
+  28% { opacity: .35; } 36% { opacity: 1; } 44% { opacity: .6; } 100% { opacity: 1; }
+}
+@keyframes stripOn {
+  0%   { opacity: 0; transform: scale(.86); }
+  60%  { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes stripFlash { 0% { opacity: .9; } 100% { opacity: 0; } }
+.casing.arming .panel .strip {
+  animation: stripOn .5s cubic-bezier(.2,1.35,.35,1) both;
+  animation-delay: var(--panel-d, 900ms);
+}
+.casing.arming .panel .strip::after {
+  content: ''; position: absolute; inset: -10px; border-radius: 26px;
+  background: rgba(255,255,255,.9); pointer-events: none;
+  animation: stripFlash .5s ease-out both;
+  animation-delay: var(--panel-d, 900ms);
+}
+.panel .strip { position: relative; }
+.casing.arming .lcd { animation: lcdBoot .8s ease-out both;
+                      animation-delay: calc(var(--panel-d, 900ms) + 120ms); }
+
+@keyframes digitTick { 0% { opacity: .55; transform: translateY(-2px); } 100% { opacity: 1; transform: none; } }
+.digits { display: block; }
+.digits.tick { animation: digitTick .16s ease-out; }
+
+@keyframes critical { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+.deck.critical::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 2;
+  background: radial-gradient(130% 100% at 50% 50%, transparent 42%, rgba(208,87,79,.24) 100%);
+  animation: critical 1s ease-in-out infinite;
+}
+
+@keyframes casingShake {
+  0%, 100% { transform: none; }
+  12% { transform: translate(-9px, 3px) rotate(-.45deg); }
+  26% { transform: translate(8px, -3px) rotate(.4deg); }
+  40% { transform: translate(-6px, 2px) rotate(-.24deg); }
+  56% { transform: translate(5px, -2px) rotate(.18deg); }
+  74% { transform: translate(-3px, 1px); }
+  88% { transform: translate(2px, 0); }
+}
+.casing.shake { animation: casingShake .55s ease-out; }
+
+@keyframes solveSweep { from { transform: translateX(-115%); } to { transform: translateX(115%); } }
+.bay.module.solved::before {
+  content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(105deg, transparent 20%, rgba(79,157,93,.45) 50%, transparent 80%);
+  animation: solveSweep .75s cubic-bezier(.3,.7,.4,1) forwards;
+}
+
+@keyframes verdictIn { from { opacity: 0; transform: scale(1.3); } to { opacity: 1; transform: none; } }
+.menu.entering .verdict { animation: verdictIn .5s cubic-bezier(.2,1.2,.4,1) both; }
+.menu.entering .cause { animation: riseIn .42s ease-out .2s both; }
+.menu.entering .stats .row { animation: riseIn .42s ease-out both; }
+.menu.entering .stats .row:nth-child(1) { animation-delay: .28s; }
+.menu.entering .stats .row:nth-child(2) { animation-delay: .35s; }
+.menu.entering .stats .row:nth-child(3) { animation-delay: .42s; }
+.menu.entering .seed { animation: riseIn .5s ease-out .56s both; }
+
+@keyframes dealIn { from { opacity: 0; transform: translate(-46px, 12px) rotate(-11deg); }
+                    to   { opacity: 1; transform: none; } }
+.deal { transform-box: fill-box; transform-origin: 50% 50%;
+        animation: dealIn .5s cubic-bezier(.2,1.1,.3,1) both; }
+.deal-2 { animation-delay: .11s; }
+
+@keyframes tileIn { from { opacity: 0; transform: translateY(-14px) scale(.85); } to { opacity: 1; transform: none; } }
+.terms div { animation: tileIn .38s cubic-bezier(.2,1.2,.4,1) both; }
+.terms div:nth-child(1) { animation-delay: .05s; }
+.terms div:nth-child(2) { animation-delay: .11s; }
+.terms div:nth-child(3) { animation-delay: .17s; }
+.terms div:nth-child(4) { animation-delay: .23s; }
+.terms div:nth-child(5) { animation-delay: .29s; }
+
+@keyframes readoutIn { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+.readout, .expr { animation: readoutIn .45s cubic-bezier(.2,1.2,.4,1) .1s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* ==========================================================================
+   THE VOICE
+   Anything the devices say uses one treatment, everywhere it appears.
+   ========================================================================== */
+
+.voice {
+  font-family: var(--round);
+  letter-spacing: .05em;
+  color: #dbe7ec;
+  text-shadow: 0 0 18px rgba(190, 225, 240, .28);
+}
+
+.premise {
+  margin: -18px 0 30px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #4d626c;
+  text-shadow: none;
+  max-width: 560px;
+  margin-left: auto; margin-right: auto;
+}
+
+.key em { font-style: normal; font-size: 10px; color: #97a0a4; }
+.key i  { color: #6d7c83; }
+
+.tally { margin: 22px 0 0; font-size: 12px; color: #5d727c; }
+.minor { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+.verdict-voice { margin: 0 0 8px; font-size: 17px; color: #46606c;
+                 text-shadow: none; }
+
+.arming-line {
+  position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);
+  z-index: 70; margin: 0;
+  font-size: 17px; color: #e6f0f4;
+  padding: 10px 22px;
+  background: rgba(18, 26, 30, .72);
+  border-radius: 14px;
+  pointer-events: none; opacity: 0;
+}
+.arming-line.on { animation: armingSay 3s ease both; }
+@keyframes armingSay {
+  0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  14% { opacity: 1; transform: translateX(-50%); }
+  74% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ==========================================================================
+   THE OPENING
+   ========================================================================== */
+
+.cutscene {
+  position: fixed; inset: 0; z-index: 100;
+  background: #05080a;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+.cs-stage {
+  width: min(1000px, 92vw);
+  height: min(560px, 52vh);
+  display: grid; place-items: center;
+}
+.cs-stage.in { animation: csFade 1.3s ease both; }
+@keyframes csFade { from { opacity: 0; } to { opacity: 1; } }
+.cs-art { width: 100%; height: 100%; display: block; }
+
+.cs-box {
+  width: min(860px, 90vw);
+  min-height: 108px;
+  margin-top: 26px;
+  padding: 22px 30px;
+  display: flex; align-items: center; gap: 14px;
+  border-top: 1px solid #1d282d;
+}
+.cs-line { margin: 0; font-size: clamp(19px, 2.4vw, 27px); line-height: 1.45; }
+
+.cs-prompt {
+  width: 0; height: 0; flex: none; opacity: 0;
+  border-left: 11px solid #8fb6c4;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+}
+.cs-prompt.ready { opacity: 1; animation: csCaret 1.1s steps(2, end) infinite; }
+@keyframes csCaret { 50% { opacity: .15; } }
+
+.cs-skip {
+  position: absolute; top: 22px; right: 24px;
+  font-family: var(--round); font-size: 12px; letter-spacing: .16em;
+  color: #7e929b; background: transparent;
+  border: 2px solid #2a3940; border-radius: 10px;
+  padding: 8px 16px; cursor: pointer;
+}
+.cs-skip:hover { color: #d6e6ec; border-color: #4d626c; }
+
+/* --- scenery motion -------------------------------------------------------- */
+/* nothing rises into place: scenes appear, and the frame drifts in slowly */
+
+@keyframes csAppear { from { opacity: 0; transform: scale(.985); }
+                      to   { opacity: 1; transform: none; } }
+.cs-appear { transform-box: fill-box; transform-origin: 50% 50%;
+             animation: csAppear 1.1s ease both; }
+
+@keyframes csZoom { from { transform: scale(1); } to { transform: scale(1.05); } }
+.cs-stage.in .cs-art { animation: csZoom 18s ease-out both; }
+
+@keyframes csGlow { 0%, 100% { opacity: .35; } 50% { opacity: .75; } }
+.cs-glow { animation: csGlow 7s ease-in-out infinite; }
+@keyframes csBreathe { 0%, 100% { opacity: .18; } 50% { opacity: .5; } }
+.cs-breathe { animation: csBreathe 6s ease-in-out infinite; }
+
+@keyframes csTwinkle { 0%, 100% { opacity: .16; } 50% { opacity: .8; } }
+.cs-star { animation: csTwinkle 5s ease-in-out infinite; }
+
+@keyframes csBlink { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
+.cs-blink { animation: csBlink 2.4s ease-in-out infinite; }
+
+@keyframes csSlideIn  { from { transform: translateX(-760px); opacity: 0; }
+                        18%  { opacity: 1; }
+                        to   { transform: translateX(120px); opacity: 1; } }
+@keyframes csSlideOut { from { transform: translateX(60px); opacity: 1; }
+                        to   { transform: translateX(820px); opacity: 0; } }
+.cs-slide-in  { animation: csSlideIn 9s cubic-bezier(.25,.6,.3,1) both; }
+.cs-slide-out { animation: csSlideOut 11s cubic-bezier(.4,.1,.6,1) both; }
+
+/* straight down the shaft, shrinking with distance */
+@keyframes csDrop { 0%   { opacity: 0; transform: translateY(-14px) scale(1); }
+                    12%  { opacity: 1; }
+                    82%  { opacity: 1; }
+                    100% { opacity: 0; transform: translateY(206px) scale(.6); } }
+.cs-drop { transform-box: fill-box; transform-origin: 50% 0%;
+           animation: csDrop 5.4s cubic-bezier(.36,0,.7,1) infinite; }
+
+/* the shaft itself breathes rather than blinks */
+@keyframes csBeam { 0%, 100% { opacity: .8; } 50% { opacity: 1; } }
+.cs-beam { animation: csBeam 5.4s ease-in-out infinite; }
+
+@keyframes csLightUp { from { opacity: 0; }
+                       to   { opacity: 1; } }
+.cs-lightup { animation: csLightUp .5s ease both; }
+
+@keyframes csDim { from { opacity: .8; } to { opacity: .22; } }
+.cs-dim { animation: csDim 4s ease-out both; }
+
+@keyframes csDriftL { from { transform: translateX(-60px); } to { transform: translateX(78px); } }
+@keyframes csDriftR { from { transform: translateX(60px); } to { transform: translateX(-78px); } }
+.cs-drift-l { animation: csDriftL 14s ease-in-out both; }
+.cs-drift-r { animation: csDriftR 14s ease-in-out both; }
+
+@keyframes csSpark { 0% { opacity: 0; r: 2; } 30% { opacity: 1; }
+                     100% { opacity: 0; r: 60; } }
+.cs-spark { animation: csSpark 2.6s ease-out both; }
+@keyframes csDigits { 0% { opacity: 0; } 55% { opacity: 0; } 100% { opacity: 1; } }
+.cs-digits { animation: csDigits 3s ease-out both; }
+
+
+/* ==========================================================================
+   Press feedback: every control answers the click.
+   ========================================================================== */
+.key, .go-btn, .press-btn, .null-btn, .sound, .abort,
+.zoom, .flip-btn, .cs-skip, .hit {
+  transition: transform .09s cubic-bezier(.3,.9,.4,1), filter .12s ease,
+              border-color .18s ease, background .18s ease, box-shadow .12s ease;
+}
+.key:active, .sound:active, .cs-skip:active,
+.zoom:active, .flip-btn:active { transform: scale(.94); }
+.go-btn:active, .press-btn:active, .null-btn:active { transform: scale(.94); }
+.key:active { filter: brightness(1.35); }
+@keyframes tapFlash { from { box-shadow: 0 0 0 0 rgba(111,215,232,.55); }
+                      to   { box-shadow: 0 0 0 14px rgba(111,215,232,0); } }
+.key:active, .go-btn:active, .press-btn:active,
+.null-btn:active { animation: tapFlash .35s ease-out; }
+
+/* ==========================================================================
+   DEVICE SELECT
+   One page per device rather than a row of buttons: pick a stage and it is
+   an event, with its own record in front of you.
+   ========================================================================== */
+
+.select { display: flex; align-items: center; justify-content: center; gap: 16px; }
+
+.nav {
+  flex: none; width: 52px; height: 52px;
+  font-family: var(--round); font-size: 30px; line-height: 1;
+  color: var(--text); background: #17242b;
+  border: 1px solid #2c4048; border-radius: 50%;
+  cursor: pointer;
+}
+.nav:hover:not(:disabled) { border-color: var(--rim); background: #1e2f38; }
+.nav:active:not(:disabled) { transform: scale(.9); }
+.nav:disabled { opacity: .25; cursor: default; }
+
+.viewport { width: min(470px, 82vw); overflow: hidden; }
+.track { display: flex; transition: transform .42s cubic-bezier(.3,.85,.3,1); }
+.page { flex: 0 0 100%; padding: 6px; }
+
+.card {
+  display: grid; gap: 13px; justify-items: center;
+  padding: 24px 22px 20px;
+  min-height: 396px;
+  background: linear-gradient(180deg, #1b2a32, #131f26);
+  border: 1px solid #2c4048; border-radius: 16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 12px 30px rgba(0,0,0,.45);
+  transition: border-color .3s ease, opacity .3s ease;
+}
+/* completed: the border alone says so, so each device keeps its own
+   colour — TRIVIAL stays blue once it is answered */
+.card.done { border-color: var(--green); box-shadow: 0 0 0 1px rgba(116,201,140,.3); }
+.card.locked { opacity: .55; border-color: #1e2a30; }
+
+.idx { font-size: 11px; letter-spacing: .3em; text-indent: .3em; color: var(--ink-2); }
+.nm { font-size: clamp(22px, 3vw, 30px); letter-spacing: .1em; color: #e7f3f6; }
+
+.emblem-wrap { color: var(--rim); line-height: 0; }
+.card.locked .emblem-wrap { color: #33454d; }
+.emblem { width: 108px; height: 108px; display: block; }
+
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 22px; width: 100%; }
+.fact {
+  display: flex; justify-content: space-between; align-items: baseline;
+  border-bottom: 1px solid #22323a; padding-bottom: 5px;
+}
+.fact span { font-size: 10px; letter-spacing: .13em; color: var(--ink-2); }
+.fact b { font-size: 15px; color: var(--text); font-weight: 400; }
+.card.locked .facts { visibility: hidden; }
+
+.blurb { font-size: 12px; color: var(--ink-2); max-width: 300px; line-height: 1.5; }
+.engage { width: 100%; padding: 15px 10px; }
+.engage b { font-size: 15px; letter-spacing: .16em; }
+.engage:disabled { opacity: .4; cursor: default; }
+
+.card .choices { grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.card .practice {
+  margin: 0; flex-direction: column; gap: 14px; width: 100%;
+  background: transparent; border: 0; padding: 0;
+}
+.card .practice .go { width: 100%; }
+
+.sel-dots { display: flex; gap: 9px; justify-content: center; margin-top: 18px; }
+.dot {
+  width: 9px; height: 9px; padding: 0; border-radius: 50%;
+  background: #24343c; border: 1px solid #33474f; cursor: pointer;
+}
+.dot.on { background: var(--rim); border-color: var(--rim);
+          box-shadow: 0 0 10px rgba(111,215,232,.6); }
+.dot.locked { background: #17222700; border-style: dashed; }
+
+/* the opening's last beat: it hands you a device, not a menu */
+.cs-begin {
+  position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%);
+  font-family: var(--round); font-size: 15px; letter-spacing: .3em;
+  text-indent: .3em; color: #06121a;
+  background: var(--rim); border: 0; border-radius: 12px;
+  padding: 16px 42px; cursor: pointer;
+  box-shadow: 0 0 40px rgba(111,215,232,.55);
+}
+.cs-begin.in { animation: beginIn .6s cubic-bezier(.2,1.3,.4,1) both,
+                          beginPulse 2.4s ease-in-out .6s infinite; }
+@keyframes beginIn { from { opacity: 0; transform: translateX(-50%) scale(.8); }
+                     to   { opacity: 1; transform: translateX(-50%) scale(1); } }
+@keyframes beginPulse {
+  0%, 100% { box-shadow: 0 0 34px rgba(111,215,232,.45); }
+  50%      { box-shadow: 0 0 58px rgba(111,215,232,.8); }
+}
+.cs-begin:active { transform: translateX(-50%) scale(.94); }
+
+/* ==========================================================================
+   THE ROOM
+   A procedural sky behind every screen: drifting colour, stars with depth,
+   the curve of a world, and something crossing it very far away.
+   ========================================================================== */
+
+.backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden;
+            pointer-events: none; }
+.bd-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* colour as plain gradients: no filter, so nothing re-blurs per frame */
+.bd-cloud {
+  position: absolute; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+  animation-name: bdDrift; animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes bdDrift {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  33%      { transform: translate(-46%, -54%) scale(1.12); }
+  66%      { transform: translate(-55%, -46%) scale(.92); }
+}
+
+@keyframes bdTwinkle { 0%, 100% { opacity: .22; } 50% { opacity: 1; } }
+.bd-star { animation: bdTwinkle 6s ease-in-out infinite; }
+
+/* two layers, drifting at different speeds, so the sky has depth */
+@keyframes bdPanA { from { transform: translateX(0); } to { transform: translateX(-46px); } }
+@keyframes bdPanB { from { transform: translateX(0); } to { transform: translateX(-110px); } }
+.bd-layer-0 { animation: bdPanA 150s linear infinite alternate; }
+.bd-layer-1 { animation: bdPanB 110s linear infinite alternate; }
+
+@keyframes bdRim { 0%, 100% { opacity: .28; } 50% { opacity: .62; } }
+.bd-rim { animation: bdRim 11s ease-in-out infinite; }
+
+@keyframes bdBlink { 0%, 100% { opacity: 1; } 50% { opacity: .15; } }
+.bd-blink { animation: bdBlink 2.6s ease-in-out infinite; }
+
+/* it takes four minutes to cross, and you are meant to half-miss it */
+@keyframes bdCross {
+  from { transform: translate(-140px, 190px) rotate(-4deg); opacity: 0; }
+  8%   { opacity: .85; }
+  92%  { opacity: .85; }
+  to   { transform: translate(1740px, 96px) rotate(-4deg); opacity: 0; }
+}
+.bd-far { animation: bdCross 240s linear infinite; }
+
+/* ==========================================================================
+   Colour on the selector: each device carries its own accent, cool to hot.
+   ========================================================================== */
+
+.card { --accent: #6fd7e8; }
+.emblem-wrap { color: var(--accent); }
+.card.locked .emblem-wrap { color: #33454d; }
+.card.next {
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08),
+              0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
+              0 0 46px color-mix(in srgb, var(--accent) 22%, transparent),
+              0 12px 30px rgba(0,0,0,.5);
+}
+.card .nm { color: var(--accent); }
+.card.locked .nm { color: #4a5a62; }
+.engage {
+  background: color-mix(in srgb, var(--accent) 22%, #16232a);
+  border-color: color-mix(in srgb, var(--accent) 55%, #16232a);
+  color: #eaf6f9;
+}
+.engage:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 34%, #16232a);
+}
+.dot.on { background: var(--dot, var(--rim)); border-color: var(--dot, var(--rim));
+          box-shadow: 0 0 10px color-mix(in srgb, var(--dot, var(--rim)) 70%, transparent); }
+
+
+/* While a device is on screen the case covers most of the view, so the sky
+   holds its position instead of animating behind it. */
+body.playing .backdrop *,
+body.playing .backdrop { animation-play-state: paused !important; }
+/* the opening is opaque and full-screen: drop the sky entirely underneath it */
+body.cutscene-open .backdrop { display: none; }
+.bomb { will-change: transform; }
+
+/* ==========================================================================
+   WHAT IS CLICKABLE
+   The case is scenery. Nothing in it takes a pointer unless it is genuinely a
+   control, so a click on bare shell, a rail, a blank plate or the dead area
+   of a module simply does not land on anything. Events still bubble up from
+   the controls, so the per-bay sound hook is unaffected.
+   ========================================================================== */
+
+.bomb, .bomb * { pointer-events: none; }
+
+/* the exceptions, and the whole list of them */
+.bay.module .hit,      .bay.module .hit *,
+.bay.module button,    .bay.module button *,
+.bay.module input,
+.zoom, .zoom *,
+.panel .abort { pointer-events: auto; }
+
+/* the scrim only takes clicks while a module is actually pulled forward;
+   left always-on it swallows every click across the grid */
+.casing.focusing .scrim { pointer-events: auto; }
+
+/* The case is hardware, not prose. Without this a click-drag paints a text
+   selection across every module at once, which reads as the whole bomb
+   reacting to the click. */
+.bomb { user-select: none; -webkit-user-select: none; }
+.bomb input { user-select: text; -webkit-user-select: text; }

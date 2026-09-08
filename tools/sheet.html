@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- dev contact sheet: one live bay per module, at real bay size. -->
+<meta charset="utf-8">
+<link rel="stylesheet" href="../style.css">
+<body style="background:#0b1013;margin:0">
+<div id="grid" style="display:grid;grid-template-columns:repeat(4,300px);grid-auto-rows:300px;gap:12px;padding:14px;background:#7f9198"></div>
+<script src="../js/core.js"></script>
+<script src="../js/audio.js"></script>
+<script src="../js/svg.js"></script>
+<script src="../js/modules/cards.js"></script>
+<script src="../js/modules/sequences.js"></script>
+<script src="../js/modules/mutex.js"></script>
+<script src="../js/modules/rationality.js"></script>
+<script src="../js/modules/parallel.js"></script>
+<script src="../js/modules/venn.js"></script>
+<script src="../js/modules/triangles.js"></script>
+<script src="../js/modules/angles.js"></script>
+<script src="../js/modules/units.js"></script>
+<script src="../js/modules/units-render.js"></script>
+<script>
+var seed = Number((/seed=(\d+)/.exec(location.search) || [0, 7])[1]);
+var rng = DEFUSAL.makeRng(seed);
+var serial = DEFUSAL.makeSerial(rng);
+var ctx = { serial: serial, serialInfo: DEFUSAL.serialInfo(serial) };
+DEFUSAL.modules.forEach(function (def) {
+  var bay = document.createElement('div');
+  bay.className = 'bay module' + (def.wide ? ' wide' : '');
+  if (def.wide) bay.style.gridColumn = 'span 2';
+  var body = document.createElement('div');
+  body.className = 'body';
+  bay.appendChild(body);
+  var puzzle = def.generate(rng, ctx), solution = def.solve(puzzle, ctx);
+  def.mount(body, {
+    puzzle: puzzle, solution: solution, ctx: ctx,
+    isSolved: function () { return false; }, solve: function () {},
+    strike: function () {}, progress: function () {},
+    onSolved: null, cleanup: null
+  });
+  var tag = document.createElement('div');
+  tag.style.cssText = 'position:absolute;left:4px;bottom:3px;font-size:9px;color:#f0b429';
+  tag.textContent = def.id;
+  bay.appendChild(tag);
+  document.getElementById('grid').appendChild(bay);
+});
+</script>

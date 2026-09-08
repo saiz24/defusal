@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MATHEMATICKS</title>
+<link rel="stylesheet" href="style.css?v=20260908234543">
+</head>
+<body>
+<div id="backdrop" class="backdrop"></div>
+<div id="flash" class="flash"></div>
+
+<!-- ======================= OPENING ======================= -->
+<section id="cutscene" class="cutscene" hidden>
+  <div id="cs-art" class="cs-stage"></div>
+  <div class="cs-box">
+    <p id="cs-text" class="voice cs-line"></p>
+    <span id="cs-prompt" class="cs-prompt"></span>
+  </div>
+  <button type="button" id="cs-begin" class="cs-begin" hidden>BEGIN</button>
+  <button type="button" id="cs-skip" class="cs-skip">SKIP &#9656;</button>
+</section>
+
+<!-- ======================= MENU ======================= -->
+<section id="screen-menu" class="screen menu">
+  <div class="sheet">
+    <h1 class="title">MATHEMATICKS</h1>
+
+    <div class="select">
+      <button type="button" class="nav" id="sel-prev" aria-label="previous">&#8249;</button>
+      <div class="viewport"><div class="track" id="sel-track"></div></div>
+      <button type="button" class="nav" id="sel-next" aria-label="next">&#8250;</button>
+    </div>
+    <div class="sel-dots" id="sel-dots"></div>
+
+    <!-- kept in the document so their ids survive; moved into their pages -->
+    <div id="templates" hidden>
+      <div id="free-row" class="choices">
+        <button type="button" class="key" data-diff="easy"><b>TRIVIAL</b></button>
+        <button type="button" class="key" data-diff="medium"><b>NONTRIVIAL</b></button>
+        <button type="button" class="key" data-diff="hard"><b>PATHOLOGICAL</b></button>
+        <button type="button" class="key" data-diff="insane"><b>INTRACTABLE</b></button>
+        <button type="button" class="key" data-diff="practice" hidden><b>SANDBOX</b></button>
+      </div>
+      <div id="practice-panel" class="practice">
+        <label class="field"><span>MODULES</span>
+          <input id="practice-modules" type="number" min="1" max="8" value="4"></label>
+        <label class="field"><span>MINUTES</span>
+          <input id="practice-minutes" type="number" min="1" max="30" value="8"></label>
+        <button type="button" id="practice-start" class="key go"><b>ENGAGE</b></button>
+      </div>
+    </div>
+
+    <p id="progress" class="progress"></p>
+    <div class="minor">
+      <button type="button" id="sound" class="sound">SOUND ON</button>
+      <button type="button" id="replay-intro" class="sound">REPLAY INTRO</button>
+      <button type="button" id="reset-progress" class="sound">RESET PROGRESS</button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= BOMB ======================= -->
+<section id="screen-game" class="screen deck" hidden>
+  <p id="arming-line" class="voice arming-line"></p>
+  <button type="button" id="flip-btn" class="flip-btn" data-flip
+          title="turn the case over">
+    <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.6 5.9"></path><path d="M3 19v-6h6"></path></svg>
+    <span>TURN</span>
+  </button>
+  <div id="bomb" class="bomb">
+    <div id="flipper" class="flipper">
+
+      <div class="face front">
+        <div class="casing" data-face="0">
+          <div class="chassis"></div>
+          <div class="panel"></div>
+          <div class="bays"></div>
+          <div class="scrim"></div>
+        </div>
+      </div>
+
+      <div class="face back">
+        <div class="casing" data-face="1">
+          <div class="chassis"></div>
+          <div class="panel"></div>
+          <div class="bays"></div>
+          <div class="scrim"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ======================= RESULT ======================= -->
+<section id="screen-result" class="screen menu" hidden>
+  <div class="sheet">
+    <h2 id="result-title" class="verdict">DEFUSED</h2>
+    <p id="result-voice" class="voice verdict-voice"></p>
+    <p id="result-cause" class="cause"></p>
+    <div id="result-stats" class="stats"></div>
+    <div class="choices two">
+      <button type="button" id="result-continue" class="key" hidden><b>CONTINUE</b></button>
+      <button type="button" id="result-replay" class="key"><b>TRY AGAIN</b></button>
+      <button type="button" id="result-menu" class="key"><b>MENU</b></button>
+    </div>
+    <p id="result-seed" class="seed"></p>
+  </div>
+</section>
+
+<script src="js/core.js?v=20260908234543"></script>
+<script src="js/audio.js?v=20260908234543"></script>
+<script src="js/svg.js?v=20260908234543"></script>
+<script src="js/backdrop.js?v=20260908234543"></script>
+<script src="js/modules/cards.js?v=20260908234543"></script>
+<script src="js/modules/sequences.js?v=20260908234543"></script>
+<script src="js/modules/mutex.js?v=20260908234543"></script>
+<script src="js/modules/rationality.js?v=20260908234543"></script>
+<script src="js/modules/parallel.js?v=20260908234543"></script>
+<script src="js/modules/venn.js?v=20260908234543"></script>
+<script src="js/modules/triangles.js?v=20260908234543"></script>
+<script src="js/modules/angles.js?v=20260908234543"></script>
+<script src="js/modules/units.js?v=20260908234543"></script>
+<script src="js/modules/units-render.js?v=20260908234543"></script>
+<script src="js/cutscene.js?v=20260908234543"></script>
+<script src="js/selftest.js?v=20260908234543"></script>
+<script src="js/game.js?v=20260908234543"></script>
+<script src="js/main.js?v=20260908234543"></script>
+</body>
+</html>
