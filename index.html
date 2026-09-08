@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MATHEMATICKS</title>
+
+<!-- installable: an icon on the home screen, fullscreen, and it keeps
+     working with no connection once it has been opened once -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b1115">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DEFUSAL">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="style.css?v=20260908234543">
 </head>
 <body>
@@ -127,5 +137,16 @@
 <script src="js/selftest.js?v=20260908234543"></script>
 <script src="js/game.js?v=20260908234543"></script>
 <script src="js/main.js?v=20260908234543"></script>
+
+<script>
+/* Service workers need a real origin, so this simply does not run when the
+   page is opened by double-clicking the file — which needs no offline help
+   anyway, the files are already on the disk. */
+if ('serviceWorker' in navigator && location.protocol.slice(0, 4) === 'http') {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
 </body>
 </html>

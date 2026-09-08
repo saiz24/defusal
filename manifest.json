@@ -1,0 +1,16 @@
+{
+  "name": "DEFUSAL",
+  "short_name": "DEFUSAL",
+  "description": "A two-player co-op mathematics bomb. One holds the device, one holds the manual.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b1115",
+  "theme_color": "#0b1115",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
