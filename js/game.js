@@ -349,14 +349,20 @@
       leaving.abort = true;
 
       /* stop the clock at once, then let the case go dark before the menu */
-      if (state) { state.running = false; clearInterval(state.timer); }
+      if (state) {
+        state.running = false;
+        clearInterval(state.timer);
+        stopArming();            /* before the fade, not after it */
+      }
       D.audio.click();
       D.audio.stopBeeps();
       D.audio.powerdown();
       dom['screen-game'].classList.add('aborting');
 
+      /* `aborting` is deliberately left on: it is cleared when the screen is
+         next shown. Removing it here dropped the fade's forwards fill, so
+         the case flashed back to full brightness on its way out. */
       var done = function () {
-        dom['screen-game'].classList.remove('aborting');
         leaving.abort = false;
         teardown();
         show('menu');
@@ -779,7 +785,7 @@
       var node = dom['screen-' + name];
       if (name === screen) {
         if (leaving[name]) { clearTimeout(leaving[name]); leaving[name] = null; }
-        node.classList.remove('leaving');
+        node.classList.remove('leaving', 'aborting');
         node.hidden = false;
         node.classList.remove('entering');
         void node.offsetWidth;
@@ -968,18 +974,28 @@
     tiltX = 0; tiltY = 0;
     applyBombTransform();
 
-    setTimeout(function () {
-      dom.bomb.classList.add('arming-zoom');
-      armFactor = 1; armTilt = 0;
-      applyBombTransform();
-      D.audio.push();
-    }, PUSH_AT);
+    /* Held so teardown can cancel them, and checked against the round that
+       scheduled them. Left running, an abort part way through arming still
+       fired the push sound after the player had gone, and the second one
+       cleared `arming` on whatever round happened to exist by then — which
+       could be the next one, mid-animation. */
+    var mine = state;
+    state.armTimers = [
+      setTimeout(function () {
+        if (state !== mine) return;
+        dom.bomb.classList.add('arming-zoom');
+        armFactor = 1; armTilt = 0;
+        applyBombTransform();
+        D.audio.push();
+      }, PUSH_AT),
 
-    setTimeout(function () {
-      dom.bomb.classList.remove('arming', 'arming-zoom');
-      dom.faces.forEach(function (f) { f.casing.classList.remove('arming'); });
-      if (state) state.arming = false;
-    }, PUSH_AT + PUSH_MS);
+      setTimeout(function () {
+        if (state !== mine) return;
+        dom.bomb.classList.remove('arming', 'arming-zoom');
+        dom.faces.forEach(function (f) { f.casing.classList.remove('arming'); });
+        state.arming = false;
+      }, PUSH_AT + PUSH_MS)
+    ];
 
     lastClock = '';
     renderStrikes();
@@ -1242,6 +1258,16 @@
     return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
   }
 
+  /* The power-up has its own timers, and they can come due before the abort
+     animation has finished — cancelling them only in teardown still let the
+     push sound land after the player had gone. */
+  function stopArming() {
+    if (!state) return;
+    (state.armTimers || []).forEach(function (t) { clearTimeout(t); });
+    state.armTimers = null;
+    state.arming = false;
+  }
+
   function teardown() {
     clearFocus(true);
     dom.bomb.classList.remove('arming', 'arming-zoom');
@@ -1250,6 +1276,7 @@
     clearFocus(true);
     if (state) {
       clearInterval(state.timer);
+      stopArming();
       state.instances.forEach(function (i) {
         if (i.cleanup) { i.cleanup(); i.cleanup = null; }
       });

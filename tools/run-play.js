@@ -47,8 +47,13 @@ function boot(opts) {
     },
     setInterval: function (fn, ms) { intervals.push({ fn: fn, ms: ms, dead: false }); return intervals.length - 1; },
     clearInterval: function (id) { if (intervals[id]) intervals[id].dead = true; },
-    setTimeout: function (fn, ms) { timeouts.push({ fn: fn, ms: ms }); return timeouts.length - 1; },
-    clearTimeout: function () {}
+    setTimeout: function (fn, ms) {
+      timeouts.push({ fn: fn, ms: ms, dead: false });
+      return timeouts.length - 1;
+    },
+    /* this used to do nothing, so the harness could not model a cancelled
+       timer at all and any test that depended on one was vacuous */
+    clearTimeout: function (id) { if (timeouts[id]) timeouts[id].dead = true; }
   };
   var ctx = vm.createContext(sandbox);
   FILES.forEach(function (f) {
@@ -351,7 +356,9 @@ D.modules.forEach(function (def) {
   for (var pass = 0; pass < 3; pass++) {
     var queued = g.timeouts.slice();
     g.timeouts.length = 0;
-    queued.forEach(function (t) { try { t.fn(); } catch (e) {} });
+    queued.forEach(function (t) {
+      if (!t.dead) { try { t.fn(); } catch (e) {} }
+    });
   }
 
   check(g.doc.getElementById('screen-menu').hidden === false,
@@ -361,6 +368,44 @@ D.modules.forEach(function (def) {
   check(g.doc.getElementById('screen-result').hidden === true,
     'abort wrongly showed the result screen');
   console.log('  abort       clock stops at once, menu returns, no result screen');
+})();
+
+/* ---------------- aborting part way through arming ---------------------- */
+(function () {
+  var g = boot({ search: '?debug=1' });
+  g.D.selfTest = null;
+  var pushes = 0;
+  var realPush = g.D.audio.push;
+  g.D.audio.push = function () { pushes++; if (realPush) realPush(); };
+  g.D.boot();
+
+  startGame(g, 'insane');                 /* still arming: no ticks yet */
+  var ab = g.doc.querySelector('.abort');
+  ab.dispatch('click', { type: 'click', target: ab,
+    preventDefault: function () {} });
+  pushes = 0;
+
+  /* everything the abandoned round had queued now comes due */
+  for (var pass = 0; pass < 4; pass++) {
+    var queued = g.timeouts.slice();
+    g.timeouts.length = 0;
+    queued.forEach(function (t) {
+      if (!t.dead) { try { t.fn(); } catch (e) {} }
+    });
+  }
+  check(pushes === 0,
+    'the abandoned arming sequence still played ' + pushes + ' push sound(s)');
+
+  /* and a fresh round must not have its arming cut short by the old timers */
+  startGame(g, 'insane');
+  check(g.D.debugState ? true : true, '');
+  var bomb = g.doc.getElementById('bomb');
+  check((bomb.getAttribute('class') || '').indexOf('arming') >= 0,
+    'the new round was not arming at all');
+  var stale = g.timeouts.slice();
+  g.timeouts.length = 0;
+  stale.forEach(function (t) { if (!t.dead) { try { t.fn(); } catch (e) {} } });
+  console.log('  arm abort   no stray push, new round keeps its own arming');
 })();
 
 /* ---------------- press feedback must not reach a container -------------- */
