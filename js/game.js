@@ -725,6 +725,12 @@
     });
     dom.prev.disabled = (selIndex === 0);
     dom.next.disabled = (selIndex === pages.length - 1);
+
+    /* each device brings its own weather with it */
+    if (D.backdrop && D.backdrop.sky) {
+      var pg = pages[selIndex];
+      D.backdrop.sky(pg && pg.kind === 'stage' ? pg.i : -1);
+    }
   }
 
   function paintMenu() {
@@ -852,24 +858,14 @@
     clearFocus(true);
     wide = !wide;
     viewScale = wide ? 0.66 : 1;
-    var b = dom.wideBtn;
-    if (b) {
-      b.classList.toggle('on', wide);
-      var t = b.querySelector('span');
-      if (t) t.textContent = wide ? 'CLOSE' : 'WIDE';
-    }
+    if (dom.wideBtn) dom.wideBtn.classList.toggle('on', wide);
     D.audio.zoom(!wide);
     applyBombTransform();
   }
 
   function resetWide() {
     wide = false; viewScale = 1;
-    var b = dom.wideBtn;
-    if (b) {
-      b.classList.remove('on');
-      var t = b.querySelector('span');
-      if (t) t.textContent = 'WIDE';
-    }
+    if (dom.wideBtn) dom.wideBtn.classList.remove('on');
   }
 
   function flip() {

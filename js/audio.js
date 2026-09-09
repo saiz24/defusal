@@ -69,6 +69,8 @@
      to download. */
 
   var BELL = [440, 523.25, 587.33, 659.25, 783.99];   /* A minor pentatonic */
+  var ARP  = [220, 261.63, 293.66, 329.63, 293.66, 261.63];
+  var STEP = 0.30;                                   /* ~100bpm in sixteenths */
   var mus = null, musWanted = false;
 
   function bell(at) {
@@ -78,19 +80,71 @@
     o.frequency.setValueAtTime(f, at);
     var g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(0.045, at + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.05, at + 0.05);
     g.gain.exponentialRampToValueAtTime(0.0001, at + 2.8);
     o.connect(g); g.connect(mus.out);
     o.start(at); o.stop(at + 2.9);
   }
 
+  /* the pulse underneath: a soft low thump, not a drum */
+  function thump(at, peak) {
+    var o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(150, at);
+    o.frequency.exponentialRampToValueAtTime(46, at + 0.2);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(peak, at + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.4);
+    o.connect(g); g.connect(mus.out);
+    o.start(at); o.stop(at + 0.45);
+  }
+
+  /* the line that actually moves */
+  function pluck(at, f, peak) {
+    var o = ctx.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(f, at);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(peak, at + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.52);
+    var bq = ctx.createBiquadFilter();
+    bq.type = 'lowpass';
+    bq.frequency.setValueAtTime(2800, at);
+    bq.frequency.exponentialRampToValueAtTime(760, at + 0.5);
+    o.connect(g); g.connect(bq); bq.connect(mus.out);
+    o.start(at); o.stop(at + 0.58);
+  }
+
+  /* One step of the sequence. It is a grid rather than a scatter of notes,
+     which is what gives it a pulse to follow, and it lifts over the first
+     four bars so the opening builds instead of just sitting there. */
+  function musicStep(i, at) {
+    var bar = (i / 16) | 0;
+    var beat = i % 16;
+    var lift = Math.min(1, 0.68 + bar * 0.11);
+
+    if (beat % 4 === 0) thump(at, (beat === 0 ? 0.085 : 0.05) * lift);
+
+    /* the line runs from the first bar: holding it back left the opening as
+       one thump every 1.2s, which is the sparseness this was meant to fix */
+    if (beat % 2 === 1) pluck(at, ARP[((i / 2) | 0) % ARP.length], 0.030 * lift);
+
+    /* an octave above on the off-beats, from the second bar, so it opens out */
+    if (bar > 0 && beat % 4 === 2) {
+      pluck(at, ARP[((i / 4) | 0) % ARP.length] * 2, 0.017 * lift);
+    }
+    if (beat === 11 && bar % 2 === 1) bell(at);
+  }
+
   /* queued ahead on the audio clock, same as the countdown beeps */
   function scheduleBed() {
     if (!mus || !live()) return;
-    var t = now(), horizon = t + 1.5, n = 0;
-    while (mus.next < horizon && n++ < 6) {
-      bell(mus.next);
-      mus.next += 2.4 + Math.random() * 2.8;
+    var t = now(), horizon = t + 1.2, n = 0;
+    while (mus.next < horizon && n++ < 24) {
+      musicStep(mus.step++, mus.next);
+      mus.next += STEP;
     }
   }
 
@@ -100,7 +154,7 @@
 
     var out = ctx.createGain();
     out.gain.setValueAtTime(0.0001, t);
-    out.gain.linearRampToValueAtTime(1, t + 3.5);     /* never just arrives */
+    out.gain.linearRampToValueAtTime(1, t + 2.2);     /* never just arrives */
     out.connect(master);
 
     var lp = ctx.createBiquadFilter();
@@ -122,8 +176,9 @@
         osc.push(o);
       });
 
-    mus = { out: out, osc: osc, next: t + 2.5, timer: 0 };
-    mus.timer = setInterval(scheduleBed, 400);
+    mus = { out: out, osc: osc, next: t + 0.4, step: 0, timer: 0 };
+    mus.timer = setInterval(scheduleBed, 250);
+    scheduleBed();
   }
 
   function stopMusic() {
