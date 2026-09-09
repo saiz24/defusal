@@ -53,12 +53,92 @@
       for (i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
     }
     if (ctx.state === 'suspended') ctx.resume();
+    /* the intro can ask for music before a gesture has let audio run */
+    if (musWanted && !mus) startMusic();
   }
 
   /* Scheduling while the context is still resuming is fine: its clock is
      paused, so anything queued plays the moment the browser lets it. */
   function live() { return enabled && !!ctx && ctx.state !== 'closed'; }
   function now() { return ctx.currentTime; }
+
+  /* ---- the cutscene bed -------------------------------------------------
+     A drone with a few slow notes over it, all from one pentatonic set so it
+     can never land on a chord that sounds like a warning. It sits well under
+     the voice, and it is synthesised like everything else — there is no file
+     to download. */
+
+  var BELL = [440, 523.25, 587.33, 659.25, 783.99];   /* A minor pentatonic */
+  var mus = null, musWanted = false;
+
+  function bell(at) {
+    var f = BELL[Math.floor(Math.random() * BELL.length)];
+    var o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(f, at);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(0.045, at + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 2.8);
+    o.connect(g); g.connect(mus.out);
+    o.start(at); o.stop(at + 2.9);
+  }
+
+  /* queued ahead on the audio clock, same as the countdown beeps */
+  function scheduleBed() {
+    if (!mus || !live()) return;
+    var t = now(), horizon = t + 1.5, n = 0;
+    while (mus.next < horizon && n++ < 6) {
+      bell(mus.next);
+      mus.next += 2.4 + Math.random() * 2.8;
+    }
+  }
+
+  function startMusic() {
+    if (!live() || mus) return;
+    var t = now();
+
+    var out = ctx.createGain();
+    out.gain.setValueAtTime(0.0001, t);
+    out.gain.linearRampToValueAtTime(1, t + 3.5);     /* never just arrives */
+    out.connect(master);
+
+    var lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(520, t);
+    lp.Q.value = 0.6;
+    lp.connect(out);
+
+    var osc = [];
+    [[55, 'triangle', 0.05], [55.3, 'triangle', 0.05], [82.5, 'sine', 0.03]]
+      .forEach(function (d) {
+        var o = ctx.createOscillator();
+        o.type = d[1];
+        o.frequency.setValueAtTime(d[0], t);
+        var g = ctx.createGain();
+        g.gain.value = d[2];
+        o.connect(g); g.connect(lp);
+        o.start(t);
+        osc.push(o);
+      });
+
+    mus = { out: out, osc: osc, next: t + 2.5, timer: 0 };
+    mus.timer = setInterval(scheduleBed, 400);
+  }
+
+  function stopMusic() {
+    if (!mus) return;
+    var m = mus; mus = null;
+    clearInterval(m.timer);
+    if (!ctx) return;
+    var t = now();
+    try {
+      m.out.gain.cancelScheduledValues(t);
+      m.out.gain.setValueAtTime(m.out.gain.value, t);
+      m.out.gain.linearRampToValueAtTime(0.0001, t + 1.2);
+    } catch (e) {}
+    m.osc.forEach(function (o) { try { o.stop(t + 1.4); } catch (e) {} });
+  }
 
   /* one enveloped oscillator */
   function tone(o) {
@@ -118,6 +198,22 @@
 
   var A = {
     unlock: unlock,
+
+    /* the cutscene bed, on or off */
+    music: function (on) {
+      musWanted = !!on;
+      if (on) startMusic(); else stopMusic();
+    },
+
+    /* the case losing power when the round is abandoned */
+    powerdown: function () {
+      if (!live()) return;
+      tone({ f: 340, to: 62, dur: 0.52, type: 'sawtooth', gain: 0.09,
+             glide: 'exp', filter: 'lowpass', cutoff: 1700, cutoffTo: 240 });
+      tone({ f: 170, to: 42, dur: 0.62, type: 'triangle', gain: 0.07,
+             glide: 'exp' });
+    },
+
 
     isOn: function () { return enabled; },
     toggle: function () {

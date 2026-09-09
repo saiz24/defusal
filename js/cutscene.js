@@ -649,6 +649,7 @@
     node.begin.hidden = true;
     node.begin.classList.remove('in');
     active = false;
+    D.audio.music(false);
     node.root.classList.remove('open');
     node.root.hidden = true;
     document.body.classList.remove('cutscene-open');
@@ -674,6 +675,7 @@
     paintScene();
     enterScene();
     D.audio.unlock();
+    D.audio.music(true);
     D.audio.intro();
   }
 

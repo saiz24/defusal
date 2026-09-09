@@ -87,7 +87,12 @@ Object.defineProperty(El.prototype, 'innerHTML', {
   }
 });
 
-El.prototype.setAttribute = function (k, v) { this.attrs[k] = String(v); };
+El.prototype.setAttribute = function (k, v) {
+  this.attrs[k] = String(v);
+  /* the markup carries `hidden` on the screens that start closed; without
+     this every screen parses as visible and any assertion on it is vacuous */
+  if (k === 'hidden') this._hidden = true;
+};
 El.prototype.getAttribute = function (k) {
   return Object.prototype.hasOwnProperty.call(this.attrs, k) ? this.attrs[k] : null;
 };

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="DEFUSAL">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="style.css?v=20260908234543">
+<link rel="stylesheet" href="style.css?v=20260909143019">
 </head>
 <body>
 <div id="backdrop" class="backdrop"></div>
@@ -73,6 +73,11 @@
 <!-- ======================= BOMB ======================= -->
 <section id="screen-game" class="screen deck" hidden>
   <p id="arming-line" class="voice arming-line"></p>
+  <button type="button" id="wide-btn" class="flip-btn wide-btn" data-wide
+          title="pull back from the case">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.5-4.5M8 11h6"></path></svg>
+    <span>WIDE</span>
+  </button>
   <button type="button" id="flip-btn" class="flip-btn" data-flip
           title="turn the case over">
     <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.6 5.9"></path><path d="M3 19v-6h6"></path></svg>
@@ -119,24 +124,24 @@
   </div>
 </section>
 
-<script src="js/core.js?v=20260908234543"></script>
-<script src="js/audio.js?v=20260908234543"></script>
-<script src="js/svg.js?v=20260908234543"></script>
-<script src="js/backdrop.js?v=20260908234543"></script>
-<script src="js/modules/cards.js?v=20260908234543"></script>
-<script src="js/modules/sequences.js?v=20260908234543"></script>
-<script src="js/modules/mutex.js?v=20260908234543"></script>
-<script src="js/modules/rationality.js?v=20260908234543"></script>
-<script src="js/modules/parallel.js?v=20260908234543"></script>
-<script src="js/modules/venn.js?v=20260908234543"></script>
-<script src="js/modules/triangles.js?v=20260908234543"></script>
-<script src="js/modules/angles.js?v=20260908234543"></script>
-<script src="js/modules/units.js?v=20260908234543"></script>
-<script src="js/modules/units-render.js?v=20260908234543"></script>
-<script src="js/cutscene.js?v=20260908234543"></script>
-<script src="js/selftest.js?v=20260908234543"></script>
-<script src="js/game.js?v=20260908234543"></script>
-<script src="js/main.js?v=20260908234543"></script>
+<script src="js/core.js?v=20260909143019"></script>
+<script src="js/audio.js?v=20260909143019"></script>
+<script src="js/svg.js?v=20260909143019"></script>
+<script src="js/backdrop.js?v=20260909143019"></script>
+<script src="js/modules/cards.js?v=20260909143019"></script>
+<script src="js/modules/sequences.js?v=20260909143019"></script>
+<script src="js/modules/mutex.js?v=20260909143019"></script>
+<script src="js/modules/rationality.js?v=20260909143019"></script>
+<script src="js/modules/parallel.js?v=20260909143019"></script>
+<script src="js/modules/venn.js?v=20260909143019"></script>
+<script src="js/modules/triangles.js?v=20260909143019"></script>
+<script src="js/modules/angles.js?v=20260909143019"></script>
+<script src="js/modules/units.js?v=20260909143019"></script>
+<script src="js/modules/units-render.js?v=20260909143019"></script>
+<script src="js/cutscene.js?v=20260909143019"></script>
+<script src="js/selftest.js?v=20260909143019"></script>
+<script src="js/game.js?v=20260909143019"></script>
+<script src="js/main.js?v=20260909143019"></script>
 
 <script>
 /* Service workers need a real origin, so this simply does not run when the

@@ -104,11 +104,13 @@
      top of it: the defuser cannot pick the case up, but the view leans with
      the cursor, which is enough to read it as an object in a room. */
   var scaleNow = 1, tiltX = 0, tiltY = 0;
+  var viewScale = 1, wide = false;     /* the defuser's own zoom-out */
   var armFactor = 1, armTilt = 0;      /* the arming pull-back */
 
   function applyBombTransform() {
     dom.bomb.style.transform =
-      'translate(-50%, -50%) scale(' + (scaleNow * armFactor).toFixed(4) + ')' +
+      'translate(-50%, -50%) scale(' +
+        (scaleNow * armFactor * viewScale).toFixed(4) + ')' +
       ' rotateX(' + (tiltX + armTilt).toFixed(2) + 'deg)' +
       ' rotateY(' + tiltY.toFixed(2) + 'deg)';
   }
@@ -343,7 +345,23 @@
     abort.type = 'button';
     abort.textContent = 'ABORT';
     abort.addEventListener('click', function () {
-      D.audio.click(); teardown(); show('menu');
+      if (leaving.abort) return;
+      leaving.abort = true;
+
+      /* stop the clock at once, then let the case go dark before the menu */
+      if (state) { state.running = false; clearInterval(state.timer); }
+      D.audio.click();
+      D.audio.stopBeeps();
+      D.audio.powerdown();
+      dom['screen-game'].classList.add('aborting');
+
+      var done = function () {
+        dom['screen-game'].classList.remove('aborting');
+        leaving.abort = false;
+        teardown();
+        show('menu');
+      };
+      if (reducedMotion()) done(); else setTimeout(done, 620);
     });
 
     if (faceIndex === 0) {
@@ -828,6 +846,32 @@
     D.audio.zoom(true);
   }
 
+  /* Pull the whole case back. The per-module zoom goes the other way; this is
+     for seeing all of it at once, which matters on a small screen. */
+  function toggleWide() {
+    clearFocus(true);
+    wide = !wide;
+    viewScale = wide ? 0.66 : 1;
+    var b = dom.wideBtn;
+    if (b) {
+      b.classList.toggle('on', wide);
+      var t = b.querySelector('span');
+      if (t) t.textContent = wide ? 'CLOSE' : 'WIDE';
+    }
+    D.audio.zoom(!wide);
+    applyBombTransform();
+  }
+
+  function resetWide() {
+    wide = false; viewScale = 1;
+    var b = dom.wideBtn;
+    if (b) {
+      b.classList.remove('on');
+      var t = b.querySelector('span');
+      if (t) t.textContent = 'WIDE';
+    }
+  }
+
   function flip() {
     clearFocus(true);
     var showingBack = dom.bomb.classList.toggle('flipped');
@@ -857,6 +901,7 @@
     };
 
     clearFocus(true);
+    resetWide();
     dom.bomb.classList.remove('flipped');
     dom.clocks = [];
 
@@ -1253,6 +1298,7 @@
       'screen-result': q('screen-result'),
       bomb: q('bomb'),
       flipper: q('flipper'),
+      wideBtn: q('wide-btn'),
       flash: q('flash'),
       clocks: [],
       resultTitle: q('result-title'),
@@ -1375,6 +1421,9 @@
 
     [].forEach.call(document.querySelectorAll('[data-flip]'), function (b) {
       b.addEventListener('click', flip);
+    });
+    [].forEach.call(document.querySelectorAll('[data-wide]'), function (b) {
+      b.addEventListener('click', toggleWide);
     });
 
     window.addEventListener('resize', fit);

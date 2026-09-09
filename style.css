@@ -1098,3 +1098,19 @@ body.cutscene-open .backdrop { display: none; }
    reacting to the click. */
 .bomb { user-select: none; -webkit-user-select: none; }
 .bomb input { user-select: text; -webkit-user-select: text; }
+
+/* ==========================================================================
+   ZOOM OUT, and the case losing power
+   ========================================================================== */
+
+/* sits under TURN, same treatment; outside the 3D tree like TURN, because a
+   control that must always work has no business inside a rotated subtree */
+.wide-btn { top: 76px; }
+.wide-btn.on { background: var(--rim); color: #06222b; border-color: var(--rim); }
+
+/* The fade goes on the perspective container, never on .bomb: opacity or a
+   filter on an element inside preserve-3d flattens the box mid-animation. */
+@keyframes deckAbort { from { opacity: 1; } to { opacity: 0; } }
+.deck.aborting { animation: deckAbort .58s ease-in forwards; }
+.deck.aborting .digits { color: #223038; text-shadow: none; transition: color .18s ease; }
+.deck.aborting .led { background: #223038; box-shadow: none; }

@@ -320,6 +320,49 @@ D.modules.forEach(function (def) {
   console.log('  reset       clears both progress and the per-device record');
 })();
 
+/* ---------------- abort stops the clock and reaches the menu ------------- */
+(function () {
+  var g = boot({ search: '?debug=1' });
+  g.D.selfTest = null;
+  g.D.boot();
+  startGame(g, 'insane');
+
+  /* clear the arming hold so the clock is genuinely running */
+  for (var i = 0; i < 60; i++) { g.clock.t += 100; g.tick(); }
+  var before = g.doc.getElementById('timer').textContent;
+  g.clock.t += 2000; g.tick();
+  check(g.doc.getElementById('timer').textContent !== before,
+    'the clock was not running before abort');
+
+  var pending = g.timeouts.length;
+  g.doc.querySelector('.abort').dispatch('click', { type: 'click',
+    target: g.doc.querySelector('.abort'), preventDefault: function () {} });
+
+  /* the clock must stop at once, not after the animation */
+  var atAbort = g.doc.getElementById('timer').textContent;
+  g.clock.t += 5000; g.tick();
+  check(g.doc.getElementById('timer').textContent === atAbort,
+    'the clock kept running after abort');
+
+  check(g.timeouts.length > pending, 'abort scheduled no follow-up');
+
+  /* run what is queued, twice over: the powerdown hands off to show(), which
+     queues the 300ms leave of the screen being left behind */
+  for (var pass = 0; pass < 3; pass++) {
+    var queued = g.timeouts.slice();
+    g.timeouts.length = 0;
+    queued.forEach(function (t) { try { t.fn(); } catch (e) {} });
+  }
+
+  check(g.doc.getElementById('screen-menu').hidden === false,
+    'abort did not return to the menu');
+  check(g.doc.getElementById('screen-game').hidden === true,
+    'the game screen was left showing after abort');
+  check(g.doc.getElementById('screen-result').hidden === true,
+    'abort wrongly showed the result screen');
+  console.log('  abort       clock stops at once, menu returns, no result screen');
+})();
+
 /* ---------------- press feedback must not reach a container -------------- */
 (function () {
   var css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
