@@ -1114,3 +1114,101 @@ body.cutscene-open .backdrop { display: none; }
 .deck.aborting { animation: deckAbort .58s ease-in forwards; }
 .deck.aborting .digits { color: #223038; text-shadow: none; transition: color .18s ease; }
 .deck.aborting .led { background: #223038; box-shadow: none; }
+
+/* ==========================================================================
+   TOUCH AND SMALL SCREENS
+   The casing already scales to the viewport, so the work here is input
+   ergonomics rather than layout: kill the tap delay and the double-tap zoom,
+   stop the page rubber-banding under a drag, drop hover-only affordances on
+   devices that cannot hover, and keep the chrome clear of notches.
+   ========================================================================== */
+
+html, body {
+  overscroll-behavior: none;                 /* no pull-to-refresh mid-round */
+  -webkit-text-size-adjust: 100%;            /* iOS must not reflow our type */
+}
+
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
+}
+
+button, .key, .bay, .bay *, .zoom, .answer input, .field input,
+.cs-begin, .sound, [role="button"] {
+  touch-action: manipulation;                /* removes the 300ms tap delay */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bomb, .casing, .cutscene { touch-action: manipulation; }
+
+/* A finger has no hover state. Anything that only appears on hover has to be
+   permanently visible where hovering is impossible, or it cannot be found. */
+@media (hover: none) {
+  .zoom { opacity: 1 !important; }
+  .bay:hover, .key:hover, button:hover { transform: none; }
+}
+
+/* Coarse pointers need a bigger target than a mouse does. 44px is the floor
+   both Apple and Google publish, and the bays scale with the casing so this
+   only has to lift the chrome controls. */
+@media (pointer: coarse) {
+  .key { min-height: 52px; }
+  .zoom { min-width: 44px; min-height: 44px; }
+  .sound, .cs-skip, .cs-begin { min-height: 44px; padding-left: 18px; padding-right: 18px; }
+  .answer input, .field input { min-height: 44px; }
+}
+
+/* Phone-sized viewports. The menu and result sheets are the only fixed-width
+   pieces; the bomb itself is already a single scaled transform. */
+@media (max-width: 820px) {
+  .sheet { padding: 18px 14px; }
+  .title { font-size: 40px; }
+  .choices { gap: 10px; }
+  .key i { font-size: 11px; }
+  .stats { max-width: none; }
+  .cs-box { padding: 14px 16px; }
+  .cs-line { font-size: 16px; line-height: 1.5; }
+}
+
+@media (max-width: 560px) {
+  .title { font-size: 32px; }
+  .choices.two { grid-template-columns: 1fr; }
+  .blurb { max-width: none; }
+}
+
+/* Portrait on a handset. The casing is a wide object and squeezing it into a
+   tall frame makes the gradations on the ruler and cylinder unreadable, which
+   breaks Unit Conversions specifically. Ask for a turn rather than render
+   something the Defuser cannot read. */
+#rotate-hint { display: none; }
+
+@media (max-width: 900px) and (orientation: portrait) {
+  body.playing #rotate-hint,
+  body.cutscene-open #rotate-hint {
+    display: flex;
+    position: fixed; inset: 0; z-index: 9000;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px; text-align: center;
+    padding: 32px;
+    background: var(--bg, #0b1115);
+  }
+  body.playing .deck, body.cutscene-open .cutscene { filter: blur(2px); }
+  #rotate-hint p { font-size: 16px; color: var(--ink-2, #9fb0b8); margin: 0; max-width: 320px; }
+  #rotate-hint .rot-glyph {
+    width: 76px; height: 48px; border: 3px solid currentColor;
+    border-radius: 8px; color: var(--ink-2, #9fb0b8);
+    animation: rotNudge 2.2s ease-in-out infinite;
+  }
+}
+
+@keyframes rotNudge {
+  0%, 45%   { transform: rotate(90deg) scale(.82); }
+  60%, 100% { transform: rotate(0deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #rotate-hint .rot-glyph { animation: none; transform: none; }
+}
