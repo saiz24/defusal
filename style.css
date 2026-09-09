@@ -1003,13 +1003,12 @@ body.debug .answer-tag {
    ========================================================================== */
 
 .backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden;
-            pointer-events: none; }
+            pointer-events: none; contain: strict; }
 .bd-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
 /* colour as plain gradients: no filter, so nothing re-blurs per frame */
 .bd-cloud {
   position: absolute; border-radius: 50%;
-  mix-blend-mode: screen;
   transform: translate(-50%, -50%);
   will-change: transform;
   /* painted from currentColor so a change of sky is one colour transition */
@@ -1104,13 +1103,16 @@ body.playing .backdrop *,
 body.playing .backdrop { animation-play-state: paused !important; }
 /* and drop the blending pass while the case is on screen: five screen-blended
    layers cost a composite each, and the sky is mostly covered anyway */
-body.playing .bd-cloud { mix-blend-mode: normal; }
 /* The opening used to hide the sky entirely, which is what made those scenes
    feel like they happened in a void. It now shows through a veil instead. */
 body.cutscene-open .backdrop { display: block; }
 /* ...but only the sky. The screens underneath must not show through the
    veil — the menu was legible behind the opening. */
 body.cutscene-open .screen { visibility: hidden; }
+
+/* A hidden screen still keeps its animations ticking in the style engine.
+   Nothing paints, but there is no reason to keep computing them. */
+.screen[hidden] *, .screen[hidden] { animation-play-state: paused !important; }
 body.cutscene-open .backdrop .bd-cloud { opacity: .34 !important; }
 .bomb { will-change: transform; }
 
@@ -1270,24 +1272,27 @@ button, .key, .bay, .bay *, .zoom, .answer input, .field input,
                      50%      { transform: translateY(-5px); } }
 @keyframes mBreath { 0%, 100% { transform: scale(1) rotate(0deg); }
                      50%      { transform: scale(1.045) rotate(1.6deg); } }
-@keyframes mGlow   { 0%, 100% { text-shadow: 0 0 46px rgba(111,215,232,.35); }
-                     50%      { text-shadow: 0 0 62px rgba(111,215,232,.55); } }
 @keyframes mSway   { 0%, 100% { transform: translateY(0) rotate(0deg); }
                      50%      { transform: translateY(-3px) rotate(-.35deg); } }
 @keyframes mPulse  { 0%, 100% { opacity: .82; } 50% { opacity: 1; } }
 
-.title      { animation: mGlow 9s ease-in-out infinite; }
+/* transform and opacity only: animating text-shadow repaints the whole title
+   every frame, and it cannot be handed to the compositor */
+.title      { animation: mFloat 15s ease-in-out infinite; }
 .viewport   { animation: mFloat 13s ease-in-out infinite; }
-.emblem-wrap{ animation: mBreath 17s ease-in-out infinite; }
-.card .facts{ animation: mSway 21s ease-in-out infinite; }
 .nav        { animation: mPulse 7s ease-in-out infinite; }
 .sel-dots   { animation: mFloat 19s ease-in-out infinite; }
+
+/* Scoped to the page in view. Running these on all five cards meant the
+   carousel dragged eight extra animations along with every slide. */
+.card.focused-page .emblem-wrap { animation: mBreath 17s ease-in-out infinite; }
+.card.focused-page .facts       { animation: mSway 21s ease-in-out infinite; }
 
 /* the emblem already carries a transform on the group, so animate a wrapper */
 .emblem-wrap { display: inline-block; transform-origin: 50% 50%; }
 
 /* stagger them so the whole sheet never moves as one piece */
 .viewport    { animation-delay: -3s; }
-.emblem-wrap { animation-delay: -7s; }
-.card .facts { animation-delay: -11s; }
+.card.focused-page .emblem-wrap { animation-delay: -7s; }
+.card.focused-page .facts       { animation-delay: -11s; }
 .sel-dots    { animation-delay: -5s; }

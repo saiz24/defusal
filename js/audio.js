@@ -154,7 +154,7 @@
 
     var out = ctx.createGain();
     out.gain.setValueAtTime(0.0001, t);
-    out.gain.linearRampToValueAtTime(1, t + 2.2);     /* never just arrives */
+    out.gain.linearRampToValueAtTime(1.95, t + 2.2);  /* never just arrives */
     out.connect(master);
 
     var lp = ctx.createBiquadFilter();

@@ -54,11 +54,11 @@
 
       /* colour: soft gradients, moved as whole layers */
       clouds.length = 0;
-      cloud(host, 14, 14, 68, 0.62, 54, 0);
-      cloud(host, 72, 20, 62, 0.55, 66, -14);
-      cloud(host, 42, 76, 82, 0.48, 78, -32);
-      cloud(host, 86, 6, 46, 0.44, 60, -25);
-      cloud(host, 28, 48, 56, 0.36, 92, -47);
+      cloud(host, 14, 14, 68, 0.80, 54, 0);
+      cloud(host, 72, 20, 62, 0.72, 66, -14);
+      cloud(host, 42, 76, 82, 0.62, 78, -32);
+      cloud(host, 86, 6, 46, 0.58, 60, -25);
+      cloud(host, 28, 48, 56, 0.46, 92, -47);
       D.backdrop.sky(-1);
 
       /* one slow sweep across everything, so the sky is never quite still */
@@ -71,7 +71,7 @@
 
       /* the star field: static art, two groups, two animations in total */
       var twinkles = [];
-      [[150, 1.0, 0.55], [90, 1.9, 0.32]].forEach(function (layer, li) {
+      [[96, 1.05, 0.6], [54, 2.0, 0.36]].forEach(function (layer, li) {
         var g = S.el('g', { class: 'bd-layer bd-layer-' + li }, svg);
         var rng = D.makeRng(9001 + li * 77), i;
         for (i = 0; i < layer[0]; i++) {
@@ -81,7 +81,7 @@
             fill: '#dceef6',
             opacity: layer[2] * (0.4 + D.rint(rng, 0, 60) / 100)
           }, g);
-          if (i % 9 === 0) twinkles.push(c);      /* only a handful blink */
+          if (i % 10 === 0) twinkles.push(c);     /* only a handful blink */
         }
       });
       twinkles.forEach(function (c, i) {
@@ -96,7 +96,7 @@
         stroke: '#2e7f9c', 'stroke-width': 4, opacity: 0.4,
         class: 'bd-rim' }, svg);
       var rng2 = D.makeRng(404), k;
-      for (k = 0; k < 46; k++) {
+      for (k = 0; k < 26; k++) {
         var a = 90 + D.rint(rng2, -46, 46);
         var p = S.polar(700, 2050, 1330 - D.rint(rng2, 0, 30), a);
         S.el('circle', { cx: p.x, cy: p.y, r: D.rint(rng2, 5, 13) / 10,

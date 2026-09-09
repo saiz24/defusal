@@ -148,7 +148,11 @@
     var w = window.innerWidth || 1280, h = window.innerHeight || 720;
     var nx = (e.clientX / w) * 2 - 1;          /* -1 .. 1 */
     var ny = (e.clientY / h) * 2 - 1;
-    pendingTilt = [D.clamp(nx * 9, -9, 9), D.clamp(-ny * 6, -6, 6)];
+    /* A shallower lean. Rotating the case changes the on-screen scale of
+       every layer in it, and each change costs a re-rasterise of the text and
+       artwork inside — a smaller sweep is materially cheaper and still reads
+       as the case sitting in a room. */
+    pendingTilt = [D.clamp(nx * 5.5, -5.5, 5.5), D.clamp(-ny * 3.6, -3.6, 3.6)];
     if (!tiltRaf && window.requestAnimationFrame) {
       tiltRaf = window.requestAnimationFrame(flushTilt);
     } else if (!window.requestAnimationFrame) {
