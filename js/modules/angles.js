@@ -50,15 +50,19 @@
 
   var CONFIGS = ['vertical', 'complementary', 'linear', 'unrelated'];
 
+  /* The competency this module carries is classifying EVERY angle type, so the
+     rare types get real weight. At the old 6% each, zero and complete angles
+     were almost never drawn, which in turn made violet and yellow unreachable
+     answers: the first angle's digit alone decides the colour band. */
   function loneMeasure(rng) {
     var roll = rng();
-    if (roll < 0.06) return 0;
-    if (roll < 0.12) return 360;
-    if (roll < 0.20) return 180;
-    if (roll < 0.30) return 90;
-    if (roll < 0.55) return D.rint(rng, 10, 89);        /* acute  */
-    if (roll < 0.78) return D.rint(rng, 91, 179);       /* obtuse */
-    return D.rint(rng, 190, 350);                       /* reflex */
+    if (roll < 0.12) return 0;                          /* zero     */
+    if (roll < 0.24) return 360;                        /* complete */
+    if (roll < 0.36) return 180;                        /* straight */
+    if (roll < 0.48) return 90;                         /* right    */
+    if (roll < 0.66) return D.rint(rng, 10, 89);        /* acute    */
+    if (roll < 0.84) return D.rint(rng, 91, 179);       /* obtuse   */
+    return D.rint(rng, 190, 350);                       /* reflex   */
   }
 
   function generate(rng, ctx) {
@@ -69,12 +73,24 @@
       m2 = m1;
       start = D.rint(rng, 10, 70);
     } else if (config === 'complementary') {
-      m1 = D.rint(rng, 15, 75);
-      m2 = 90 - m1;
+      /* 0 + 90 is a complementary pair as surely as 30 + 60 is, and it is the
+         only one that puts a zero or a right angle in this configuration.
+         Without it both angles are always acute, so X is always 44, so Z is
+         always 442 and every complementary round answers blue — the whole
+         configuration gives the answer away without any mathematics. */
+      var cRoll = rng();
+      if (cRoll < 0.14) { m1 = 0; m2 = 90; }
+      else if (cRoll < 0.28) { m1 = 90; m2 = 0; }
+      else { m1 = D.rint(rng, 15, 75); m2 = 90 - m1; }
       start = D.rint(rng, 0, 40);
     } else if (config === 'linear') {
-      m1 = (rng() < 0.12) ? 90 : D.rint(rng, 20, 160);
-      m2 = 180 - m1;
+      /* Same reasoning: 0 + 180 is a legitimate pair summing to 180 and is the
+         only way a straight or zero angle reaches this configuration. */
+      var lRoll = rng();
+      if (lRoll < 0.10) { m1 = 0; m2 = 180; }
+      else if (lRoll < 0.20) { m1 = 180; m2 = 0; }
+      else if (lRoll < 0.32) { m1 = 90; m2 = 90; }
+      else { m1 = D.rint(rng, 20, 160); m2 = 180 - m1; }
       start = 0;
     } else {
       m1 = loneMeasure(rng);

@@ -203,6 +203,10 @@ node tools/run-play.js 150        # mounts every module for real against a
                                   # losing interaction, then plays whole bombs
                                   # to a defusal, a three-strike loss and a
                                   # time-out
+python3 tools/check-manual.py     # asserts the PRINTED MANUAL agrees with the
+                                  # code: every unit chart value, the angle
+                                  # digit table, the binary place values, and
+                                  # that no two modules share a tagline
 node tools/render-preview.js 5    # writes one round of each module to
 node tools/render-units.js        # tools/preview/*.svg for eyeballing artwork
 tools/shoot.sh                    # screenshots the real page through headless

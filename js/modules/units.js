@@ -217,7 +217,18 @@
 
     var keys = Object.keys(T[layout]);
     var lights = D.pick(rng, keys);
-    var opt = D.pick(rng, T[layout][lights]);
+
+    /* Pick the CATEGORY first, then a round inside it. Picking uniformly over
+       the whole option list lets the ruler dominate — it admits far more
+       feasible readings than the dial or the cylinder — and learners then
+       hardly ever meet the weighing scale or the graduated cylinder, both of
+       which the competency names explicitly. */
+    var pool = T[layout][lights], byCat = {};
+    pool.forEach(function (o) {
+      (byCat[o.category] = byCat[o.category] || []).push(o);
+    });
+    var cats = Object.keys(byCat).sort();
+    var opt = D.pick(rng, byCat[D.pick(rng, cats)]);
 
     return {
       layout: layout,
