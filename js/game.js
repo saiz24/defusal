@@ -116,9 +116,14 @@
   }
 
   function fit() {
-    var w = (window.innerWidth || 1280) - 24;
-    var h = (window.innerHeight || 720) - 24;
-    scaleNow = Math.min(w / (BOMB_W || 1724), h / (BOMB_H || 938));
+    /* On a desktop the case used to run edge to edge, so there was no room
+       around it and the device read as a screen rather than as an object on a
+       table. A margin costs a few per cent of size and buys the whole of it.
+       Small viewports keep the old tight fit — there, legibility wins. */
+    var vw = window.innerWidth || 1280, vh = window.innerHeight || 720;
+    var pad = vw >= 1100 ? 108 : 24;
+    scaleNow = Math.min((vw - pad) / (BOMB_W || 1724),
+                        (vh - pad) / (BOMB_H || 938));
     applyBombTransform();
   }
 
@@ -198,6 +203,87 @@
 
   var WIRE = ['#d0574f', '#ddb63f', '#4180ae', '#4f9d5d'];
 
+  /* ---------- signage and hardware ----------------------------------------
+     The faces stay quiet — the modules have to be read — so everything that
+     says "this is a bomb" lives on the rails, where nothing is ever solved.
+     All of it is static: one paint at build time, no per-frame work. */
+
+  var chevUid = 0;
+
+  /* a hazard bar: diagonal stripes clipped to a rounded plate */
+  function hazardBar(svg, x, y, w, h) {
+    var S = D.svg, g = S.el('g', {}, svg), step = 30, i;
+    var id = 'chev' + (++chevUid);
+    var cp = S.el('clipPath', { id: id }, g);
+    S.el('rect', { x: x, y: y, width: w, height: h, rx: 6 }, cp);
+    S.el('rect', { x: x, y: y, width: w, height: h, rx: 6, fill: '#d9b03c' }, g);
+    var band = S.el('g', { 'clip-path': 'url(#' + id + ')' }, g);
+    for (i = -h - step; i < w + step; i += step) {
+      S.el('path', { d: 'M' + (x + i) + ' ' + (y + h) +
+        ' L' + (x + i + h) + ' ' + y +
+        ' L' + (x + i + h + step / 2) + ' ' + y +
+        ' L' + (x + i + step / 2) + ' ' + (y + h) + ' Z',
+        fill: '#2b3136' }, band);
+    }
+    S.el('rect', { x: x, y: y, width: w, height: h, rx: 6, fill: 'none',
+      stroke: INK, 'stroke-width': 3.5 }, g);
+  }
+
+  /* an armed pilot lamp in a bezel. The pulse is opacity on one small node. */
+  function pilotLamp(svg, x, y, color) {
+    var S = D.svg, g = S.el('g', {}, svg);
+    S.el('circle', { cx: x, cy: y, r: 17, fill: '#28343a', stroke: INK,
+      'stroke-width': 3.5 }, g);
+    S.el('circle', { cx: x, cy: y, r: 10, fill: color }, g);
+    S.el('circle', { cx: x - 3, cy: y - 4, r: 3.4,
+      fill: 'rgba(255,255,255,.55)' }, g);
+    var halo = S.el('circle', { cx: x, cy: y, r: 10, fill: color,
+      opacity: 0.55 }, g);
+    halo.setAttribute('class', 'pilot-halo');
+    return g;
+  }
+
+  /* a strapped charge cell — the same object the back rail carries, one of */
+  function chargeCell(svg, x, y, w, h) {
+    var S = D.svg, g = S.el('g', {}, svg);
+    S.el('rect', { x: x, y: y, width: w, height: h, rx: h * 0.34,
+      fill: '#a94a3f', stroke: INK, 'stroke-width': 4 }, g);
+    S.el('rect', { x: x + 10, y: y + 8, width: w - 20, height: 8, rx: 4,
+      fill: '#c26254' }, g);
+    [0.32, 0.68].forEach(function (f) {
+      S.el('rect', { x: x + w * f - 9, y: y - 3, width: 18, height: h + 6,
+        fill: '#e8ddc4', stroke: INK, 'stroke-width': 3 }, g);
+    });
+  }
+
+  /* stencilled text, the way it is sprayed on a real case */
+  function stencil(svg, x, y, str, size, anchor) {
+    /* No font-family here: a CSS custom property is not a legal SVG
+       presentation attribute, and the fallback serif ran wider than the
+       plate it was meant to sit inside. */
+    var t = D.svg.text(svg, x, y, str, {
+      'text-anchor': anchor || 'start', fill: 'rgba(214,226,231,.42)',
+      'font-size': size || 20, 'font-weight': '700', 'letter-spacing': '2'
+    });
+    t.setAttribute('dominant-baseline', 'middle');
+    return t;
+  }
+
+  /* wear: a handful of faint scratches so the shell is not factory-new */
+  function scuffs(svg, seed) {
+    var S = D.svg, rng = D.makeRng(seed >>> 0), i, x, y, len, ang;
+    for (i = 0; i < 14; i++) {
+      x = D.rint(rng, 40, BOMB_W - 40);
+      y = rng() < 0.5 ? D.rint(rng, 46, RAIL_TOP - 20)
+                      : D.rint(rng, BOMB_H - RAIL_BOT + 16, BOMB_H - 26);
+      len = D.rint(rng, 14, 54);
+      ang = (rng() * 0.5 - 0.25);
+      S.el('line', { x1: x, y1: y, x2: x + len, y2: y + len * ang,
+        stroke: 'rgba(255,255,255,.055)', 'stroke-width': 2,
+        'stroke-linecap': 'round' }, svg);
+    }
+  }
+
   function buildFrontChassis() {
     var S = D.svg, svg = S.root(0, 0, BOMB_W, BOMB_H);
     /* the wiring lives on the rim now; the faces stay quiet */
@@ -216,6 +302,86 @@
       S.el('rect', { x: BOMB_W / 2 - 74 + i * 52, y: BOMB_H - RAIL_BOT + 47,
         width: 34, height: 18, rx: 5, fill: '#77848a' }, svg);
     }
+
+    /* --- everything below is signage and hardware on the rails only ------
+       The control strip is centred and about 680 wide, so the flanks start
+       where it ends. On the narrowest case that is a short run; the pieces
+       are placed from the outside in so they simply have less room, never
+       overlap the clock. */
+    var half = BOMB_W / 2, flank = Math.max(0, half - 360);
+    var botY = BOMB_H - RAIL_BOT + 34;
+
+    [-1, 1].forEach(function (side) {
+      var edge = side < 0 ? 26 : BOMB_W - 26;
+      var inner = half + side * 352;
+      var mid = half + side * (352 + flank / 2);   /* middle of this flank */
+
+      if (flank > 70) {
+        var bw = Math.min(150, flank - 26), bx = mid - bw / 2, by = 96;
+        var xOut = side < 0 ? bx + 10 : bx + bw - 10;
+        var xEdge = side < 0 ? -10 : BOMB_W + 10;
+
+        /* The loom is laid down FIRST so the block is bolted on top of it.
+           Drawn afterwards the wires painted over the stencil on the plate,
+           and a cable crossing a label is the wrong way round anyway: the
+           wires run under the hardware, not over it.
+
+           Three leads, not four, at uneven sag — a loom is a bundle routed by
+           hand, not a rainbow. Every end is hidden: these run off the side of
+           the case, where the SVG viewport clips them, because a wire that
+           stops in open air reads as a broken line rather than as wiring. */
+        [0, 1, 2].forEach(function (k) {
+          var y0 = by + 52 - k * 7;
+          var y1 = by + 74 + k * 17;
+          cable(svg, 'M' + xOut + ' ' + y0 +
+            ' C' + (xOut + side * 48) + ' ' + (y0 + 28) + ' ' +
+            (xOut + side * 96) + ' ' + y1 + ' ' + xEdge + ' ' + y1,
+            WIRE[k], 4.5);
+        });
+        /* and one lead inward, ending under the control strip, so the panel
+           is plainly wired to the rest of the case. It has to finish well
+           inside the strip rather than at the edge of where the strip is
+           guessed to be: the strip is content-sized, and an end laid against
+           its border showed as a hook in open air. The narrowest case still
+           puts the strip's edge about 350 out from the middle, so 180 is
+           always underneath it. */
+        var xIn = side < 0 ? bx + bw - 10 : bx + 10;
+        cable(svg, 'M' + xIn + ' ' + (by + 56) +
+          ' C' + (xIn - side * 40) + ' ' + (by + 96) + ' ' +
+          (half + side * 260) + ' ' + (by + 60) + ' ' +
+          (half + side * 180) + ' ' + (by + 20), WIRE[3], 4.5);
+
+        /* A relay block with its lamp, bolted to the top rail. The lamp needs
+           something to be mounted on or it reads as a floating dot. */
+        S.el('rect', { x: bx, y: by, width: bw, height: 62, rx: 12,
+          fill: '#3a474e', stroke: INK, 'stroke-width': 4 }, svg);
+        S.el('rect', { x: bx + 8, y: by + 7, width: bw - 16, height: 7, rx: 4,
+          fill: 'rgba(255,255,255,.14)' }, svg);
+        bolt(svg, bx + 14, by + 48, 6);
+        bolt(svg, bx + bw - 14, by + 48, 6);
+        pilotLamp(svg, bx + 30, by + 28, side < 0 ? '#d0574f' : '#ffc861');
+        /* Anchored from the left, at a fixed inset. text-anchor:"end" did not
+           land where getComputedTextLength said it would and the label ran off
+           the right of the plate, so nothing here relies on it. */
+        if (bw > 128) {
+          stencil(svg, bx + 56, by + 28, side < 0 ? 'ARMED' : 'LIVE', 13);
+        }
+      }
+
+      /* the bottom rail: one hazard bar per flank, and a stencil under it */
+      if (flank > 110) {
+        var hw = Math.min(flank + 40, half - 150);
+        /* The rail's lowest band carries the case bevel and swallows anything
+           drawn into it, so both pieces sit in its upper half. */
+        var hx = side < 0 ? 34 : BOMB_W - 34 - hw;
+        /* clear of the bay panel's drop shadow, which was clipping the top of
+           the lettering */
+        stencil(svg, hx + 4, botY + 14, side < 0 ? 'DO NOT CUT' : 'CHARGE LIVE', 15);
+        hazardBar(svg, hx, botY + 32, hw, 24);
+      }
+    });
+
+    scuffs(svg, BOMB_W * 7919 + BOMB_H);
     frame(svg);
     return svg;
   }
