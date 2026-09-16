@@ -1,5 +1,12 @@
 # DEFUSAL
 
+**The game is called MATHEMATICKS.** That is the name on the title screen, in
+the manifest, on the printed manual and on the competition entry. DEFUSAL is
+the codename this repository, the JavaScript namespace and the source headers
+were written under, and it stays — renaming a namespace buys nothing and risks
+everything a fortnight before a competition. Anything an audience sees says
+MATHEMATICKS; anything only a developer sees may say DEFUSAL.
+
 A two-player co-op maths bomb. The **defuser** holds this screen; the **expert**
 holds the printed manual. The app never shows a rule, a hint, a unit name or a
 solution during play — it only draws the bomb, generates valid puzzles and
