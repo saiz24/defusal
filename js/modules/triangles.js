@@ -3,13 +3,17 @@
 
    Manual rule implemented here
    ----------------------------
-   A triangle with its three angle measures, three colour buttons (red, green,
-   blue) in a randomised left-to-right order, and a four-way D-pad.
+   A triangle with its three angle measures, a spec plate carrying three
+   lengths, three colour buttons (red, green, blue) in a randomised
+   left-to-right order, and a four-way D-pad.
    Seven presses: the three colours first, then the four directions.
 
    1. Side classification chooses the colour SLOTS (left-to-right positions,
       not colours):
         equilateral -> 2, 1, 3      isosceles -> 3, 2, 1      scalene -> 1, 2, 3
+      Then read the three lengths on the spec plate. If the two shorter ones
+      add to MORE than the longest they can form a triangle: press the slots
+      as listed. If they cannot, press the same three slots in REVERSE.
    2. D = largest angle - smallest angle.
    3. X = 10 if right, 20 if acute, 30 if obtuse.
    4. D = 0        -> Z = X
@@ -56,6 +60,26 @@
     return [a, b, c];
   }
 
+  /* The three lengths on the spec plate are NOT the drawn triangle's sides.
+     A drawn triangle always satisfies the inequality, so testing its own sides
+     would be a rule with one answer; half of these plates are impossible.
+     This is the Grade 8 competency the module reaches for — "apply the
+     triangle inequality theorems to establish results for angles and sides in
+     triangles" — where classifying by sides and angles alone is Grade 4. */
+  function formsTriangle(sides) {
+    var t = sides.slice().sort(function (x, y) { return x - y; });
+    return t[0] + t[1] > t[2];
+  }
+
+  function specSides(rng, want) {
+    var guard = 0, trial;
+    while (guard++ < 600) {
+      trial = [D.rint(rng, 3, 30), D.rint(rng, 3, 30), D.rint(rng, 4, 44)];
+      if (formsTriangle(trial) === want) return trial;
+    }
+    return want ? [6, 8, 10] : [3, 4, 20];
+  }
+
   function generate(rng, ctx) {
     var target = D.pick(rng, COMBOS), angles = null, guard = 0;
 
@@ -74,7 +98,8 @@
 
     return {
       angles: D.shuffle(rng, angles),
-      order: D.shuffle(rng, ['red', 'green', 'blue'])
+      order: D.shuffle(rng, ['red', 'green', 'blue']),
+      sides: specSides(rng, rng() < 0.5)
     };
   }
 
@@ -118,9 +143,11 @@
 
     var slots = SLOTS[sc];
     var colors = slots.map(function (slot) { return p.order[slot - 1]; });
+    var possible = formsTriangle(p.sides);
+    if (!possible) colors = colors.slice().reverse();
 
     return {
-      sideClass: sc, angleClass: ac, d: dd, x: x, z: z,
+      sideClass: sc, angleClass: ac, d: dd, x: x, z: z, possible: possible,
       slots: slots, colors: colors, dirs: dirs,
       presses: colors.concat(dirs)
     };
@@ -128,7 +155,7 @@
 
   function debugText(p, s) {
     return s.colors.map(function (c) { return c.charAt(0).toUpperCase(); })
-      .join('') + ' / ' +
+      .join('') + (s.possible ? '' : ' (rev)') + ' / ' +
       s.dirs.map(function (d) {
         return { up: '↑', down: '↓', left: '←', right: '→' }[d];
       }).join('') + '   (D=' + s.d + ' X=' + s.x + ' Z=' + s.z + ')';
@@ -142,10 +169,16 @@
     });
     if (s.presses.length !== 7) fail('press sequence is not seven long');
     if (SLOTS[s.sideClass].join() !== s.slots.join()) fail('slot rule wrong');
-    /* colours must be the round's order read through the slot positions */
-    s.slots.forEach(function (slot, i) {
-      if (s.colors[i] !== p.order[slot - 1]) fail('colour slot ' + i + ' wrong');
+    if (!Array.isArray(p.sides) || p.sides.length !== 3) fail('no spec plate');
+    p.sides.forEach(function (v) {
+      if (!Number.isInteger(v) || v < 1) fail('bad spec length ' + v);
     });
+    if (s.possible !== formsTriangle(p.sides)) fail('inequality read wrong');
+    /* colours are the round's order read through the slot positions, reversed
+       when the spec plate cannot close into a triangle */
+    var wantColors = s.slots.map(function (slot) { return p.order[slot - 1]; });
+    if (!s.possible) wantColors = wantColors.slice().reverse();
+    if (wantColors.join() !== s.colors.join()) fail('colour order wrong');
     var sorted = p.angles.slice().sort(function (x, y) { return x - y; });
     if (s.d !== sorted[2] - sorted[0]) fail('D wrong');
     var wantX = s.angleClass === 'right' ? 10 : (s.angleClass === 'acute' ? 20 : 30);
@@ -199,7 +232,7 @@
     var ys = pts.map(function (q) { return q.y; });
     var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
     var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
-    var boxW = 236, boxH = 138;
+    var boxW = 236, boxH = 124;
     var k = Math.min(boxW / (maxX - minX || 1), boxH / (maxY - minY || 1));
     var offX = 40 + (boxW - (maxX - minX) * k) / 2;
     var offY = 58 + (boxH - (maxY - minY) * k) / 2;
@@ -225,7 +258,7 @@
       /* clamp the label inside the frame: a vertex near the edge would
          otherwise push its number off the panel */
       var lx = D.clamp(q.x - b.x * 20, 28, W - 28);
-      var ly = D.clamp(q.y - b.y * 20, 18, H - 18);
+      var ly = D.clamp(q.y - b.y * 20, 18, H - 66);
       var t = S.text(svg, lx, ly, p.angles[i] + '°', {
         'text-anchor': 'middle', fill: '#e8d9a8', 'font-size': 13,
         'font-weight': '700', stroke: '#171d20', 'stroke-width': 3.5,
@@ -233,6 +266,19 @@
       });
       t.setAttribute('dominant-baseline', 'middle');
     });
+
+    /* the spec plate, under the triangle: three lengths and nothing else */
+    var plX = 40, plW = 236, plY = 206, plH = 36;
+    S.el('rect', { x: plX, y: plY, width: plW, height: plH, rx: 8,
+      fill: '#c9d3d8', stroke: '#333b3f', 'stroke-width': 3 }, svg);
+    S.el('rect', { x: plX + 6, y: plY + 5, width: plW - 12, height: 6, rx: 3,
+      fill: 'rgba(255,255,255,.5)' }, svg);
+    var plT = S.text(svg, plX + plW / 2, plY + plH / 2,
+      p.sides.join('   \u00b7   '), {
+        'text-anchor': 'middle', fill: '#1c2429', 'font-size': 18,
+        'font-weight': '700'
+      });
+    plT.setAttribute('dominant-baseline', 'middle');
 
     var pressed = 0;
 
