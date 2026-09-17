@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MATHEMATICKS — The Manual</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+/* ==========================================================================
+   THE DIGITAL MANUAL
+   The Expert's half of the game. It is a separate document on purpose: in
+   two-device mode it opens on a second phone, so the Defuser's screen is
+   still the only place the device can be seen.
+   Every word here is extracted from the printed manual by
+   tools/extract-manual.py — nothing is retyped, so the two cannot drift.
+   ========================================================================== */
+html, body { height: auto; overflow: auto; }
+body {
+  background: #0b1115;
+  color: var(--text);
+  padding: 0 0 80px;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--rim); }
+
+/* ---- top bar ---- */
+.bar {
+  position: sticky; top: 0; z-index: 30;
+  background: rgba(11,17,21,.96);
+  border-bottom: 1px solid #22323a;
+  padding: 12px max(16px, env(safe-area-inset-left)) 12px max(16px, env(safe-area-inset-right));
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+}
+.bar-row { display: flex; gap: 12px; align-items: center;
+           max-width: 1080px; margin: 0 auto; flex-wrap: wrap; }
+.brand { font-size: 15px; letter-spacing: .18em; color: var(--rim); white-space: nowrap; }
+.search {
+  flex: 1 1 220px; min-width: 0; min-height: 44px;
+  background: #16222a; color: var(--text);
+  border: 2px solid #2b3d46; border-radius: 10px;
+  padding: 8px 14px; font-family: var(--round); font-size: 15px;
+}
+.search:focus { outline: none; border-color: var(--rim); }
+.count { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+
+/* ---- contents ---- */
+.wrap { max-width: 1080px; margin: 0 auto;
+        padding: 0 max(16px, env(safe-area-inset-left)); }
+.toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 26px; }
+.toc a {
+  display: inline-block; padding: 8px 13px; min-height: 40px;
+  border: 1px solid #2b3d46; border-radius: 999px;
+  font-size: 13px; text-decoration: none; color: var(--text);
+  background: #131f26; line-height: 24px;
+}
+.toc a:hover { border-color: var(--rim); }
+.toc a .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+              margin-right: 7px; vertical-align: middle; }
+
+.lede { font-size: 14px; color: var(--ink-2); line-height: 1.6;
+        margin: 18px 0 0; max-width: 62ch; }
+
+/* ---- a module ---- */
+.mod { border-top: 1px solid #22323a; padding: 30px 0 10px; scroll-margin-top: 84px; }
+.mod-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.mod h2 { margin: 0; font-size: 26px; letter-spacing: .02em; }
+.badge {
+  font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  border: 1px solid; border-radius: 6px; padding: 3px 9px;
+}
+.badge.easy   { color: #6cc48a; border-color: #36624a; }
+.badge.medium { color: #e0b552; border-color: #6b5628; }
+.badge.hard   { color: #e0766c; border-color: #6e3b36; }
+.tagline { margin: 6px 0 0; color: var(--ink-2); font-style: italic; font-size: 15px; }
+
+/* ---- the live example ---- */
+.example { margin: 20px 0 6px; }
+.example-head {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-2); margin-bottom: 10px;
+}
+.example-head button {
+  font-family: var(--round); font-size: 12px; letter-spacing: .1em;
+  background: #1b2a33; color: var(--text);
+  border: 1px solid #33495459; border-radius: 8px;
+  padding: 7px 13px; min-height: 36px; cursor: pointer;
+}
+.example-head button:hover { border-color: var(--rim); color: var(--rim); }
+.serial-chip { color: var(--rim); letter-spacing: .22em; }
+.stage {
+  background: #7f9198; border-radius: 14px; padding: 12px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.stage .bay { position: relative; }
+.note {
+  font-size: 12px; color: var(--ink-2); margin: 8px 0 0; line-height: 1.55;
+}
+
+/* ---- the rules ---- */
+.rules { margin-top: 8px; max-width: 74ch; }
+.rules p { line-height: 1.62; margin: 13px 0; }
+.rules p.h { font-size: 17px; font-weight: 700; color: #dbe9ee;
+             margin: 26px 0 6px; letter-spacing: .01em; }
+.rules p.attn { color: var(--amber); font-weight: 700; letter-spacing: .06em;
+                margin: 24px 0 4px; }
+.rules li { line-height: 1.62; margin: 7px 0; }
+.rules ul { padding-left: 22px; margin: 10px 0; }
+.rules b { color: #fff; }
+.tablewrap { overflow-x: auto; margin: 14px 0; -webkit-overflow-scrolling: touch; }
+.rules table { border-collapse: collapse; font-size: 14px; min-width: 100%; }
+.rules th, .rules td {
+  border: 1px solid #2b3d46; padding: 7px 11px; text-align: left;
+  white-space: nowrap;
+}
+.rules thead th { background: #16232b; color: #cfe3ea; font-weight: 700; }
+.rules tbody tr:nth-child(even) { background: rgba(255,255,255,.022); }
+.rules tr.subhead th { background: #16232b; color: #cfe3ea; font-weight: 700; }
+
+mark { background: var(--amber); color: #10181c; border-radius: 3px; padding: 0 2px; }
+.empty { padding: 50px 0; color: var(--ink-2); text-align: center; }
+.mod[hidden] { display: none !important; }
+
+@media (max-width: 700px) {
+  .mod h2 { font-size: 22px; }
+  .rules p, .rules li { font-size: 15px; }
+  .brand { font-size: 13px; }
+}
+
+@media print {
+  .bar, .toc, .example-head button, .note { display: none !important; }
+  body { background: #fff; color: #000; }
+  .mod { break-inside: avoid; border-top: 1px solid #999; }
+  .rules b, .rules p.h { color: #000; }
+  .rules th, .rules td { border-color: #666; }
+  .rules thead th { background: #eee; color: #000; }
+}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="bar-row">
+    <span class="brand">MATHEMATICKS · MANUAL</span>
+    <input class="search" id="q" type="search" autocomplete="off"
+           placeholder="Search the manual — try &ldquo;serial&rdquo;, &ldquo;reflex&rdquo;, &ldquo;binary&rdquo;">
+    <span class="count" id="count"></span>
+  </div>
+</div>
+
+<div class="wrap">
+  <p class="lede">
+    The Expert holds this. The Defuser holds the device and may not read it;
+    you may not look at the device. Modules are not labelled on screen — find
+    yours by what the Defuser describes.
+    Each module below carries a live example: it is generated by the game
+    itself, so it looks exactly like the real thing. It is an illustration
+    only, and its answer is not given.
+  </p>
+  <nav class="toc" id="toc"></nav>
+  <main id="mods"></main>
+  <p class="empty" id="empty" hidden>Nothing in the manual matches that.</p>
+</div>
+
+<script src="../js/core.js"></script>
+<script src="../js/audio.js"></script>
+<script src="../js/svg.js"></script>
+<script src="../js/modules/cards.js"></script>
+<script src="../js/modules/sequences.js"></script>
+<script src="../js/modules/mutex.js"></script>
+<script src="../js/modules/rationality.js"></script>
+<script src="../js/modules/parallel.js"></script>
+<script src="../js/modules/venn.js"></script>
+<script src="../js/modules/triangles.js"></script>
+<script src="../js/modules/angles.js"></script>
+<script src="../js/modules/units.js"></script>
+<script src="../js/modules/units-render.js"></script>
+<script src="rules.js"></script>
+<script>
+(function () {
+  'use strict';
+  var D = DEFUSAL, R = MANUAL_RULES;
+  var TINT = { easy: '#6cc48a', medium: '#e0b552', hard: '#e0766c' };
+
+  function el(tag, cls, parent, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+
+  /* ---- one live round of a module, mounted for real ---------------------- */
+  /* The manual must never be able to change what the game does, so the
+     example is read-only: solve, strike and progress are no-ops and the
+     module is told it is never solved. */
+  function mountExample(stage, def, seed) {
+    var rng = D.makeRng(seed);
+    var serial = D.makeSerial(rng);
+    var ctx = { serial: serial, serialInfo: D.serialInfo(serial) };
+    var bay = el('div', 'bay module' + (def.wide ? ' wide' : ''), null);
+    bay.style.width = (def.wide ? 612 : 300) + 'px';
+    bay.style.height = '300px';
+    bay.style.margin = '0 auto';
+    var body = el('div', 'body', bay);
+    var puzzle = def.generate(rng, ctx);
+    def.mount(body, {
+      puzzle: puzzle, solution: def.solve(puzzle, ctx), ctx: ctx,
+      isSolved: function () { return false; },
+      solve: function () {}, strike: function () {}, progress: function () {},
+      onSolved: null, cleanup: null
+    });
+    stage.innerHTML = '';
+    stage.appendChild(bay);
+    return serial;
+  }
+
+  /* ---- render the rules -------------------------------------------------- */
+
+  function runsInto(node, runs, fallback) {
+    if (!runs || !runs.length) { node.textContent = fallback || ''; return; }
+    runs.forEach(function (r) {
+      var t = r[1] ? el('b', null, node) : node;
+      if (r[1]) t.textContent = r[0]; else t.appendChild(document.createTextNode(r[0]));
+    });
+  }
+
+  function isHeading(b) {
+    return /^Step \d|^Diagram \d/.test(b.text) ||
+           (b.style || '').toLowerCase().indexOf('heading') === 0;
+  }
+
+  function renderBlocks(host, blocks) {
+    var list = null;
+    blocks.forEach(function (b) {
+      if (b.kind === 'table') {
+        list = null;
+        var wrap = el('div', 'tablewrap', host);
+        var tb = el('table', null, wrap);
+        var rows = b.rows.filter(function (r) {
+          return r.some(function (c) { return c !== ''; });
+        });
+        if (!rows.length) { wrap.remove(); return; }
+        var head = el('thead', null, tb);
+        var hr = el('tr', null, head);
+        rows[0].forEach(function (c) { el('th', null, hr, c); });
+        var body = el('tbody', null, tb);
+        var headTail = rows[0].slice(1).join('\u0001');
+        rows.slice(1).forEach(function (r) {
+          var tr = el('tr', null, body);
+          /* Word keeps the metric and American unit charts in one table with a
+             second header row part-way down. A row whose tail repeats the
+             header's is that second header, not data. */
+          var sub = r.length === rows[0].length && r.slice(1).join('\u0001') === headTail;
+          if (sub) tr.className = 'subhead';
+          r.forEach(function (c) { el(sub ? 'th' : 'td', null, tr, c); });
+        });
+        return;
+      }
+      if (b.kind === 'list') {
+        if (!list) list = el('ul', null, host);
+        runsInto(el('li', null, list), b.runs, b.text);
+        return;
+      }
+      list = null;
+      /* Attention! is styled as a warning, and it is checked BEFORE the
+         heading test because Word gives it a heading style too. */
+      var cls = b.text === 'Attention!' ? 'attn' : (isHeading(b) ? 'h' : '');
+      runsInto(el('p', cls, host), b.runs, b.text);
+    });
+  }
+
+  /* ---- build ------------------------------------------------------------- */
+
+  var toc = document.getElementById('toc');
+  var mods = document.getElementById('mods');
+  var seeds = {};
+
+  R.modules.forEach(function (m, i) {
+    var def = D.byId[m.id];
+
+    var link = el('a', null, toc);
+    link.href = '#' + m.id;
+    el('span', 'dot', link).style.background = TINT[m.difficulty] || '#888';
+    link.appendChild(document.createTextNode(m.name));
+
+    var sec = el('section', 'mod', mods);
+    sec.id = m.id;
+    sec.dataset.name = m.name.toLowerCase();
+
+    var head = el('div', 'mod-head', sec);
+    el('h2', null, head, m.name);
+    el('span', 'badge ' + m.difficulty, head, m.difficulty);
+    el('p', 'tagline', sec, m.tagline || '');
+
+    if (def) {
+      var ex = el('div', 'example', sec);
+      var exHead = el('div', 'example-head', ex);
+      el('span', null, exHead, 'Example');
+      var chip = el('span', 'serial-chip', exHead);
+      var btn = el('button', null, exHead, 'Another example');
+      btn.type = 'button';
+      var stage = el('div', 'stage', ex);
+      seeds[m.id] = 1000 + i * 37;
+      function draw() {
+        chip.textContent = 'SERIAL ' + mountExample(stage, def, seeds[m.id]);
+      }
+      btn.addEventListener('click', function () { seeds[m.id] += 101; draw(); });
+      draw();
+      el('p', 'note', ex,
+        'A real round, drawn by the game. The serial shown belongs to this ' +
+        'example — in play, read the serial off the device itself.');
+    }
+
+    var rules = el('div', 'rules', sec);
+    renderBlocks(rules, m.blocks);
+  });
+
+  /* ---- search ------------------------------------------------------------ */
+  /* Filters whole modules and highlights hits inside them. Highlighting walks
+     text nodes rather than touching innerHTML, so the tables and the live
+     artwork survive a search unharmed. */
+
+  var q = document.getElementById('q');
+  var countEl = document.getElementById('count');
+  var emptyEl = document.getElementById('empty');
+  var sections = [].slice.call(mods.querySelectorAll('.mod'));
+
+  function clearMarks(root) {
+    root.querySelectorAll('mark').forEach(function (m) {
+      var t = document.createTextNode(m.textContent);
+      m.parentNode.replaceChild(t, m);
+    });
+    root.normalize();
+  }
+
+  function markAll(root, needle) {
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        if (n.parentNode.closest('.stage, mark')) return NodeFilter.FILTER_REJECT;
+        return n.nodeValue.toLowerCase().indexOf(needle) >= 0
+          ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) {
+      var text = node.nodeValue, low = text.toLowerCase(), at = 0, frag = document.createDocumentFragment(), idx;
+      while ((idx = low.indexOf(needle, at)) >= 0) {
+        if (idx > at) frag.appendChild(document.createTextNode(text.slice(at, idx)));
+        var mk = document.createElement('mark');
+        mk.textContent = text.slice(idx, idx + needle.length);
+        frag.appendChild(mk);
+        at = idx + needle.length;
+      }
+      if (at < text.length) frag.appendChild(document.createTextNode(text.slice(at)));
+      node.parentNode.replaceChild(frag, node);
+    });
+    return hits.length;
+  }
+
+  function run() {
+    var needle = q.value.trim().toLowerCase();
+    var shown = 0;
+    sections.forEach(function (sec) {
+      var rules = sec.querySelector('.rules');
+      clearMarks(sec);
+      if (!needle) { sec.hidden = false; shown++; return; }
+      var hit = sec.dataset.name.indexOf(needle) >= 0;
+      var inside = markAll(rules, needle);
+      hit = hit || inside > 0;
+      sec.hidden = !hit;
+      if (hit) shown++;
+    });
+    emptyEl.hidden = shown > 0;
+    countEl.textContent = needle
+      ? shown + ' of ' + sections.length + ' modules'
+      : sections.length + ' modules';
+  }
+
+  q.addEventListener('input', run);
+  run();
+
+  /* "/" focuses the search, the way every reference document does */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '/' && document.activeElement !== q) { e.preventDefault(); q.focus(); }
+    if (e.key === 'Escape' && document.activeElement === q) { q.value = ''; run(); q.blur(); }
+  });
+})();
+</script>
+</body>
+</html>

@@ -210,6 +210,11 @@ node tools/run-play.js 150        # mounts every module for real against a
                                   # losing interaction, then plays whole bombs
                                   # to a defusal, a three-strike loss and a
                                   # time-out
+python3 tools/extract-manual.py   # rebuilds manual/rules.js from the printed
+                                  # manual. Run it after EVERY edit to the
+                                  # .docx: the digital manual is generated from
+                                  # that extraction and retypes nothing, which
+                                  # is what stops the two drifting apart
 python3 tools/check-manual.py     # asserts the PRINTED MANUAL agrees with the
                                   # code: every unit chart value, the angle
                                   # digit table, the binary place values, and
@@ -231,6 +236,10 @@ never loads it.
 
 ```
 index.html
+manual/index.html       the digital manual: the same rules as the print, with a
+                        live example of every module drawn by the game itself,
+                        searchable, and readable on a phone
+manual/rules.js         GENERATED from the .docx — never edited by hand
 style.css
 js/core.js              namespace, seeded RNG, module registry, serial helpers
 js/svg.js               SVG construction helpers
