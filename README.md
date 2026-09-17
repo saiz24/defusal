@@ -166,6 +166,42 @@ in a single transform, so nothing ever reflows. Press-by-press progress on every
 pips in the same corner of its bay; a solved bay dims and its corner lamp goes
 green and its whole outline turns green; a strike flashes the bay red.
 
+## On a phone
+
+The case is laid out at a fixed design size and scaled to the viewport in one
+transform. On a 844x390 phone that scale is about 0.48, which has two
+consequences worth knowing:
+
+* **A stylesheet pixel is not a glass pixel inside the case.** `min-height: 44px`
+  on a control inside the transform becomes about 21px of actual glass. Anything
+  that has to stay thumb-sized is therefore sized in case units big enough to
+  survive the scale, not in the 44px the guidelines quote.
+* **Unfocused, a module is not readable.** A 12px label renders at about 6px.
+  Focus view is not a convenience on a phone, it is the way the game is played:
+  one module at a time, filling the screen.
+
+So on a coarse pointer:
+
+* **Tapping anywhere on a module focuses it.** The lens button unfocused is
+  about twelve device pixels across, and making a player hit that before they
+  can read anything was the single worst thing about this game on a phone. On a
+  mouse a stray click still lands on nothing, as it always has.
+* **A focused module fills about 82% of the screen width**, and the case is
+  lifted by half the difference between the two rails, because the grid is not
+  centred in the case and the bay otherwise hangs off the bottom.
+* **The clock is pinned to the glass while a module is focused**, since the
+  case's own control strip is pushed off the top by the zoom.
+* **Focusing an answer box pulls its module forward first**, and `visualViewport`
+  lifts the case clear of the on-screen keyboard — the keyboard shrinks the
+  visual viewport without resizing the window, so nothing else reports it.
+
+Measured at 844x390, focused: smallest label 20px, smallest control 55px, and
+at 740x360, 18px and 48px. Before this pass: 12px and 32px.
+
+**Still to check on real hardware**, which a headless browser cannot do: the
+actual on-screen keyboard on iOS and Android, sustained frame rate, and whether
+the ruler and cylinder gradations survive a real phone's pixel density.
+
 ## Motion and sound
 
 Screens cross-fade. Arming a bomb plays a power-on ripple: the timer lights

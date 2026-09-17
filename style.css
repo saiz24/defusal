@@ -1490,3 +1490,42 @@ body.manual-open .flip-btn { visibility: hidden; }
 
 mark { background: var(--amber); color: #10181c; border-radius: 3px; padding: 0 2px; }
 .mod[hidden] { display: none !important; }
+
+/* ==========================================================================
+   TOUCH
+   The case is one scaled transform, so a CSS min-height inside it is scaled
+   too: 44px of stylesheet becomes about 21px of glass on a phone. Anything
+   that must stay thumb-sized is therefore sized in case units large enough to
+   survive the scale, and the rest is handled by making the whole bay a target.
+   ========================================================================== */
+
+@media (pointer: coarse) {
+  /* the lens, at a size that survives the case scale */
+  .zoom { width: 56px; height: 56px; border-radius: 12px; opacity: .92; }
+  .zoom svg { width: 30px; height: 30px; stroke-width: 2.2; }
+  /* the two case controls sit outside the transform, so plain px is honest */
+  .flip-btn { width: 52px; height: 52px; }
+}
+
+/* The keyboard takes the bottom of the screen and the case is centred in the
+   whole window, so without this it sits behind the keys. --kb-lift is set from
+   visualViewport; it is 0 whenever no keyboard is up. */
+:root { --kb-lift: 0px; }
+body.kb-open .bomb { margin-top: var(--kb-lift); }
+body.kb-open .flip-btn { opacity: .35; }
+
+/* the pinned clock, for a focused module on a phone */
+.focus-clock {
+  position: fixed; z-index: 70;
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  left: calc(8px + env(safe-area-inset-left, 0px));
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 7px 13px;
+  background: rgba(8, 13, 16, .92);
+  border: 1px solid #2b3d46; border-radius: 10px;
+  font-family: var(--mono); font-size: 20px; letter-spacing: .05em;
+  color: var(--amber); pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0,0,0,.5);
+}
+.focus-clock.urgent { color: var(--red); border-color: #6e3b36; }
+.focus-clock .fc-count { font-size: 13px; color: var(--ink-2); }

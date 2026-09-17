@@ -106,11 +106,13 @@
   var scaleNow = 1, tiltX = 0, tiltY = 0;
   var viewScale = 1, wide = false;     /* the defuser's own zoom-out */
   var armFactor = 1, armTilt = 0;      /* the arming pull-back */
+  var focusBoost = 1;                  /* touch only: fill the screen on focus */
+  var focusShiftY = 0;                 /* ...and re-centre it while we are there */
 
   function applyBombTransform() {
     dom.bomb.style.transform =
-      'translate(-50%, -50%) scale(' +
-        (scaleNow * armFactor * viewScale).toFixed(4) + ')' +
+      'translate(-50%, calc(-50% + ' + focusShiftY.toFixed(1) + 'px)) scale(' +
+        (scaleNow * armFactor * viewScale * focusBoost).toFixed(4) + ')' +
       ' rotateX(' + (tiltX + armTilt).toFixed(2) + 'deg)' +
       ' rotateY(' + tiltY.toFixed(2) + 'deg)';
   }
@@ -125,6 +127,15 @@
     scaleNow = Math.min((vw - pad) / (BOMB_W || 1724),
                         (vh - pad) / (BOMB_H || 938));
     applyBombTransform();
+  }
+
+  /* A finger, not a mouse. Everything below that changes for touch is gated on
+     this rather than on width: a small window on a laptop still has a cursor,
+     and a large tablet still has a finger. */
+  function coarse() {
+    try {
+      return window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    } catch (e) { return false; }
   }
 
   function reducedMotion() {
@@ -1002,6 +1013,10 @@
     if (!focused) return;
     focused.bay.classList.remove('focused');
     focused.bay.style.transform = '';
+    if (focusBoost !== 1 || focusShiftY !== 0) {
+      focusBoost = 1; focusShiftY = 0; applyBombTransform();
+    }
+    if (dom.focusClock) dom.focusClock.hidden = true;
     dom.faces[focused.faceIndex].casing.classList.remove('focusing');
     focused = null;
     if (!silent) D.audio.zoom(false);
@@ -1025,6 +1040,29 @@
       (GRID_H / 2 - c.y).toFixed(1) + 'px) translateZ(60px) scale(' +
       k.toFixed(3) + ')';
     dom.faces[inst.faceIndex].casing.classList.add('focusing');
+
+    /* On a phone the case is scaled to about 0.45, so a focused bay still only
+       reaches ~450px and its controls land near 30px — under the 44px both
+       Apple and Google publish as the floor. Push the whole case in until the
+       focused module fills most of the screen; the scrim hides the rest, so
+       there is nothing to see around it anyway. */
+    if (coarse()) {
+      var onScreen = w * k * scaleNow;
+      var want = (window.innerWidth || 844) * 0.82;
+      focusBoost = D.clamp(want / Math.max(1, onScreen), 1, 2.4);
+      /* The grid is not centred in the case — the top rail carries the control
+         strip and is 90 units deeper than the bottom one — so a bay pushed to
+         the grid's centre sits below the middle of the screen and hangs off the
+         bottom once it is this large. Lift the case by half that difference. */
+      focusShiftY = -((RAIL_TOP - RAIL_BOT) / 2) * scaleNow * focusBoost;
+      applyBombTransform();
+      if (dom.focusClock) {
+        dom.focusClock.hidden = false;
+        dom.focusClockCount.textContent =
+          state.solved + '/' + state.instances.length;
+      }
+    }
+
     D.audio.zoom(true);
   }
 
@@ -1225,6 +1263,13 @@
         if ((' ' + cls + ' ').indexOf(' hit ') >= 0) { D.audio.press(); return; }
         n = n.parentNode;
       }
+      /* Nothing interactive was hit. On a mouse that stays what it has always
+         been — the case is scenery and a stray click lands on nothing. On a
+         finger it focuses the module instead: unfocused, the lens button is
+         about twelve device pixels across, and requiring a player to hit that
+         before they can read anything is the single worst thing about this
+         game on a phone. */
+      if (coarse() && !state.arming) toggleFocus(inst);
     });
 
     var inst = {
@@ -1268,6 +1313,17 @@
       toggleFocus(inst);
     });
 
+    /* Touch only: when a module's answer box takes focus the on-screen keyboard
+       eats roughly half the screen, and an unfocused bay puts that box at
+       about a third of legible size. Pull the module forward first, so the
+       browser scrolls something worth looking at into view. */
+    body.addEventListener('focusin', function (e) {
+      if (!coarse()) return;
+      var tag = e.target && e.target.tagName;
+      if (tag !== 'INPUT') return;
+      if (focused !== inst) toggleFocus(inst);
+    });
+
     def.mount(body, inst);
     /* debug builds only: the headless harness drives real games through this */
     if (debug) bay.__instance = inst;
@@ -1277,6 +1333,7 @@
 
   function updateCount() {
     var txt = state.solved + '/' + state.instances.length;
+    if (dom.focusClockCount) dom.focusClockCount.textContent = txt;
     dom.clocks.forEach(function (c) { c.count.textContent = txt; });
   }
 
@@ -1325,6 +1382,8 @@
        must be able to see what reading the manual is costing them */
     if (ticked && dom.moClock) dom.moClock.textContent = text;
     if (dom.moClock) dom.moClock.classList.toggle('urgent', t <= 30);
+    if (ticked && dom.focusClockTime) dom.focusClockTime.textContent = text;
+    if (dom.focusClock) dom.focusClock.classList.toggle('urgent', t <= 30);
     dom['screen-game'].classList.toggle('critical', t <= 30 && state.running);
   }
 
@@ -1576,6 +1635,9 @@
       armingLine: q('arming-line'),
       resultStats: q('result-stats'),
       manualBtn: q('manual-btn'),
+      focusClock: q('focus-clock'),
+      focusClockTime: q('focus-clock-time'),
+      focusClockCount: q('focus-clock-count'),
       manualOverlay: q('manual-overlay'),
       moBody: q('mo-body'),
       moToc: q('mo-toc'),
@@ -1716,6 +1778,28 @@
     });
 
     window.addEventListener('resize', fit);
+
+    /* The on-screen keyboard does not resize the window on most phones — it
+       shrinks the VISUAL viewport and leaves layout alone, so a centred case
+       simply ends up underneath it. visualViewport is the only thing that
+       reports this. We lift the case by half of whatever the keyboard took,
+       which re-centres it in the space that is left. */
+    if (window.visualViewport) {
+      var vv = window.visualViewport, kbRaf = 0;
+      var onViewport = function () {
+        if (kbRaf) return;
+        kbRaf = requestAnimationFrame(function () {
+          kbRaf = 0;
+          var taken = Math.max(0, (window.innerHeight || 0) - vv.height);
+          var open = taken > 120;      /* smaller than any real keyboard */
+          document.body.classList.toggle('kb-open', open);
+          document.documentElement.style.setProperty(
+            '--kb-lift', open ? (-Math.round(taken / 2) + 'px') : '0px');
+        });
+      };
+      vv.addEventListener('resize', onViewport);
+      vv.addEventListener('scroll', onViewport);
+    }
     dom['screen-game'].addEventListener('mousemove', trackCursor);
     dom['screen-game'].addEventListener('mouseleave', function () {
       tiltX = 0; tiltY = 0; applyBombTransform();

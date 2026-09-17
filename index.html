@@ -106,6 +106,13 @@
           title="turn the case over">
     <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.6 5.9"></path><path d="M3 19v-6h6"></path></svg>
   </button>
+  <!-- Touch only. Focusing a module on a phone pushes the case's own control
+       strip off the top of the screen, and a countdown you cannot see is not a
+       countdown. This is the same clock, pinned to the glass. -->
+  <div id="focus-clock" class="focus-clock" hidden>
+    <span id="focus-clock-time">00:00</span>
+    <span id="focus-clock-count" class="fc-count">0/0</span>
+  </div>
   <div id="bomb" class="bomb">
     <div id="flipper" class="flipper">
 
