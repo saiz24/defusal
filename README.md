@@ -60,6 +60,27 @@ The species is never named, described or explained, nothing states what
 failure would mean, and there is no depiction of harm. `prefers-reduced-motion`
 disables the animation and prints each line immediately.
 
+## Three ways to hold the two halves
+
+The game rests on one rule: the person who can see the device and the person
+who can read the rules are not the same person. All three modes keep that rule.
+They differ only in where the manual lives and what it costs to reach it. The
+mode is chosen on the menu and remembered in the same guarded `localStorage`.
+
+| Mode | Players | The manual |
+|---|---|---|
+| **PRINTED** | two | on paper. The original, and still the best: nothing to set up, nothing to charge. |
+| **TWO DEVICE** | two | `manual/index.html`, open on a second phone. Same game, no printer. |
+| **SOLO** | one | on this screen — but opening it hides the device and the clock does not stop. |
+
+Solo is deliberately not the default. With one player the information gap stops
+being a communication problem and becomes a memory-and-retrieval one: a
+different exercise, and an honestly lesser one, since describing mathematics
+precisely to another person is the competency the game exists to drill. What it
+buys is a learner who can practise alone, at home, without a partner — and the
+cost is made visible rather than hidden: the result screen reports how long the
+manual was open and how many times it was opened.
+
 ## The interface
 
 Behind every screen sits a procedural sky (`js/backdrop.js`): four drifting

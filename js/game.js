@@ -1069,7 +1069,8 @@
       seed: seed, config: config, ctx: ctx,
       total: config.seconds, remaining: config.seconds,
       strikes: 0, solved: 0, instances: [],
-      running: true, last: Date.now(), timer: null, nextBeep: 0
+      running: true, last: Date.now(), timer: null, nextBeep: 0,
+      manualMs: 0, manualOpenedAt: 0, manualOpens: 0
     };
 
     clearFocus(true);
@@ -1168,6 +1169,7 @@
     ];
 
     lastClock = '';
+    dom.manualBtn.hidden = !(D.mode && D.mode.is('solo'));
     renderStrikes();
     renderTimer();
     updateCount();
@@ -1319,6 +1321,10 @@
     });
 
     if (ticked) lastClock = text;
+    /* the overlay covers the case, so it carries the clock itself: the player
+       must be able to see what reading the manual is costing them */
+    if (ticked && dom.moClock) dom.moClock.textContent = text;
+    if (dom.moClock) dom.moClock.classList.toggle('urgent', t <= 30);
     dom['screen-game'].classList.toggle('critical', t <= 30 && state.running);
   }
 
@@ -1371,8 +1377,57 @@
     renderTimer();
   }
 
+  /* ---------- the manual, in Solo ------------------------------------------
+     Built once from the same renderer the standalone manual page uses, with
+     the live examples left off: the player has the real device in front of
+     them, so a second drawing of it would only confuse. Opening it hides the
+     case and the clock keeps running, which is the whole point — in the other
+     two modes a second person reads the manual while the Defuser keeps
+     working, and Solo has to pay for that somehow. */
+
+  var manualBuilt = false, manualSections = [];
+
+  function buildManual() {
+    if (manualBuilt) return;
+    if (!window.MANUAL_RENDER || !window.MANUAL_RULES) return;
+    MANUAL_RENDER.toc(dom.moToc, 'mo-');
+    manualSections = MANUAL_RENDER.build(dom.moBody, {
+      examples: false, idPrefix: 'mo-'
+    });
+    dom.moQ.addEventListener('input', function () {
+      MANUAL_RENDER.search(manualSections, dom.moQ.value);
+    });
+    manualBuilt = true;
+  }
+
+  function manualIsOpen() { return !dom.manualOverlay.hidden; }
+
+  function openManual() {
+    if (!state || !state.running || manualIsOpen()) return;
+    buildManual();
+    if (!manualBuilt) return;
+    state.manualOpenedAt = Date.now();
+    state.manualOpens++;
+    dom.manualOverlay.hidden = false;
+    document.body.classList.add('manual-open');
+    D.audio.click();
+    dom.moQ.focus();
+  }
+
+  function closeManual() {
+    if (!manualIsOpen()) return;
+    if (state && state.manualOpenedAt) {
+      state.manualMs += Date.now() - state.manualOpenedAt;
+      state.manualOpenedAt = 0;
+    }
+    dom.manualOverlay.hidden = true;
+    document.body.classList.remove('manual-open');
+    D.audio.click();
+  }
+
   function finish(won, cause) {
     if (!state || !state.running) return;
+    closeManual();
     state.running = false;
     clearInterval(state.timer);
     D.audio.stopBeeps();
@@ -1409,10 +1464,19 @@
     state.pending = pending;
 
     dom.resultStats.innerHTML = '';
-    [[won ? 'TIME REMAINING' : 'TIME ELAPSED', mmss(won ? left : spent)],
-     ['MODULES SOLVED', state.solved + ' / ' + state.instances.length],
-     ['STRIKES', state.strikes + ' / 3']
-    ].forEach(function (r) {
+    var rows = [
+      [won ? 'TIME REMAINING' : 'TIME ELAPSED', mmss(won ? left : spent)],
+      ['MODULES SOLVED', state.solved + ' / ' + state.instances.length],
+      ['STRIKES', state.strikes + ' / 3']
+    ];
+    /* In Solo the manual is the thing that costs time, so the round is not
+       honestly described without saying how much. */
+    if (D.mode && D.mode.is('solo')) {
+      rows.push(['IN THE MANUAL',
+        mmss(Math.round(state.manualMs / 1000)) +
+        (state.manualOpens ? '  (' + state.manualOpens + ')' : '')]);
+    }
+    rows.forEach(function (r) {
       var row = el('div', 'row', dom.resultStats);
       el('span', 'k', row).textContent = r[0];
       el('span', 'v', row).textContent = r[1];
@@ -1511,6 +1575,15 @@
       progress: q('progress'),
       armingLine: q('arming-line'),
       resultStats: q('result-stats'),
+      manualBtn: q('manual-btn'),
+      manualOverlay: q('manual-overlay'),
+      moBody: q('mo-body'),
+      moToc: q('mo-toc'),
+      moQ: q('mo-q'),
+      moClock: q('mo-clock'),
+      modes: q('modes'),
+      modeBlurb: q('mode-blurb'),
+      modeHint: q('mode-hint'),
       resultSeed: q('result-seed'),
       faces: [].map.call(document.querySelectorAll('[data-face]'), function (casing) {
         return {
@@ -1553,6 +1626,29 @@
     dom.next.addEventListener('click', function () {
       D.audio.click(); gotoPage(selIndex + 1);
     });
+
+    /* the mode selector */
+    function paintModes() {
+      var m = D.mode.get();
+      [].forEach.call(dom.modes.querySelectorAll('.mode-btn'), function (b) {
+        b.classList.toggle('on', b.dataset.mode === m);
+      });
+      dom.modeBlurb.textContent = D.mode.META[m].blurb;
+      dom.modeHint.hidden = m !== 'twodevice';
+    }
+    [].forEach.call(dom.modes.querySelectorAll('.mode-btn'), function (b) {
+      b.addEventListener('click', function () {
+        D.audio.click();
+        D.mode.set(b.dataset.mode);
+        paintModes();
+      });
+    });
+    D.mode.apply();
+    paintModes();
+
+    /* the manual, in Solo */
+    dom.manualBtn.addEventListener('click', openManual);
+    q('mo-close').addEventListener('click', closeManual);
 
     q('replay-intro').addEventListener('click', function () {
       D.audio.click();
@@ -1647,12 +1743,20 @@
         return;
       }
       if (e.key === 'Escape') {
+        /* the overlay is the innermost thing on screen, so it goes first:
+           Escape out of the manual must not also abandon the round */
+        if (manualIsOpen()) { closeManual(); return; }
         if (focused) clearFocus();
         else if (state) { teardown(); show('menu'); }
       }
+      if (manualIsOpen()) return;   /* the manual owns the keyboard while open */
       var typing = e.target && e.target.tagName === 'INPUT';
       if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && state && !typing) {
         flip();
+      }
+      if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && !typing &&
+          state && state.running && D.mode && D.mode.is('solo')) {
+        openManual();
       }
       if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey && !typing) {
         D.audio.toggle();

@@ -1341,3 +1341,152 @@ button, .key, .bay, .bay *, .zoom, .answer input, .field input,
 .card.focused-page .emblem-wrap { animation-delay: -7s; }
 .card.focused-page .facts       { animation-delay: -11s; }
 .sel-dots    { animation-delay: -5s; }
+
+/* ==========================================================================
+   MODES
+   Where the manual lives, and what it costs to read it.
+   ========================================================================== */
+
+.modes { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+         margin: 4px 0 10px; }
+.mode-btn {
+  font-family: var(--round); font-size: 12px; letter-spacing: .14em;
+  color: var(--ink-2); background: #16222a;
+  border: 2px solid #2b3d46; border-radius: 10px;
+  padding: 9px 16px; min-height: 40px; cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.mode-btn:hover { color: var(--text); border-color: #486069; }
+.mode-btn.on { color: #06121a; background: var(--rim); border-color: var(--rim); }
+.mode-blurb { font-size: 12px; color: var(--ink-2); text-align: center;
+              margin: 0 auto 6px; max-width: 46ch; line-height: 1.5; }
+.mode-hint { font-size: 12px; color: var(--ink-2); text-align: center;
+             margin: 0 auto 10px; max-width: 46ch; line-height: 1.6; }
+.mode-hint code { color: var(--amber); font-family: var(--mono); font-size: 11px; }
+.mode-hint a { color: var(--rim); }
+
+/* the in-round control, sitting under the other two case buttons */
+.manual-btn { top: 128px; }
+
+/* ==========================================================================
+   THE MANUAL OVERLAY  (Solo)
+   It covers the case completely and on purpose: the cost of looking something
+   up is that you cannot look at the device while you do it. The clock is
+   repeated in the bar because the countdown does not stop.
+   ========================================================================== */
+
+.manual-overlay {
+  position: fixed; inset: 0; z-index: 120;
+  background: #0b1115;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 60px;
+}
+body.manual-open .bomb,
+body.manual-open .flip-btn { visibility: hidden; }
+
+.mo-bar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: rgba(11,17,21,.97);
+  border-bottom: 1px solid #22323a;
+  padding: 12px max(16px, env(safe-area-inset-left));
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+}
+.mo-title { font-size: 13px; letter-spacing: .2em; color: var(--rim); }
+.mo-search {
+  flex: 1 1 200px; min-width: 0; min-height: 44px;
+  background: #16222a; color: var(--text);
+  border: 2px solid #2b3d46; border-radius: 10px;
+  padding: 8px 14px; font-family: var(--round); font-size: 15px;
+}
+.mo-search:focus { outline: none; border-color: var(--rim); }
+.mo-clock {
+  font-family: var(--mono); font-size: 20px; letter-spacing: .06em;
+  color: var(--amber); min-width: 5ch; text-align: right;
+}
+.mo-clock.urgent { color: var(--red); }
+.mo-close {
+  font-family: var(--round); font-size: 12px; letter-spacing: .12em;
+  color: var(--text); background: #1b2a33;
+  border: 1px solid #33495455; border-radius: 9px;
+  padding: 9px 14px; min-height: 40px; cursor: pointer;
+}
+.mo-close:hover { border-color: var(--rim); color: var(--rim); }
+
+.manual-overlay .toc,
+.manual-overlay .mo-body { max-width: 1080px; margin: 0 auto;
+                           padding: 0 max(16px, env(safe-area-inset-left)); }
+.manual-overlay .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px auto 20px; }
+.manual-overlay .toc a {
+  display: inline-block; padding: 8px 13px; min-height: 40px; line-height: 24px;
+  border: 1px solid #2b3d46; border-radius: 999px;
+  font-size: 13px; text-decoration: none; color: var(--text); background: #131f26;
+}
+.manual-overlay .toc a .dot { display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+
+/* ==========================================================================
+   MANUAL CONTENT
+   Shared by manual/index.html and by the Solo overlay inside the game, so a
+   rule looks the same wherever it is read.
+   ========================================================================== */
+
+.mod { border-top: 1px solid #22323a; padding: 30px 0 10px; scroll-margin-top: 84px; }
+.mod-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.mod h2 { margin: 0; font-size: 26px; letter-spacing: .02em; }
+.badge {
+  font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  border: 1px solid; border-radius: 6px; padding: 3px 9px;
+}
+.badge.easy   { color: #6cc48a; border-color: #36624a; }
+.badge.medium { color: #e0b552; border-color: #6b5628; }
+.badge.hard   { color: #e0766c; border-color: #6e3b36; }
+.tagline { margin: 6px 0 0; color: var(--ink-2); font-style: italic; font-size: 15px; }
+
+/* ---- the live example ---- */
+.example { margin: 20px 0 6px; }
+.example-head {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-2); margin-bottom: 10px;
+}
+.example-head button {
+  font-family: var(--round); font-size: 12px; letter-spacing: .1em;
+  background: #1b2a33; color: var(--text);
+  border: 1px solid #33495459; border-radius: 8px;
+  padding: 7px 13px; min-height: 36px; cursor: pointer;
+}
+.example-head button:hover { border-color: var(--rim); color: var(--rim); }
+.serial-chip { color: var(--rim); letter-spacing: .22em; }
+.stage {
+  background: #7f9198; border-radius: 14px; padding: 12px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.stage .bay { position: relative; }
+.note {
+  font-size: 12px; color: var(--ink-2); margin: 8px 0 0; line-height: 1.55;
+}
+
+/* ---- the rules ---- */
+.rules { margin-top: 8px; max-width: 74ch; }
+.rules p { line-height: 1.62; margin: 13px 0; }
+.rules p.h { font-size: 17px; font-weight: 700; color: #dbe9ee;
+             margin: 26px 0 6px; letter-spacing: .01em; }
+.rules p.attn { color: var(--amber); font-weight: 700; letter-spacing: .06em;
+                margin: 24px 0 4px; }
+.rules li { line-height: 1.62; margin: 7px 0; }
+.rules ul { padding-left: 22px; margin: 10px 0; }
+.rules b { color: #fff; }
+.tablewrap { overflow-x: auto; margin: 14px 0; -webkit-overflow-scrolling: touch; }
+.rules table { border-collapse: collapse; font-size: 14px; min-width: 100%; }
+.rules th, .rules td {
+  border: 1px solid #2b3d46; padding: 7px 11px; text-align: left;
+  white-space: nowrap;
+}
+.rules thead th { background: #16232b; color: #cfe3ea; font-weight: 700; }
+.rules tbody tr:nth-child(even) { background: rgba(255,255,255,.022); }
+.rules tr.subhead th { background: #16232b; color: #cfe3ea; font-weight: 700; }
+
+
+mark { background: var(--amber); color: #10181c; border-radius: 3px; padding: 0 2px; }
+.mod[hidden] { display: none !important; }

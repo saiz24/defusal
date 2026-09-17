@@ -11,7 +11,7 @@ var shim = require('./dom-shim.js');
 var root = path.join(__dirname, '..');
 
 var FILES = [
-  'js/core.js', 'js/audio.js', 'js/svg.js',
+  'js/core.js', 'js/mode.js', 'js/audio.js', 'js/svg.js',
   'js/modules/cards.js', 'js/modules/sequences.js', 'js/modules/mutex.js',
   'js/modules/rationality.js', 'js/modules/parallel.js', 'js/modules/venn.js',
   'js/modules/triangles.js', 'js/modules/angles.js', 'js/modules/units.js',

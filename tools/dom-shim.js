@@ -64,6 +64,34 @@ Object.defineProperty(El.prototype, 'className', {
   get: function () { return this.attrs['class'] || ''; },
   set: function (v) { this.attrs['class'] = String(v); }
 });
+/* data-* attributes, read and written through .dataset the way the real DOM
+   does. The game reads data-mode off the mode buttons, and the manual renderer
+   stashes a module's name there for searching. */
+Object.defineProperty(El.prototype, 'dataset', {
+  get: function () {
+    var el = this;
+    if (this._dataset) return this._dataset;
+    this._dataset = new Proxy({}, {
+      get: function (_, k) {
+        if (typeof k !== 'string') return undefined;
+        return el.attrs['data-' + k.replace(/[A-Z]/g, function (c) {
+          return '-' + c.toLowerCase();
+        })];
+      },
+      set: function (_, k, v) {
+        el.attrs['data-' + String(k).replace(/[A-Z]/g, function (c) {
+          return '-' + c.toLowerCase();
+        })] = String(v);
+        return true;
+      },
+      has: function (_, k) {
+        return ('data-' + String(k)) in el.attrs;
+      }
+    });
+    return this._dataset;
+  }
+});
+
 Object.defineProperty(El.prototype, 'children', {
   get: function () {
     return this.childNodes.filter(function (n) { return n.nodeType === 1; });

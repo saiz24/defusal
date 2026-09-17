@@ -70,6 +70,18 @@
     </div>
 
     <p id="progress" class="progress"></p>
+
+    <div class="modes" id="modes" role="group" aria-label="how the manual is held">
+      <button type="button" class="mode-btn" data-mode="printed"><b>PRINTED</b></button>
+      <button type="button" class="mode-btn" data-mode="twodevice"><b>TWO DEVICE</b></button>
+      <button type="button" class="mode-btn" data-mode="solo"><b>SOLO</b></button>
+    </div>
+    <p class="mode-blurb" id="mode-blurb"></p>
+    <p class="mode-hint" id="mode-hint" hidden>
+      Open <code>manual/index.html</code> on the second device &mdash;
+      <a href="manual/index.html" target="_blank" rel="noopener">or here, to check it</a>
+    </p>
+
     <div class="minor">
       <button type="button" id="sound" class="sound">SOUND ON</button>
       <button type="button" id="replay-intro" class="sound">REPLAY INTRO</button>
@@ -85,6 +97,10 @@
           title="pull back from the case">
     <svg class="w-out" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.5-4.5M8 11h6"></path></svg>
     <svg class="w-in" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.5-4.5M8 11h6M11 8v6"></path></svg>
+  </button>
+  <button type="button" id="manual-btn" class="flip-btn manual-btn" hidden
+          title="open the manual — the clock keeps running">
+    <svg viewBox="0 0 24 24"><path d="M4 5.5h6a2 2 0 0 1 2 2v11a2 2 0 0 0-2-2H4z"></path><path d="M20 5.5h-6a2 2 0 0 0-2 2v11a2 2 0 0 1 2-2h6z"></path></svg>
   </button>
   <button type="button" id="flip-btn" class="flip-btn" data-flip
           title="turn the case over">
@@ -115,6 +131,21 @@
   </div>
 </section>
 
+<!-- ================ THE MANUAL, IN SOLO ================ -->
+<!-- Solo only. While it is open the device is hidden and the clock runs on,
+     so consulting the manual costs something rather than being free. -->
+<section id="manual-overlay" class="manual-overlay" hidden>
+  <div class="mo-bar">
+    <span class="mo-title">MANUAL</span>
+    <input class="mo-search" id="mo-q" type="search" autocomplete="off"
+           placeholder="Search &mdash; the clock is running">
+    <span class="mo-clock" id="mo-clock">00:00</span>
+    <button type="button" class="mo-close" id="mo-close">CLOSE &#10005;</button>
+  </div>
+  <nav class="toc" id="mo-toc"></nav>
+  <div class="mo-body" id="mo-body"></div>
+</section>
+
 <!-- ======================= RESULT ======================= -->
 <section id="screen-result" class="screen menu" hidden>
   <div class="sheet">
@@ -132,6 +163,7 @@
 </section>
 
 <script src="js/core.js?v=20260909152911"></script>
+<script src="js/mode.js?v=20260909152911"></script>
 <script src="js/audio.js?v=20260909152911"></script>
 <script src="js/svg.js?v=20260909152911"></script>
 <script src="js/backdrop.js?v=20260909152911"></script>
@@ -148,6 +180,8 @@
 <script src="js/cutscene.js?v=20260909152911"></script>
 <script src="js/selftest.js?v=20260909152911"></script>
 <script src="js/game.js?v=20260909152911"></script>
+<script src="manual/rules.js?v=20260909152911"></script>
+<script src="manual/render.js?v=20260909152911"></script>
 <script src="js/main.js?v=20260909152911"></script>
 
 <script>

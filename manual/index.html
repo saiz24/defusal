@@ -176,209 +176,26 @@ mark { background: var(--amber); color: #10181c; border-radius: 3px; padding: 0 
 <script src="../js/modules/units.js"></script>
 <script src="../js/modules/units-render.js"></script>
 <script src="rules.js"></script>
+<script src="render.js"></script>
 <script>
 (function () {
   'use strict';
-  var D = DEFUSAL, R = MANUAL_RULES;
-  var TINT = { easy: '#6cc48a', medium: '#e0b552', hard: '#e0766c' };
-
-  function el(tag, cls, parent, text) {
-    var n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    if (parent) parent.appendChild(n);
-    return n;
-  }
-
-  /* ---- one live round of a module, mounted for real ---------------------- */
-  /* The manual must never be able to change what the game does, so the
-     example is read-only: solve, strike and progress are no-ops and the
-     module is told it is never solved. */
-  function mountExample(stage, def, seed) {
-    var rng = D.makeRng(seed);
-    var serial = D.makeSerial(rng);
-    var ctx = { serial: serial, serialInfo: D.serialInfo(serial) };
-    var bay = el('div', 'bay module' + (def.wide ? ' wide' : ''), null);
-    bay.style.width = (def.wide ? 612 : 300) + 'px';
-    bay.style.height = '300px';
-    bay.style.margin = '0 auto';
-    var body = el('div', 'body', bay);
-    var puzzle = def.generate(rng, ctx);
-    def.mount(body, {
-      puzzle: puzzle, solution: def.solve(puzzle, ctx), ctx: ctx,
-      isSolved: function () { return false; },
-      solve: function () {}, strike: function () {}, progress: function () {},
-      onSolved: null, cleanup: null
-    });
-    stage.innerHTML = '';
-    stage.appendChild(bay);
-    return serial;
-  }
-
-  /* ---- render the rules -------------------------------------------------- */
-
-  function runsInto(node, runs, fallback) {
-    if (!runs || !runs.length) { node.textContent = fallback || ''; return; }
-    runs.forEach(function (r) {
-      var t = r[1] ? el('b', null, node) : node;
-      if (r[1]) t.textContent = r[0]; else t.appendChild(document.createTextNode(r[0]));
-    });
-  }
-
-  function isHeading(b) {
-    return /^Step \d|^Diagram \d/.test(b.text) ||
-           (b.style || '').toLowerCase().indexOf('heading') === 0;
-  }
-
-  function renderBlocks(host, blocks) {
-    var list = null;
-    blocks.forEach(function (b) {
-      if (b.kind === 'table') {
-        list = null;
-        var wrap = el('div', 'tablewrap', host);
-        var tb = el('table', null, wrap);
-        var rows = b.rows.filter(function (r) {
-          return r.some(function (c) { return c !== ''; });
-        });
-        if (!rows.length) { wrap.remove(); return; }
-        var head = el('thead', null, tb);
-        var hr = el('tr', null, head);
-        rows[0].forEach(function (c) { el('th', null, hr, c); });
-        var body = el('tbody', null, tb);
-        var headTail = rows[0].slice(1).join('\u0001');
-        rows.slice(1).forEach(function (r) {
-          var tr = el('tr', null, body);
-          /* Word keeps the metric and American unit charts in one table with a
-             second header row part-way down. A row whose tail repeats the
-             header's is that second header, not data. */
-          var sub = r.length === rows[0].length && r.slice(1).join('\u0001') === headTail;
-          if (sub) tr.className = 'subhead';
-          r.forEach(function (c) { el(sub ? 'th' : 'td', null, tr, c); });
-        });
-        return;
-      }
-      if (b.kind === 'list') {
-        if (!list) list = el('ul', null, host);
-        runsInto(el('li', null, list), b.runs, b.text);
-        return;
-      }
-      list = null;
-      /* Attention! is styled as a warning, and it is checked BEFORE the
-         heading test because Word gives it a heading style too. */
-      var cls = b.text === 'Attention!' ? 'attn' : (isHeading(b) ? 'h' : '');
-      runsInto(el('p', cls, host), b.runs, b.text);
-    });
-  }
-
-  /* ---- build ------------------------------------------------------------- */
-
   var toc = document.getElementById('toc');
   var mods = document.getElementById('mods');
-  var seeds = {};
-
-  R.modules.forEach(function (m, i) {
-    var def = D.byId[m.id];
-
-    var link = el('a', null, toc);
-    link.href = '#' + m.id;
-    el('span', 'dot', link).style.background = TINT[m.difficulty] || '#888';
-    link.appendChild(document.createTextNode(m.name));
-
-    var sec = el('section', 'mod', mods);
-    sec.id = m.id;
-    sec.dataset.name = m.name.toLowerCase();
-
-    var head = el('div', 'mod-head', sec);
-    el('h2', null, head, m.name);
-    el('span', 'badge ' + m.difficulty, head, m.difficulty);
-    el('p', 'tagline', sec, m.tagline || '');
-
-    if (def) {
-      var ex = el('div', 'example', sec);
-      var exHead = el('div', 'example-head', ex);
-      el('span', null, exHead, 'Example');
-      var chip = el('span', 'serial-chip', exHead);
-      var btn = el('button', null, exHead, 'Another example');
-      btn.type = 'button';
-      var stage = el('div', 'stage', ex);
-      seeds[m.id] = 1000 + i * 37;
-      function draw() {
-        chip.textContent = 'SERIAL ' + mountExample(stage, def, seeds[m.id]);
-      }
-      btn.addEventListener('click', function () { seeds[m.id] += 101; draw(); });
-      draw();
-      el('p', 'note', ex,
-        'A real round, drawn by the game. The serial shown belongs to this ' +
-        'example — in play, read the serial off the device itself.');
-    }
-
-    var rules = el('div', 'rules', sec);
-    renderBlocks(rules, m.blocks);
-  });
-
-  /* ---- search ------------------------------------------------------------ */
-  /* Filters whole modules and highlights hits inside them. Highlighting walks
-     text nodes rather than touching innerHTML, so the tables and the live
-     artwork survive a search unharmed. */
-
   var q = document.getElementById('q');
   var countEl = document.getElementById('count');
   var emptyEl = document.getElementById('empty');
-  var sections = [].slice.call(mods.querySelectorAll('.mod'));
 
-  function clearMarks(root) {
-    root.querySelectorAll('mark').forEach(function (m) {
-      var t = document.createTextNode(m.textContent);
-      m.parentNode.replaceChild(t, m);
-    });
-    root.normalize();
-  }
-
-  function markAll(root, needle) {
-    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-      acceptNode: function (n) {
-        if (!n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-        if (n.parentNode.closest('.stage, mark')) return NodeFilter.FILTER_REJECT;
-        return n.nodeValue.toLowerCase().indexOf(needle) >= 0
-          ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-      }
-    });
-    var hits = [], n;
-    while ((n = walker.nextNode())) hits.push(n);
-    hits.forEach(function (node) {
-      var text = node.nodeValue, low = text.toLowerCase(), at = 0, frag = document.createDocumentFragment(), idx;
-      while ((idx = low.indexOf(needle, at)) >= 0) {
-        if (idx > at) frag.appendChild(document.createTextNode(text.slice(at, idx)));
-        var mk = document.createElement('mark');
-        mk.textContent = text.slice(idx, idx + needle.length);
-        frag.appendChild(mk);
-        at = idx + needle.length;
-      }
-      if (at < text.length) frag.appendChild(document.createTextNode(text.slice(at)));
-      node.parentNode.replaceChild(frag, node);
-    });
-    return hits.length;
-  }
+  MANUAL_RENDER.toc(toc);
+  var sections = MANUAL_RENDER.build(mods, { examples: true });
 
   function run() {
-    var needle = q.value.trim().toLowerCase();
-    var shown = 0;
-    sections.forEach(function (sec) {
-      var rules = sec.querySelector('.rules');
-      clearMarks(sec);
-      if (!needle) { sec.hidden = false; shown++; return; }
-      var hit = sec.dataset.name.indexOf(needle) >= 0;
-      var inside = markAll(rules, needle);
-      hit = hit || inside > 0;
-      sec.hidden = !hit;
-      if (hit) shown++;
-    });
+    var shown = MANUAL_RENDER.search(sections, q.value);
     emptyEl.hidden = shown > 0;
-    countEl.textContent = needle
+    countEl.textContent = q.value.trim()
       ? shown + ' of ' + sections.length + ' modules'
       : sections.length + ' modules';
   }
-
   q.addEventListener('input', run);
   run();
 
