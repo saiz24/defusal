@@ -12,7 +12,13 @@ shot() { # shot <name> <w> <h> <query>
     --screenshot="$OUT/$1.png" "file://$ROOT/index.html$4" 2>/dev/null
   echo "  $OUT/$1.png"
 }
-shot menu    1440 900 ""
+shot menu    1440 900 "?intro=0&mode=printed"
+shot modes   1440 900 "?intro=0&modes=1&mode=solo"
+shot intro   1440 900 "?intro=1&scene=1"
+shot solo    1440 900 "?intro=0&mode=solo&start=hard&seed=99"
+shot reader  1280 860 "?intro=0&mode=twodevice&role=manual"
+shot seedpg  1440 900 "?intro=0&mode=printed&page=6"
+shot phone   844  390 "?intro=0&mode=solo&start=medium&seed=4242"
 shot easy720 1280 720 "?start=easy&seed=99"
 shot medium  1440 900 "?start=medium&seed=1234"
 shot insane  1440 900 "?start=insane&seed=4242"

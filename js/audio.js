@@ -430,6 +430,19 @@
       hiss({ dur: 0.16, gain: 0.05, filter: 'highpass', cutoff: 2600, at: t + pd });
     },
 
+    /* the cut between two places: a rising sweep under a soft impact */
+    whoosh: function () {
+      if (!live()) return;
+      var t = now();
+      hiss({ dur: 0.34, gain: 0.10, filter: 'bandpass', cutoff: 320,
+             cutoffTo: 2600, q: 0.7, attack: 0.05, at: t });
+      tone({ f: 110, to: 440, dur: 0.30, type: 'sine', gain: 0.07, at: t,
+             attack: 0.04, glide: 'exp' });
+      tone({ f: 60, dur: 0.24, type: 'sine', gain: 0.16, at: t + 0.30 });
+      hiss({ dur: 0.30, gain: 0.06, filter: 'lowpass', cutoff: 1400,
+             cutoffTo: 200, at: t + 0.30 });
+    },
+
     /* a module accepted its answer */
     solve: function () {
       if (!live()) return;
@@ -440,15 +453,47 @@
       hiss({ dur: 0.10, gain: 0.04, filter: 'highpass', cutoff: 4000, at: t });
     },
 
-    /* a mistake: buzzer, thud, and the case ringing */
+    /* A mistake. This one is meant to hurt: the old buzzer was softer than
+       the solve chime two bays over, so a strike read as a shrug. It is now
+       an impact followed by a klaxon — a crack off the shell, a sub thump you
+       feel more than hear, two detuned sawtooth growls a tritone apart so the
+       pair never resolves, and a two-blat alarm over the top. Still entirely
+       synthesised, and the master limiter catches the sum. */
     strike: function () {
       if (!live()) return;
       var t = now();
-      tone({ f: 220, to: 74, dur: 0.34, type: 'sawtooth', gain: 0.20, at: t,
-             filter: 'lowpass', cutoff: 1400, cutoffTo: 300, glide: 'exp' });
-      tone({ f: 58, dur: 0.30, type: 'sine', gain: 0.30, at: t });
-      hiss({ dur: 0.22, gain: 0.16, filter: 'bandpass', cutoff: 1400,
-             cutoffTo: 300, q: 0.8, at: t });
+
+      /* the hit itself: a hard crack, then the case ringing under it */
+      hiss({ dur: 0.07, gain: 0.34, filter: 'highpass', cutoff: 2600,
+             attack: 0.0012, at: t });
+      hiss({ dur: 0.40, gain: 0.22, filter: 'bandpass', cutoff: 1900,
+             cutoffTo: 240, q: 0.7, attack: 0.002, at: t });
+
+      /* the sub: short, deep, and gone before the klaxon lands */
+      tone({ f: 96, to: 31, dur: 0.46, type: 'sine', gain: 0.46, at: t,
+             attack: 0.002, glide: 'exp' });
+
+      /* two growls a tritone apart — the interval is the point, it refuses to
+         settle the way the solve chime does */
+      tone({ f: 233, to: 78, dur: 0.52, type: 'sawtooth', gain: 0.26, at: t,
+             attack: 0.002, filter: 'lowpass', cutoff: 2600, cutoffTo: 380,
+             q: 4, glide: 'exp' });
+      tone({ f: 165, to: 55, dur: 0.52, type: 'sawtooth', gain: 0.22, at: t,
+             attack: 0.002, filter: 'lowpass', cutoff: 2200, cutoffTo: 300,
+             q: 4, glide: 'exp' });
+
+      /* the klaxon: two blats, each dropping a tone, square so it cuts */
+      [0, 1].forEach(function (k) {
+        var at = t + 0.05 + k * 0.20;
+        tone({ f: 466, to: 392, dur: 0.17, type: 'square', gain: 0.17, at: at,
+               attack: 0.004, filter: 'bandpass', cutoff: 1500, q: 1.4 });
+        tone({ f: 233, to: 196, dur: 0.17, type: 'square', gain: 0.12, at: at,
+               attack: 0.004, filter: 'lowpass', cutoff: 1800 });
+      });
+
+      /* and the tail, so the room is still shaking a beat later */
+      hiss({ dur: 0.70, gain: 0.09, filter: 'lowpass', cutoff: 900,
+             cutoffTo: 110, at: t + 0.10 });
     },
 
     /* every module down */

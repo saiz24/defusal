@@ -10,8 +10,9 @@
    the network for nothing, so navigation away from the bundled files is
    refused outright rather than trusted not to happen. */
 
-const { app, BrowserWindow, Menu, shell, screen } = require('electron');
+const { app, BrowserWindow, Menu, shell, screen, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 /* In development the game sits one level up, beside this folder. Once packaged
    it is copied into the app's resources, so the two cases resolve differently. */
@@ -19,6 +20,11 @@ const GAME_DIR = app.isPackaged
   ? path.join(process.resourcesPath, 'app')
   : path.join(__dirname, '..');
 const INDEX = path.join(GAME_DIR, 'index.html');
+/* The printed manual, for PRINTED mode. The game itself never opens it — the
+   on-screen manual is typeset in the page — but the Expert's copy has to come
+   from somewhere, and a packaged app with no way to reach it is a game that
+   cannot be played its best way. */
+const MANUAL_PDF = path.join(GAME_DIR, 'manual', 'manual.pdf');
 
 let win = null;
 
@@ -100,6 +106,22 @@ app.on('window-all-closed', () => {
    Menu. Kept deliberately thin: fullscreen and reload are genuinely useful
    during a session, the rest is noise on top of a game.
    ------------------------------------------------------------------------- */
+/* Hands the PDF to whatever the machine already uses to read and print one.
+   Opening it in our own window would mean shipping a PDF viewer, and every
+   desktop this runs on has a better one than we would write. */
+function openPrintedManual() {
+  if (!fs.existsSync(MANUAL_PDF)) {
+    dialog.showMessageBox(win, {
+      type: 'info',
+      title: 'The printed manual',
+      message: 'manual/manual.pdf is not in this build.',
+      detail: 'Run tools/make-manual-pdf.sh in the game folder and build again.'
+    });
+    return;
+  }
+  shell.openPath(MANUAL_PDF);
+}
+
 function buildMenu() {
   const isMac = process.platform === 'darwin';
 
@@ -119,6 +141,12 @@ function buildMenu() {
           label: 'Restart',
           accelerator: 'CmdOrCtrl+R',
           click: () => { if (win) win.reload(); }
+        },
+        { type: 'separator' },
+        {
+          label: 'Open the printed manual\u2026',
+          accelerator: 'CmdOrCtrl+M',
+          click: openPrintedManual
         },
         { type: 'separator' },
         { role: isMac ? 'close' : 'quit' }

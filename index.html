@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="MATHEMATICKS">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="style.css?v=20260909152911">
+<link rel="stylesheet" href="style.css?v=20260918b">
 </head>
 <body>
 <div id="backdrop" class="backdrop"></div>
@@ -29,7 +29,12 @@
 </div>
 
 <!-- ======================= OPENING ======================= -->
+<!-- The opening fills the glass. It is the drawing INSIDE it that is held off
+     the edges — by padding on the picture, not by a box around it — so the
+     scene has air without the screen growing a frame. The ghost layer holds
+     the outgoing scene so one beat dissolves into the next. -->
 <section id="cutscene" class="cutscene" hidden>
+  <div id="cs-ghost" class="cs-stage cs-ghost" aria-hidden="true"></div>
   <div id="cs-art" class="cs-stage"></div>
   <div class="cs-box">
     <p id="cs-text" class="voice cs-line"></p>
@@ -37,6 +42,31 @@
   </div>
   <button type="button" id="cs-begin" class="cs-begin" hidden>BEGIN</button>
   <button type="button" id="cs-skip" class="cs-skip">SKIP &#9656;</button>
+</section>
+
+<!-- ======================= MODE SELECT =======================
+     Handed to the player the moment the opening lets go, and reachable again
+     from the menu. The three modes are a row of keys along the bottom; above
+     them a panel shows what each one actually looks like once a device is
+     armed, because "two devices" and "solo" mean nothing until you have seen
+     the shape of them. -->
+<section id="screen-mode" class="screen menu" hidden>
+  <div class="sheet mode-sheet">
+    <h2 class="mode-heading">MODE</h2>
+
+    <div class="mode-stage">
+      <div class="mode-track" id="mode-track"></div>
+    </div>
+
+    <div class="mode-opts" id="mode-opts" hidden></div>
+
+    <div class="mode-row" id="mode-row" role="group" aria-label="mode"></div>
+
+    <div class="mode-go">
+      <button type="button" id="mode-back" class="sound" hidden>BACK</button>
+      <button type="button" id="mode-confirm" class="key go"><b>CONTINUE</b></button>
+    </div>
+  </div>
 </section>
 
 <!-- ======================= MENU ======================= -->
@@ -53,12 +83,12 @@
 
     <!-- kept in the document so their ids survive; moved into their pages -->
     <div id="templates" hidden>
-      <div id="free-row" class="choices">
-        <button type="button" class="key" data-diff="easy"><b>TRIVIAL</b></button>
-        <button type="button" class="key" data-diff="medium"><b>NONTRIVIAL</b></button>
-        <button type="button" class="key" data-diff="hard"><b>PATHOLOGICAL</b></button>
-        <button type="button" class="key" data-diff="insane"><b>INTRACTABLE</b></button>
-        <button type="button" class="key" data-diff="practice" hidden><b>SANDBOX</b></button>
+      <div id="seed-panel" class="practice seedbox">
+        <label class="field wide"><span>CODE</span>
+          <input id="seed-code" type="text" autocomplete="off" spellcheck="false"
+                 autocapitalize="characters" placeholder="S3-K7A2XQ"></label>
+        <p class="seed-note" id="seed-note" hidden></p>
+        <button type="button" id="seed-start" class="key go"><b>ENGAGE</b></button>
       </div>
       <div id="practice-panel" class="practice">
         <label class="field"><span>MODULES</span>
@@ -71,21 +101,53 @@
 
     <p id="progress" class="progress"></p>
 
-    <div class="modes" id="modes" role="group" aria-label="how the manual is held">
-      <button type="button" class="mode-btn" data-mode="printed"><b>PRINTED</b></button>
-      <button type="button" class="mode-btn" data-mode="twodevice"><b>TWO DEVICE</b></button>
-      <button type="button" class="mode-btn" data-mode="solo"><b>SOLO</b></button>
-    </div>
-    <p class="mode-blurb" id="mode-blurb"></p>
-    <p class="mode-hint" id="mode-hint" hidden>
-      Open <code>manual/index.html</code> on the second device &mdash;
-      <a href="manual/index.html" target="_blank" rel="noopener">or here, to check it</a>
-    </p>
-
+    <!-- Two controls, not four in a row. ENGAGE on the card is the thing to
+         press; MODE is the only other decision that changes how the game is
+         played, so it is the only other thing given weight here. Everything
+         else is housekeeping and lives behind SETTINGS. -->
     <div class="minor">
-      <button type="button" id="sound" class="sound">SOUND ON</button>
-      <button type="button" id="replay-intro" class="sound">REPLAY INTRO</button>
-      <button type="button" id="reset-progress" class="sound">RESET PROGRESS</button>
+      <button type="button" id="mode-open" class="key wide-key">
+        <b>MODE</b><i id="mode-now">PRINTED</i>
+      </button>
+      <button type="button" id="settings-open" class="icon-key" title="settings"
+              aria-label="settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.2"></circle>
+          <path d="M12 3.6v2.2M12 18.2v2.2M20.4 12h-2.2M5.8 12H3.6M18 6l-1.6 1.6M7.6 16.4 6 18M18 18l-1.6-1.6M7.6 7.6 6 6"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SETTINGS =======================
+     Everything that is not a decision about how to play. It was a row of
+     equal-weight buttons under the device carousel, which put RESET PROGRESS
+     the same distance from the eye as the thing you actually came to press. -->
+<section id="screen-settings" class="screen menu" hidden>
+  <div class="sheet set-sheet">
+    <h2 class="set-heading">SETTINGS</h2>
+
+    <div class="set-list">
+      <div class="set-row">
+        <b>SOUND</b>
+        <button type="button" id="sound" class="opt-btn">ON</button>
+      </div>
+
+      <div class="set-row">
+        <b>OPENING</b>
+        <button type="button" id="replay-intro" class="opt-btn">REPLAY</button>
+      </div>
+
+      <div class="set-row danger">
+        <b>PROGRESS</b>
+        <span id="set-progress" class="set-val">0 / 5</span>
+        <button type="button" id="reset-progress" class="opt-btn bad">RESET</button>
+      </div>
+    </div>
+
+    <div class="mode-go">
+      <button type="button" id="settings-back" class="key go"><b>DONE</b></button>
     </div>
   </div>
 </section>
@@ -97,10 +159,6 @@
           title="pull back from the case">
     <svg class="w-out" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.5-4.5M8 11h6"></path></svg>
     <svg class="w-in" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.5-4.5M8 11h6M11 8v6"></path></svg>
-  </button>
-  <button type="button" id="manual-btn" class="flip-btn manual-btn" hidden
-          title="open the manual — the clock keeps running">
-    <svg viewBox="0 0 24 24"><path d="M4 5.5h6a2 2 0 0 1 2 2v11a2 2 0 0 0-2-2H4z"></path><path d="M20 5.5h-6a2 2 0 0 0-2 2v11a2 2 0 0 1 2-2h6z"></path></svg>
   </button>
   <button type="button" id="flip-btn" class="flip-btn" data-flip
           title="turn the case over">
@@ -138,58 +196,97 @@
   </div>
 </section>
 
-<!-- ================ THE MANUAL, IN SOLO ================ -->
-<!-- Solo only. While it is open the device is hidden and the clock runs on,
-     so consulting the manual costs something rather than being free. -->
-<section id="manual-overlay" class="manual-overlay" hidden>
-  <div class="mo-bar">
-    <span class="mo-title">MANUAL</span>
-    <input class="mo-search" id="mo-q" type="search" autocomplete="off"
-           placeholder="Search &mdash; the clock is running">
-    <span class="mo-clock" id="mo-clock">00:00</span>
-    <button type="button" class="mo-close" id="mo-close">CLOSE &#10005;</button>
-  </div>
-  <nav class="toc" id="mo-toc"></nav>
-  <div class="mo-body" id="mo-body"></div>
+<!-- ============ THE MANUAL, BESIDE THE DEVICE (SOLO) ============
+     Solo used to hide the case behind a full-screen manual and charge the
+     player time for looking. It is a split screen now: both halves are on
+     the glass at once, either half can take all of it, and the split can be
+     turned. It starts vertical. -->
+<aside id="play-manual" class="play-manual" hidden></aside>
+
+<!-- The divider. Drag it to give either half more of the glass; double-click
+     puts it back in the middle. Body-level like the bar below, and only ever
+     shown while both halves are up. -->
+<div id="split-grip" class="split-grip" hidden role="separator"
+     aria-label="drag to resize the split" tabindex="0"></div>
+
+<!-- The split controls. Body-level, because when the manual has the whole
+     screen there is no bomb pane left to carry the control that brings the
+     bomb back. -->
+<div id="layout-bar" class="layout-bar" hidden role="group" aria-label="screen layout">
+  <button type="button" class="lay-btn" id="lay-bomb" title="the device, full screen">DEVICE</button>
+  <button type="button" class="lay-btn" id="lay-both" title="both halves">SPLIT</button>
+  <button type="button" class="lay-btn" id="lay-manual" title="the manual, full screen">MANUAL</button>
+  <button type="button" class="lay-btn lay-turn" id="lay-turn" title="turn the split">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+      <path class="lay-v" d="M12 4v16"></path>
+      <path class="lay-h" d="M3 12h18"></path>
+    </svg>
+  </button>
+</div>
+
+<!-- ============ THE MANUAL, AS THE WHOLE SCREEN (TWO DEVICES) ============
+     This screen IS the manual. There is no bomb on it and there never was a
+     link to follow: the second player picked MANUAL on the mode screen and
+     this is what that means. -->
+<section id="screen-reader" class="screen reader" hidden>
+  <div id="reader-host" class="reader-host"></div>
+  <button type="button" id="reader-back" class="sound reader-back">CHANGE THIS SCREEN</button>
 </section>
 
-<!-- ======================= RESULT ======================= -->
+<!-- ======================= RESULT =======================
+     One sheet, read top to bottom: what happened, the numbers, what to do
+     next, and last the code — which had been a loose line of text with a
+     button floating beside it. -->
 <section id="screen-result" class="screen menu" hidden>
-  <div class="sheet">
+  <div class="sheet result-sheet">
     <h2 id="result-title" class="verdict">DEFUSED</h2>
-    <p id="result-voice" class="voice verdict-voice"></p>
     <p id="result-cause" class="cause"></p>
+
     <div id="result-stats" class="stats"></div>
+
     <div class="choices two">
       <button type="button" id="result-continue" class="key" hidden><b>CONTINUE</b></button>
       <button type="button" id="result-replay" class="key"><b>TRY AGAIN</b></button>
       <button type="button" id="result-menu" class="key"><b>MENU</b></button>
     </div>
-    <p id="result-seed" class="seed"></p>
+
+    <div class="code-plate">
+      <div class="code-head">
+        <span class="code-label">DEVICE CODE</span>
+        <span id="result-detail" class="code-detail"></span>
+      </div>
+      <div class="code-row">
+        <code id="result-seed" class="seed-code"></code>
+        <button type="button" id="result-copy" class="opt-btn">COPY</button>
+      </div>
+    </div>
   </div>
 </section>
 
-<script src="js/core.js?v=20260909152911"></script>
-<script src="js/mode.js?v=20260909152911"></script>
-<script src="js/audio.js?v=20260909152911"></script>
-<script src="js/svg.js?v=20260909152911"></script>
-<script src="js/backdrop.js?v=20260909152911"></script>
-<script src="js/modules/cards.js?v=20260909152911"></script>
-<script src="js/modules/sequences.js?v=20260909152911"></script>
-<script src="js/modules/mutex.js?v=20260909152911"></script>
-<script src="js/modules/rationality.js?v=20260909152911"></script>
-<script src="js/modules/parallel.js?v=20260909152911"></script>
-<script src="js/modules/venn.js?v=20260909152911"></script>
-<script src="js/modules/triangles.js?v=20260909152911"></script>
-<script src="js/modules/angles.js?v=20260909152911"></script>
-<script src="js/modules/units.js?v=20260909152911"></script>
-<script src="js/modules/units-render.js?v=20260909152911"></script>
-<script src="js/cutscene.js?v=20260909152911"></script>
-<script src="js/selftest.js?v=20260909152911"></script>
-<script src="js/game.js?v=20260909152911"></script>
-<script src="manual/rules.js?v=20260909152911"></script>
-<script src="manual/render.js?v=20260909152911"></script>
-<script src="js/main.js?v=20260909152911"></script>
+<script src="js/core.js?v=20260918b"></script>
+<script src="js/fx.js?v=20260918b"></script>
+<script src="js/mode.js?v=20260918b"></script>
+<script src="js/audio.js?v=20260918b"></script>
+<script src="js/svg.js?v=20260918b"></script>
+<script src="js/backdrop.js?v=20260918b"></script>
+<script src="js/modules/cards.js?v=20260918b"></script>
+<script src="js/modules/sequences.js?v=20260918b"></script>
+<script src="js/modules/mutex.js?v=20260918b"></script>
+<script src="js/modules/rationality.js?v=20260918b"></script>
+<script src="js/modules/parallel.js?v=20260918b"></script>
+<script src="js/modules/venn.js?v=20260918b"></script>
+<script src="js/modules/triangles.js?v=20260918b"></script>
+<script src="js/modules/angles.js?v=20260918b"></script>
+<script src="js/modules/units.js?v=20260918b"></script>
+<script src="js/modules/units-render.js?v=20260918b"></script>
+<script src="manual/rules.js?v=20260918b"></script>
+<script src="manual/render.js?v=20260918b"></script>
+<script src="js/manual-view.js?v=20260918b"></script>
+<script src="js/cutscene.js?v=20260918b"></script>
+<script src="js/selftest.js?v=20260918b"></script>
+<script src="js/game.js?v=20260918b"></script>
+<script src="js/main.js?v=20260918b"></script>
 
 <script>
 /* Service workers need a real origin, so this simply does not run when the

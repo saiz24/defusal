@@ -149,56 +149,5 @@ var MANUAL_RENDER = (function () {
     });
   }
 
-  /* ---- search ------------------------------------------------------------
-     Highlighting walks text nodes rather than touching innerHTML, so the
-     tables and the live SVG artwork survive a search unharmed. */
-
-  function clearMarks(root) {
-    var marks = root.querySelectorAll('mark'), i;
-    for (i = 0; i < marks.length; i++) {
-      var m = marks[i];
-      m.parentNode.replaceChild(document.createTextNode(m.textContent), m);
-    }
-    root.normalize();
-  }
-
-  function markAll(root, needle) {
-    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-      acceptNode: function (n) {
-        if (!n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-        if (n.parentNode.closest('.stage, mark')) return NodeFilter.FILTER_REJECT;
-        return n.nodeValue.toLowerCase().indexOf(needle) >= 0
-          ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-      }
-    });
-    var hits = [], n;
-    while ((n = walker.nextNode())) hits.push(n);
-    hits.forEach(function (node) {
-      var text = node.nodeValue, low = text.toLowerCase(), at = 0, idx;
-      var frag = document.createDocumentFragment();
-      while ((idx = low.indexOf(needle, at)) >= 0) {
-        if (idx > at) frag.appendChild(document.createTextNode(text.slice(at, idx)));
-        el('mark', null, frag, text.slice(idx, idx + needle.length));
-        at = idx + needle.length;
-      }
-      if (at < text.length) frag.appendChild(document.createTextNode(text.slice(at)));
-      node.parentNode.replaceChild(frag, node);
-    });
-    return hits.length;
-  }
-
-  function search(sections, raw) {
-    var needle = (raw || '').trim().toLowerCase(), shown = 0;
-    sections.forEach(function (sec) {
-      clearMarks(sec);
-      if (!needle) { sec.hidden = false; shown++; return; }
-      var hit = sec.dataset.name.indexOf(needle) >= 0;
-      if (markAll(sec.querySelector('.rules'), needle) > 0) hit = true;
-      sec.hidden = !hit;
-      if (hit) shown++;
-    });
-    return shown;
-  }
-
-  return { build: build, toc: toc, search: search, TINT: TINT, el: el };
+  return { build: build, toc: toc, TINT: TINT, el: el };
 })();

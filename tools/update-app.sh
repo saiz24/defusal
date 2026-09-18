@@ -19,11 +19,25 @@ if [ ! -d "$DEST" ]; then
   exit 1
 fi
 
-echo "before: $(grep -o 'style\.css?v=[0-9]*' "$DEST/index.html" | head -1)"
+stamp() { grep -o 'style\.css?v=[0-9A-Za-z]*' "$1" 2>/dev/null | head -1; }
+
+echo "before: $(stamp "$DEST/index.html")"
 
 cp "$SRC/index.html" "$SRC/style.css" "$SRC/manifest.json" \
    "$SRC/icon-192.png" "$SRC/icon-512.png" "$DEST/"
 rsync -a --delete "$SRC/js/" "$DEST/js/"
 
-echo "after : $(grep -o 'style\.css?v=[0-9]*' "$DEST/index.html" | head -1)"
+# The manual is part of the game now: rules.js and render.js are what the
+# on-screen manual is built from, and without them a Solo split and a
+# two-device manual screen both come up empty. manual.pdf rides along because
+# PRINTED mode needs something to print.
+mkdir -p "$DEST/manual" "$DEST/fonts"
+rsync -a --delete --exclude '*.stale' "$SRC/manual/" "$DEST/manual/"
+
+# The display face is bundled, not asked for by name: a font installed on the
+# machine this was built on is not on the machine it is shown on.
+rsync -a --delete "$SRC/fonts/" "$DEST/fonts/"
+
+echo "after : $(stamp "$DEST/index.html")"
 echo "updated $DEST — relaunch the app to see it"
+ls "$DEST" | sed 's/^/  /'

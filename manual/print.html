@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MATHEMATICKS — The Manual</title>
+<style>
+/* ==========================================================================
+   THE MANUAL, AS A DOCUMENT
+
+   This page exists to be printed. tools/make-manual-pdf.sh runs it through
+   headless Chrome and writes manual/manual.pdf, which is what the game itself
+   shows — so the manual on a second screen and the manual on paper are one
+   document, not two things that have to be kept in step.
+
+   Every word is MANUAL_RULES, which tools/extract-manual.py generates from
+   the printed .docx. Nothing here is retyped.
+
+   There are no illustrations, on purpose. The Expert never sees the device;
+   a picture of it in the manual only invites them to look at the wrong thing,
+   and a rule they can match by eye is a rule they never have to describe.
+   ========================================================================== */
+
+@page { size: A4; margin: 17mm 16mm 16mm; }
+
+html { font-size: 11pt; }
+body {
+  margin: 0; color: #111; background: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.5;
+}
+* { box-sizing: border-box; }
+
+.cover { page-break-after: always; padding-top: 46mm; text-align: center; }
+.cover h1 {
+  margin: 0 0 6mm; font-size: 30pt; letter-spacing: .10em; font-weight: 700;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.cover .rule { width: 46mm; height: 2px; background: #111; margin: 0 auto 8mm; }
+.cover p {
+  margin: 0 auto 5mm; max-width: 108mm; font-size: 11pt; line-height: 1.62;
+}
+.cover .warn {
+  margin-top: 14mm; font-size: 10pt; letter-spacing: .16em; text-transform: uppercase;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.cover ol {
+  max-width: 108mm; margin: 0 auto; text-align: left; font-size: 10.5pt;
+}
+.cover li { margin: 2mm 0; }
+
+.contents { page-break-after: always; }
+.contents h2, .mod h2 {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  letter-spacing: .04em;
+}
+.contents h2 { font-size: 15pt; margin: 0 0 5mm; }
+.contents ol { padding-left: 6mm; font-size: 11pt; }
+.contents li { margin: 2.4mm 0; }
+.contents .diff {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 8.5pt; letter-spacing: .12em; text-transform: uppercase;
+  color: #555; margin-left: 3mm;
+}
+
+.mod { page-break-before: always; }
+.mod-head { border-bottom: 1.5px solid #111; padding-bottom: 2mm; margin-bottom: 4mm; }
+.mod h2 { font-size: 17pt; margin: 0; }
+.badge {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 8.5pt; letter-spacing: .14em; text-transform: uppercase;
+  border: 1px solid #555; border-radius: 3px; padding: 0.6mm 2mm;
+  color: #333; margin-left: 3mm; vertical-align: 2px;
+}
+.tagline { font-style: italic; color: #444; margin: 0 0 4mm; font-size: 10.5pt; }
+
+.rules p { margin: 3mm 0; orphans: 2; widows: 2; }
+.rules p.h {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 11.5pt; font-weight: 700; margin: 6mm 0 1.5mm;
+  page-break-after: avoid;
+}
+.rules p.attn {
+  font-weight: 700; letter-spacing: .06em; margin: 6mm 0 1mm;
+  page-break-after: avoid;
+}
+.rules ul { margin: 2mm 0; padding-left: 7mm; }
+.rules li { margin: 1.4mm 0; }
+.rules b { font-weight: 700; }
+
+.tablewrap { margin: 3.5mm 0; page-break-inside: avoid; }
+table { border-collapse: collapse; width: 100%; font-size: 9.5pt;
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+th, td { border: 0.6px solid #666; padding: 1.4mm 2.2mm; text-align: left; }
+thead th, tr.subhead th { background: #eee; font-weight: 700; }
+
+/* the game's own live examples are not built here; this keeps any stray
+   artwork out even if the renderer changes */
+.example, .stage, svg, img { display: none !important; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <h1>MATHEMATICKS</h1>
+  <div class="rule"></div>
+  <p><strong>The Expert holds this manual. The Defuser holds the device.</strong></p>
+  <p>
+    The Defuser may not read this manual. You may not look at the device.
+    Modules are not named on the device — find yours by what the Defuser
+    describes to you.
+  </p>
+  <p class="warn">Before you start</p>
+  <ol>
+    <li>Agree who is the Defuser and who is the Expert.</li>
+    <li>The Expert reads a module's section aloud; the Defuser reads the device aloud.</li>
+    <li>Three mistakes and the device goes off. So does the clock running out.</li>
+  </ol>
+</section>
+
+<section class="contents">
+  <h2>Contents</h2>
+  <ol id="toc"></ol>
+</section>
+
+<main id="mods"></main>
+
+<script src="rules.js"></script>
+<script>
+/* Deliberately not manual/render.js: that renderer is built for the screen
+   and can mount live examples. This page needs the words and nothing else. */
+(function () {
+  'use strict';
+  var R = window.MANUAL_RULES;
+
+  function el(tag, cls, parent, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+
+  function runsInto(node, runs, fallback) {
+    if (!runs || !runs.length) { node.textContent = fallback || ''; return; }
+    runs.forEach(function (r) {
+      if (r[1]) el('b', null, node, r[0]);
+      else node.appendChild(document.createTextNode(r[0]));
+    });
+  }
+
+  function isHeading(b) {
+    return /^Step \d|^Diagram \d/.test(b.text) ||
+           (b.style || '').toLowerCase().indexOf('heading') === 0;
+  }
+
+  function blocks(host, list) {
+    var ul = null;
+    list.forEach(function (b) {
+      if (b.kind === 'table') {
+        ul = null;
+        var rows = b.rows.filter(function (r) {
+          return r.some(function (c) { return c !== ''; });
+        });
+        if (!rows.length) return;
+        var tb = el('table', null, el('div', 'tablewrap', host));
+        var hr = el('tr', null, el('thead', null, tb));
+        rows[0].forEach(function (c) { el('th', null, hr, c); });
+        var body = el('tbody', null, tb);
+        var headTail = rows[0].slice(1).join('');
+        rows.slice(1).forEach(function (r) {
+          var tr = el('tr', null, body);
+          var sub = r.length === rows[0].length &&
+                    r.slice(1).join('') === headTail;
+          if (sub) tr.className = 'subhead';
+          r.forEach(function (c) { el(sub ? 'th' : 'td', null, tr, c); });
+        });
+        return;
+      }
+      if (b.kind === 'list') {
+        if (!ul) ul = el('ul', null, host);
+        runsInto(el('li', null, ul), b.runs, b.text);
+        return;
+      }
+      ul = null;
+      var cls = b.text === 'Attention!' ? 'attn' : (isHeading(b) ? 'h' : '');
+      runsInto(el('p', cls, host), b.runs, b.text);
+    });
+  }
+
+  var toc = document.getElementById('toc');
+  var mods = document.getElementById('mods');
+
+  R.modules.forEach(function (m) {
+    var li = el('li', null, toc);
+    li.appendChild(document.createTextNode(m.name));
+    el('span', 'diff', li, m.difficulty);
+
+    var sec = el('section', 'mod', mods);
+    var head = el('div', 'mod-head', sec);
+    var h = el('h2', null, head, m.name);
+    el('span', 'badge', h, m.difficulty);
+    el('p', 'tagline', sec, m.tagline || '');
+    blocks(el('div', 'rules', sec), m.blocks);
+  });
+
+  document.title = R.title || 'MATHEMATICKS — The Manual';
+  document.documentElement.setAttribute('data-ready', '1');
+})();
+</script>
+</body>
+</html>

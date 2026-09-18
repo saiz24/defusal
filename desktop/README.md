@@ -64,8 +64,33 @@ judges. **Install and launch it once on the presentation machine beforehand.**
   bundled files is refused rather than trusted not to happen.
 - Single instance: launching again focuses the window already open instead of
   starting a second bomb.
-- A thin menu — Restart (`Ctrl`/`Cmd`+`R`), fullscreen, zoom, quit. Developer
-  tools appear only in unpackaged runs.
+- A thin menu — Restart (`Ctrl`/`Cmd`+`R`), **Open the printed manual**
+  (`Ctrl`/`Cmd`+`M`), fullscreen, zoom, quit. Developer tools appear only in
+  unpackaged runs.
+
+## The manual is part of the build
+
+The app bundles `manual/` alongside `js/`, because the on-screen manual is
+built from `manual/rules.js` at runtime — without it a Solo split and a
+two-device manual screen both come up empty. `manual/manual.pdf` rides along
+too, and **Open the printed manual** hands it to whatever the machine already
+uses to read and print a PDF. That is what PRINTED mode needs, and shipping a
+PDF viewer inside the app to do a job every desktop already does better would
+be silly.
+
+## Updating an app you have already installed
+
+The build copies the game inside the app bundle, so editing the game folder
+does not change an app that is already on the machine. Push the current game
+into it with:
+
+```
+./tools/update-app.sh                      # /Applications/MATHEMATICKS.app
+./tools/update-app.sh /path/to/Other.app
+```
+
+It prints the cache stamp before and after, so you can see the app actually
+moved, and then you relaunch it.
 
 ## Changing the version or the name
 

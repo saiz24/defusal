@@ -1,5 +1,6 @@
 /* boot once the document is parsed; no modules, no fetch, file:// safe */
 function defusalStart() {
+  DEFUSAL.fx.init();
   DEFUSAL.backdrop.init();
   DEFUSAL.boot();
   DEFUSAL.cutscene.init();

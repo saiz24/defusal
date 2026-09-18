@@ -7,6 +7,9 @@
    ========================================================================== */
 
 var fs = require('fs'), path = require('path'), vm = require('vm');
+
+var COUNTS = { easy: 3, medium: 5, hard: 6, insane: 8 };
+var SECONDS = { easy: 300, medium: 420, hard: 480, insane: 600 };
 var shim = require('./dom-shim.js');
 var root = path.join(__dirname, '..');
 
@@ -15,7 +18,8 @@ var FILES = [
   'js/modules/cards.js', 'js/modules/sequences.js', 'js/modules/mutex.js',
   'js/modules/rationality.js', 'js/modules/parallel.js', 'js/modules/venn.js',
   'js/modules/triangles.js', 'js/modules/angles.js', 'js/modules/units.js',
-  'js/modules/units-render.js', 'js/cutscene.js', 'js/selftest.js', 'js/game.js'
+  'js/modules/units-render.js', 'js/fx.js', 'js/cutscene.js', 'js/selftest.js',
+  'js/game.js'
 ];
 
 function boot(opts) {
@@ -479,15 +483,17 @@ D.modules.forEach(function (def) {
 
 function panelsOf(g) { return g.doc.querySelectorAll('.bay.module'); }
 
+/* OPEN PLAY's row of difficulty buttons is gone, so a round is started the
+   way the game starts one internally. D.startRound is exported by debug
+   builds only, which is what every harness boot is. */
 function startGame(g, diff) {
-  g.doc.querySelectorAll('[data-diff]').filter(function (b) {
-    return b.getAttribute('data-diff') === diff;
-  })[0].dispatch('click');
+  g.D.startRound({ difficulty: diff, count: COUNTS[diff],
+                   seconds: SECONDS[diff] });
 }
 
 console.log('');
 ['easy', 'medium', 'hard', 'insane'].forEach(function (diff) {
-  var counts = { easy: 3, medium: 5, hard: 6, insane: 8 };
+  var counts = COUNTS;
   var g = boot({ search: '?debug=1' });
   g.D.selfTest = null;                     /* skip the console self-test here */
   g.D.boot();
@@ -625,6 +631,138 @@ console.log('');
   check(others.length === 0, 'solving one module solved another');
   check(g.doc.getElementById('modcount').textContent === '1/8', 'module count wrong after one solve');
   console.log('  isolation: solved module inert, neighbours untouched');
+})();
+
+/* ---------------- the case is a solid object ----------------------------
+   Every face and rim is placed with an inline transform built from the case's
+   thickness. If that number stops being a number — a second `var DEPTH` in the
+   same scope did exactly that once — the transforms come out as invalid
+   strings, the browser drops them silently, the two faces end up coplanar and
+   the case z-fights with itself. Nothing else in the suite notices: the round
+   is dealt correctly and every module still solves. Assert the geometry. */
+(function () {
+  var g = boot({ search: '?debug=1' });
+  g.D.selfTest = null;
+  g.D.boot();
+  startGame(g, 'insane');
+
+  var faces = g.doc.querySelectorAll('.face');
+  check(faces.length === 2, 'expected two faces, got ' + faces.length);
+  faces.forEach(function (f, i) {
+    var t = (f.style && f.style.transform) || '';
+    check(/translateZ\(\d+(\.\d+)?px\)/.test(t),
+      'face ' + i + ' has no usable depth: "' + t + '"');
+    check(t.indexOf('NaN') < 0 && t.indexOf('undefined') < 0 &&
+          t.indexOf('[object') < 0, 'face ' + i + ' transform is junk: "' + t + '"');
+    check(/^\d+px$/.test((f.style && f.style.width) || ''),
+      'face ' + i + ' has no width: "' + (f.style && f.style.width) + '"');
+  });
+  check(/rotateY\(180deg\)/.test(faces[1].style.transform),
+    'the back face is not turned over');
+
+  var edges = g.doc.querySelectorAll('.edge');
+  check(edges.length === 4, 'expected four rim panels, got ' + edges.length);
+  edges.forEach(function (e, i) {
+    var st = e.style || {};
+    ['width', 'height', 'marginLeft', 'marginTop', 'transform'].forEach(function (k) {
+      var v = st[k];
+      check(v !== undefined && v !== '' && String(v).indexOf('NaN') < 0 &&
+            String(v).indexOf('[object') < 0,
+        'rim ' + i + ' has a bad ' + k + ': "' + v + '"');
+    });
+  });
+  console.log('  case solid  faces and rims placed, depth is a number');
+})();
+
+/* ---------------- codes: a round has to be reproducible ------------------
+   The whole point of the SEED page is that the code on the result screen
+   arms the identical device. Anything less and it is decoration. */
+(function () {
+  var g = boot({ search: '?debug=1' });
+  g.D.selfTest = null;
+  g.D.boot();
+
+  /* every shape of config survives a round trip */
+  var shapes = [
+    { difficulty: 'easy', count: 3, seconds: 300, stage: 1 },
+    { difficulty: 'insane', count: 8, seconds: 600 },
+    { difficulty: 'practice', count: 6, seconds: 720 }
+  ];
+  shapes.forEach(function (c) {
+    var code = g.D.makeCode(c, 123456789);
+    var back = g.D.parseCode(code);
+    check(!!back, 'code ' + code + ' did not parse back');
+    if (!back) return;
+    check(back.seed === 123456789, code + ': seed lost (' + back.seed + ')');
+    check(back.count === c.count, code + ': module count lost');
+    check(back.seconds === c.seconds, code + ': time lost');
+    check(back.stage === c.stage || (!c.stage && !back.stage),
+      code + ': stage lost');
+    check(back.noRecord === true, code + ': a typed code must not record');
+  });
+
+  check(g.D.parseCode('') === null, 'an empty code parsed');
+  check(g.D.parseCode('NONSENSE') === null, 'nonsense parsed as a code');
+  check(g.D.parseCode('S9-AAA') === null, 'a device that does not exist parsed');
+  /* typed the way a player types it: lower case, with a stray space */
+  check(!!g.D.parseCode(' s3-k7a2xq '), 'a lower-case code did not parse');
+
+  /* and the code really does deal the same bomb twice */
+  g.D.startRound({ difficulty: 'hard', count: 6, seconds: 480, seed: 4242 });
+  var a = panelsOf(g).map(function (p) { return p.getAttribute('data-id'); });
+  var serialA = g.doc.getElementById('serial').textContent;
+  g.D.startRound(g.D.parseCode('DH-' + (4242).toString(36).toUpperCase()));
+  var b = panelsOf(g).map(function (p) { return p.getAttribute('data-id'); });
+  var serialB = g.doc.getElementById('serial').textContent;
+  check(a.join(',') === b.join(','),
+    'the same code dealt different modules: ' + a + ' vs ' + b);
+  check(serialA === serialB,
+    'the same code dealt different serials: ' + serialA + ' vs ' + serialB);
+  console.log('  codes       round trip, and the same code deals the same device');
+})();
+
+/* ---------------- modes: what each screen is ---------------------------- */
+(function () {
+  var g = boot({ search: '?debug=1' });
+  g.D.selfTest = null;
+  g.D.boot();
+  var M = g.D.mode;
+
+  M.set('printed');
+  check(M.showsBomb() && !M.showsManual(), 'printed should be device only');
+
+  M.set('twodevice');
+  M.setRole('manual');
+  check(!M.showsBomb() && M.showsManual(),
+    'a two-device manual screen must not draw a bomb');
+  M.setRole('bomb');
+  check(M.showsBomb() && !M.showsManual(),
+    'a two-device device screen must not carry the manual');
+
+  M.set('solo');
+  check(M.showsBomb() && M.showsManual(), 'solo carries both halves');
+  check(M.getSplit() === 'vertical', 'solo must start with a vertical split');
+  check(M.toggleSplit() === 'horizontal', 'the split did not turn');
+  check(M.toggleSplit() === 'vertical', 'the split did not turn back');
+  check(M.getPane() === 'both', 'solo must start showing both halves');
+  check(M.setPane('manual') === 'manual', 'the manual could not take the screen');
+  check(M.setPane('bomb') === 'bomb', 'the device could not take the screen');
+
+  /* the divider: clamped, and kept per orientation */
+  check(M.getRatio() === 50, 'the split should start in the middle');
+  check(M.setRatio(66) === 66, 'the divider did not move');
+  check(M.setRatio(5) === M.MIN_AT, 'the divider was not clamped at the low end');
+  check(M.setRatio(300) === M.MAX_AT, 'the divider was not clamped at the high end');
+  check(M.setRatio(NaN) === M.MAX_AT, 'a nonsense ratio moved the divider');
+  M.setRatio(70);
+  M.setSplit('horizontal');
+  check(M.getRatio() === 50,
+    'turning the split carried the other orientation\'s divider over');
+  M.setRatio(30);
+  M.setSplit('vertical');
+  check(M.getRatio() === 70, 'the vertical divider was not remembered');
+  check(M.resetRatio() === 50, 'the divider did not go back to the middle');
+  console.log('  modes       roles, the split, its panes and its divider');
 })();
 
 console.log('');

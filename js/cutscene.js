@@ -116,6 +116,18 @@
   var waitTimer = null;
   var full = '', shown = 0, active = false, onDone = null;
 
+  /* Spam guards. A player who clicks through the opening as fast as they can
+     used to outrun it: every press fired another advance, so lines were
+     completed and skipped in the same frame, the "line finished" sound stacked
+     on itself, and a scene change could start while the previous one was still
+     dissolving — two ghosts thrashing through one layer.
+
+     LOCK_MS is the floor between any two presses. SCENE_LOCK_MS is longer,
+     and is held from the moment a scene changes: a new beat has to be on
+     screen before it can be skipped, or the picture never gets drawn at all. */
+  var LOCK_MS = 260, SCENE_LOCK_MS = 700;
+  var lockedUntil = 0;
+
   /* how long a finished line stays up before the next one arrives; the click
      is still there for anyone who reads faster */
   function readHold(text) { return 520 + text.length * 19; }
@@ -144,6 +156,14 @@
   var LINEC = '#b9ccd6', DIM = '#3d525e', LIT = '#6fd7e8';
 
   function frame() { return S.root(0, 0, 1000, 560, 'cs-art'); }
+
+  /* Every url(#id) inside the scenery has to be unique across the document:
+     while one beat dissolves into the next, TWO copies of the artwork are on
+     the page at once, and a duplicated id makes both of them resolve to
+     whichever was parsed first — which is how a globe ended up wearing the
+     previous scene's clip. */
+  var artUid = 0;
+  function uid(stem) { return stem + (++artUid); }
 
   function ink(parent, tag, attrs) {
     attrs = attrs || {};
@@ -180,9 +200,10 @@
       stroke: '#3fa9d8', 'stroke-width': 8, opacity: .35, class: 'cs-glow' }, svg);
     S.el('circle', { cx: cx, cy: cy, r: r, fill: '#1c5f96' }, svg);
 
-    var clip = S.el('clipPath', { id: 'globeclip' }, svg);
+    var clipId = uid('globeclip');
+    var clip = S.el('clipPath', { id: clipId }, svg);
     S.el('circle', { cx: cx, cy: cy, r: r }, clip);
-    var g = S.el('g', { 'clip-path': 'url(#globeclip)' }, svg);
+    var g = S.el('g', { 'clip-path': 'url(#' + clipId + ')' }, svg);
     var k = r / 100;
     function land(d) {
       S.el('path', { d: d, fill: '#3f8c50', stroke: '#2f6d3e',
@@ -269,7 +290,8 @@
     /* Across the shaft rather than in bands: stacked wedges leave visible
        edges where they overlap, and light has none. A gradient is only a
        paint — it costs nothing like the blur that made the backdrop lag. */
-    var lg = S.el('linearGradient', { id: 'csbeam', x1: '0', y1: '0',
+    var beamId = uid('csbeam');
+    var lg = S.el('linearGradient', { id: beamId, x1: '0', y1: '0',
       x2: '1', y2: '0' }, g);
     [[0, 0], [0.18, .05], [0.5, .17], [0.82, .05], [1, 0]]
       .forEach(function (st) {
@@ -279,7 +301,7 @@
 
     S.el('path', { d: 'M' + (cx - 46) + ' ' + yTop + ' L' + (cx - 196) + ' ' +
       yBot + ' L' + (cx + 196) + ' ' + yBot + ' L' + (cx + 46) + ' ' + yTop +
-      ' Z', fill: 'url(#csbeam)' }, g);
+      ' Z', fill: 'url(#' + beamId + ')' }, g);
 
     /* a brighter core down the middle */
     S.el('path', { d: 'M' + (cx - 13) + ' ' + yTop + ' L' + (cx - 54) + ' ' +
@@ -567,7 +589,29 @@
 
   /* ---------- playback ---------------------------------------------------------- */
 
+  /* The outgoing scene is handed to the ghost layer and faded there while the
+     new one fades up over it, so beats dissolve into each other. Cut straight
+     the picture blinked to black between every line of the opening. */
   function paintScene() {
+    if (node.ghost) {
+      node.ghost.innerHTML = '';
+      var going = node.art.firstChild;
+      if (!reduced() && going) {
+        /* The slow drift is an animation on `.cs-stage.in .cs-art`, and the
+           moment this node leaves that stage the rule stops applying — so it
+           snapped back to the start of the drift on its way out, which is the
+           jump that made every scene change look broken. Freeze it where it
+           actually is before moving it. */
+        var at = '';
+        try { at = window.getComputedStyle(going).transform; } catch (e) {}
+        if (at && at !== 'none') going.style.transform = at;
+        going.style.animation = 'none';
+        node.ghost.appendChild(going);
+        node.ghost.classList.remove('out');
+        void node.ghost.offsetWidth;
+        node.ghost.classList.add('out');
+      }
+    }
     node.art.innerHTML = '';
     var build = ART[seq[scene].art] || ART.earth;
     node.art.appendChild(build());
@@ -618,7 +662,7 @@
 
     if (lastBeat() && seqName === 'intro') { offerBegin(); return; }
     /* it carries itself from here; clicking only hurries it along */
-    autoTimer = setTimeout(function () { autoTimer = null; advance(); },
+    autoTimer = setTimeout(function () { autoTimer = null; advance(true); },
       readHold(full));
   }
 
@@ -627,7 +671,13 @@
     node.begin.classList.add('in');
   }
 
-  function advance() {
+  function advance(auto) {
+    /* the sequence's own timers are never throttled; only presses are */
+    if (!auto) {
+      var t = Date.now();
+      if (t < lockedUntil) return;
+      lockedUntil = t + LOCK_MS;
+    }
     if (waitTimer) { stopTyping(); startLine(); return; }  /* skip the beat */
     if (typing) { finishLine(); return; }   /* complete before moving on */
     if (!node.begin.hidden) return;         /* the last beat waits for BEGIN */
@@ -637,6 +687,8 @@
       scene++;
       line = 0;
       if (scene >= seq.length) { finish(); return; }
+      /* a new picture has to be allowed to arrive before it can be skipped */
+      lockedUntil = Date.now() + SCENE_LOCK_MS;
       paintScene();
       enterScene();
       return;
@@ -648,6 +700,7 @@
     stopTyping();
     node.begin.hidden = true;
     node.begin.classList.remove('in');
+    if (node.ghost) { node.ghost.innerHTML = ''; node.ghost.classList.remove('out'); }
     active = false;
     D.audio.music(false);
     node.root.classList.remove('open');
@@ -666,7 +719,7 @@
     /* ?scene=N opens on a given beat, for checking the scenery */
     var at = /[?&]scene=(\d)/.exec(location.search);
     scene = at ? D.clamp(Number(at[1]), 0, seq.length - 1) : 0;
-    line = 0; active = true;
+    line = 0; active = true; lockedUntil = 0;
     node.begin.hidden = true;
     node.begin.classList.remove('in');
     node.root.hidden = false;
@@ -690,6 +743,7 @@
     init: function () {
       node.root = document.getElementById('cutscene');
       node.art = document.getElementById('cs-art');
+      node.ghost = document.getElementById('cs-ghost');
       node.text = document.getElementById('cs-text');
       node.prompt = document.getElementById('cs-prompt');
       node.skip = document.getElementById('cs-skip');
@@ -698,8 +752,17 @@
       node.begin.addEventListener('click', function (e) {
         e.stopPropagation();
         D.audio.click();
-        finish();
-        if (D.startFirstDevice) D.startFirstDevice();
+        /* The one real cut in the game: the opening closes on the point of
+           light it has just resolved into a clock, and the mode screen is
+           behind it when it opens again. */
+        var hand = function () {
+          finish();
+          if (D.showModeSelect) D.showModeSelect(D.startFirstDevice);
+          else if (D.startFirstDevice) D.startFirstDevice();
+        };
+        if (!D.fx) { hand(); return; }
+        D.audio.whoosh();
+        D.fx.iris({ x: e.clientX, y: e.clientY, color: '#0a1318', hold: hand });
       });
 
       node.root.addEventListener('click', function (e) {

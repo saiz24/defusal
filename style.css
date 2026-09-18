@@ -8,11 +8,26 @@
    viewport in one transform, so nothing ever reflows.
    ========================================================================== */
 
+/* The one thing the game loads that it does not draw. It is bundled rather
+   than asked for by name: a font installed on the machine this was built on
+   is not on the machine it is shown on, and there is no network to fall back
+   to. 29KB, next to the page, same as everything else. */
+@font-face {
+  font-family: "Seven Segment";
+  src: url("fonts/seven-segment.ttf") format("truetype");
+  font-weight: normal; font-style: normal; font-display: block;
+}
+
 :root {
   --bg:      #070d11;
   --bg-2:    #16262f;
   --ink:     #1a2429;   /* outlines on the lit faces */
-  --ink-2:   #7c8f98;   /* quiet labels */
+  /* Quiet, not faint. These sit on a moving sky, at 10 and 11px, in a face
+     with thin strokes — the old #7c8f98 measured fine against a flat swatch
+     and was genuinely hard to read against the backdrop. */
+  --ink-2:   #a4b8c2;   /* quiet labels, still plainly readable */
+  --ink-3:   #86a0ab;   /* the quietest thing on a screen */
+  --ink-off: #56676e;   /* switched OFF, and meant to look it */
   --paper:   #eceff0;   /* module faces stay lit and legible */
   --soft:    #d7dedf;
   --case:    #2c383e;   /* the shell */
@@ -24,11 +39,66 @@
   --green:   #4f9d5d;
   --yellow:  #ddb63f;
   --violet:  #7a6bb0;
-  --text:    #cfdde2;
-  --round: "Courier New", ui-rounded, "SF Pro Rounded",
-           "Hiragino Maru Gothic ProN", Avenir, "Trebuchet MS",
-           system-ui, sans-serif;
-  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --text:    #dbe9ef;   /* body copy, lifted off the old #cfdde2 */
+
+  /* ---- three voices, and only three -----------------------------------
+     Everything used to be set in ONE face at ONE weight, which is why a
+     heading, a button, a caption and a paragraph all looked like the same
+     thing. The typewriter is the game — it keeps the title, the verdicts,
+     the device names, the manual and every key. What it stops doing is the
+     small print: a 10px label with thin slab strokes, over a moving sky, is
+     where it stopped being readable.
+
+       --round    the game's face. Titles, verdicts, the manual, controls.
+       --prose    the small print — labels, blurbs, captions, notes. It is
+                  here for legibility at 11px and for contrast against the
+                  typewriter, nothing else.
+       --mono     readouts: the clock, a serial, a round code, a figure in a
+                  table. Numbers that have to line up.
+     -------------------------------------------------------------------- */
+  /* The display face. Everything the device says about itself — its name, a
+     verdict, the title over all of it — is the same lit segment readout the
+     clock is, so the screen and the thing on the table are speaking in one
+     voice. It carries a glow that takes the colour of whichever device is in
+     front of you. */
+  --seg: "Seven Segment", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --round: "American Typewriter", "Courier New", ui-rounded,
+           "SF Pro Rounded", "Hiragino Maru Gothic ProN", Avenir,
+           "Trebuchet MS", system-ui, sans-serif;
+  --prose: "Avenir Next", "Avenir", "Segoe UI Variable Text", "Segoe UI",
+           system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Roboto Mono", Menlo,
+          Consolas, monospace;
+
+  /* ---- one scale, used everywhere -------------------------------------
+     The sizes used to be picked per rule: 10, 11, 12, 13, 15, 17, 19, 21,
+     22, 25, 26 — eleven sizes, most of them a pixel apart, which is how a
+     screen ends up with no hierarchy at all. Six steps, and a heading is
+     obviously a heading. ------------------------------------------------- */
+  --t-hero:  clamp(42px, 7.6vw, 88px);   /* the title, a verdict */
+  --t-head:  clamp(21px, 2.9vw, 30px);   /* a screen heading, a device name */
+  --t-sub:   17px;                       /* a heading inside a panel */
+  --t-body:  15px;                       /* anything read in sentences */
+  --t-label: 12px;                       /* a label on a control or a figure */
+  --t-micro: 10px;                       /* the quietest thing that has words */
+
+  /* and one set of tracking values, so a label is spaced like every other */
+  --trk-hero:  .3em;
+  --trk-head:  .12em;
+  --trk-label: .18em;
+
+  /* ---- one set of durations ------------------------------------------
+     Everything moved too fast to be watched. A transition is not an
+     interruption to be got out of the way — it is the thing that tells the
+     player they went somewhere. These are the only numbers used. ---------- */
+  --t-quick:  .22s;    /* a control answering a press */
+  --t-mid:    .42s;    /* something small changing state */
+  --t-slow:   .68s;    /* a screen arriving */
+  --t-cut:    .92s;    /* the iris covering the glass */
+  --ease:     cubic-bezier(.22, .9, .25, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-in:  cubic-bezier(.55, 0, .85, .35);
 }
 
 * { box-sizing: border-box; }
@@ -58,20 +128,28 @@ body { background: transparent; }
 .sheet { width: min(auto, 100%); text-align: center; }
 
 .title {
-  margin: 0 0 20px;
-  font-size: clamp(46px, 8vw, 84px);
-  font-weight: 300;
-  line-height: 1;
-  letter-spacing: .42em; text-indent: .42em;
-  color: #e7f3f6;
-  text-shadow: 0 0 46px rgba(111, 215, 232, .35);
+  margin: 0 0 22px;
+  font-family: var(--seg);
+  font-size: var(--t-hero);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: .1em; text-indent: .1em;
+  color: #eaf7fb;
+  /* the glow is the accent of whichever device is in front of you */
+  text-shadow: 0 0 6px color-mix(in srgb, var(--accent, #6fd7e8) 85%, #fff),
+               0 0 28px color-mix(in srgb, var(--accent, #6fd7e8) 70%, transparent),
+               0 0 72px color-mix(in srgb, var(--accent, #6fd7e8) 45%, transparent);
+  transition: text-shadow .6s ease, color .6s ease;
 }
+/* the unlit segments behind the lit ones, the way a real readout has them */
+.title { position: relative; }
 
 /* --- the campaign -------------------------------------------------------- */
 
 .freeplay { margin-top: 22px; }
-.progress { margin: 24px 0 6px; font-size: 12px; letter-spacing: .14em;
-            color: var(--ink-2); }
+.progress { margin: 24px 0 6px; font-family: var(--prose); font-size: var(--t-label);
+            font-weight: 700; letter-spacing: .14em; color: var(--ink-2);
+            text-shadow: 0 1px 10px rgba(0,0,0,.8); }
 
 .choices { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 .choices.two { grid-template-columns: repeat(2, 190px); justify-content: center; }
@@ -86,7 +164,8 @@ body { background: transparent; }
   cursor: pointer;
   transition: transform .12s ease, border-color .18s ease, background .18s ease;
 }
-.key b { font-size: 15px; font-weight: 400; letter-spacing: .12em; }
+.key b { font-size: 15px; font-weight: 400; letter-spacing: .12em;
+          text-shadow: 0 0 16px rgba(160, 220, 240, .28), 0 1px 2px rgba(0,0,0,.6); }
 .key:hover { transform: translateY(-2px); border-color: var(--rim); background: #1e2f38; }
 .key:active { transform: none; }
 .key.on { border-color: var(--rim); }
@@ -99,7 +178,8 @@ body { background: transparent; }
   background: #17242b;
 }
 .field { display: inline-flex; align-items: center; gap: 9px; }
-.field span { font-size: 12px; color: var(--ink-2); }
+.field span { font-family: var(--prose); font-size: var(--t-micro); font-weight: 700;
+               letter-spacing: var(--trk-label); color: var(--ink-2); }
 .field input, .answer input {
   font-family: var(--round); font-size: 20px; text-align: center;
   width: 84px; padding: 8px;
@@ -111,26 +191,39 @@ body { background: transparent; }
   outline: none; box-shadow: 0 0 0 3px var(--rim);
 }
 
+/* No margin on the base class. A control that carries layout spacing cannot
+   be put in a row with anything else without knocking it out of line, which
+   is exactly what it did to the mode screen's BACK. */
 .sound {
-  margin-top: 24px;
   font-family: var(--round); font-size: 12px;
   color: var(--ink-2); background: transparent;
   border: 1px solid #2c4048; border-radius: 8px;
   padding: 8px 15px; cursor: pointer; letter-spacing: .12em;
 }
-.sound:hover { color: var(--text); border-color: var(--rim); }
-.sound.off { color: #4a5a61; }
+.sound { text-shadow: 0 1px 8px rgba(0,0,0,.7); }
+.sound:hover { color: var(--text); border-color: var(--rim);
+               box-shadow: 0 0 16px rgba(111,215,232,.22); }
+.sound.off { color: var(--ink-off); }
 
 .verdict {
-  margin: 0 0 10px;
-  font-size: clamp(44px, 8vw, 88px); line-height: 1;
-  letter-spacing: .07em; text-indent: .07em;
-  font-weight: 300; letter-spacing: .3em; text-indent: .3em;
-  color: #e7f3f6;
-  text-shadow: 0 0 40px rgba(111,215,232,.3);
+  margin: 0 0 18px;
+  font-family: var(--seg);
+  font-size: var(--t-hero); line-height: 1.05;
+  font-weight: 400;
+  /* No text-indent. It was there to cancel the trailing letter-space, and
+     with `text-align: center` that is already cancelled — the pair pushed the
+     word off the middle of the screen by a third of a character. */
+  letter-spacing: .1em;
+  color: #eaf7fb;
+  text-shadow: 0 0 6px rgba(255,255,255,.7), 0 0 30px rgba(111,215,232,.6),
+               0 0 76px rgba(111,215,232,.35);
 }
-.verdict.good { color: #8fe0a4; }
-.verdict.bad  { color: #e9a49c; }
+.verdict.good { color: #c8f7d5;
+  text-shadow: 0 0 6px rgba(255,255,255,.7), 0 0 30px rgba(105,220,140,.7),
+               0 0 78px rgba(105,220,140,.4); }
+.verdict.bad  { color: #ffcdc5;
+  text-shadow: 0 0 6px rgba(255,255,255,.7), 0 0 30px rgba(224,104,92,.7),
+               0 0 78px rgba(224,104,92,.4); }
 .cause { display: none; }   /* the verdict speaks for itself */
 .stats { display: grid; gap: 8px; max-width: 380px; margin: 0 auto 26px; }
 .stats .row {
@@ -139,9 +232,11 @@ body { background: transparent; }
   background: #17242b;
   border: 1px solid #2c4048; border-radius: 9px;
 }
-.stats .k { font-size: 12px; color: var(--ink-2); }
-.stats .v { font-size: 18px; color: var(--text); }
-.seed { margin-top: 22px; font-size: 11px; color: #46595f; }
+.stats .k { font-family: var(--prose); font-size: var(--t-label); font-weight: 700;
+             letter-spacing: .1em; color: var(--ink-2); }
+.stats .v { font-family: var(--mono); font-size: 19px; color: #eaf6fa; }
+.seed { margin-top: 20px; font-family: var(--prose); font-size: var(--t-label);
+         color: var(--ink-3); text-shadow: 0 1px 10px rgba(0,0,0,.8); }
 
 /* ======================= the case ======================================== */
 
@@ -198,9 +293,9 @@ body { background: transparent; }
 
 /* the reverse: a stamped plate where the clock would be */
 .strip.plate-only { flex-direction: column; gap: 6px; padding: 16px 34px; }
-.stamp { font-family: var(--mono); font-size: 30px; letter-spacing: .3em;
+.stamp { font-family: var(--seg); font-size: 30px; letter-spacing: .3em;
          text-indent: .3em; color: var(--rim); }
-.stamp-sub { font-size: 11px; letter-spacing: .34em; color: #4a5a61; }
+.stamp-sub { font-size: 11px; letter-spacing: .34em; color: var(--ink-off); }
 
 .key.locked, .key.locked:hover {
   background: #101a1f; border-color: #1e2a30; color: #364750;
@@ -382,7 +477,7 @@ body { background: transparent; }
   font-size: 76px; line-height: 1;
   letter-spacing: .03em;
   font-variant-numeric: tabular-nums;
-  color: var(--amber); font-family: var(--mono);
+  color: var(--amber); font-family: var(--seg);
   text-shadow: 0 0 18px rgba(255,200,97,.6);
   background: #060c0f;
   border: 2px solid #0e1519; border-radius: 10px;
@@ -419,10 +514,10 @@ body { background: transparent; }
 .plate {
   padding: 6px 18px;
   font-size: 30px; letter-spacing: .15em; text-indent: .15em;
-  color: var(--rim); background: #0b1418; font-family: var(--mono);
+  color: var(--rim); background: #0b1418; font-family: var(--seg);
   border: 2px solid #0e1519; border-radius: 7px;
 }
-.panel .count { font-size: 28px; color: #74c98c; font-family: var(--mono); }
+.panel .count { font-size: 28px; color: #74c98c; font-family: var(--seg); }
 .abort {
   font-family: var(--round); font-size: 12px;
   color: #ffe4e0; background: #b8443c;
@@ -733,29 +828,31 @@ body.debug .answer-tag {
 
 .voice {
   font-family: var(--round);
-  letter-spacing: .05em;
-  color: #dbe7ec;
-  text-shadow: 0 0 18px rgba(190, 225, 240, .28);
+  letter-spacing: .04em;
+  color: #eaf4f8;
+  text-shadow: 0 0 26px rgba(150, 210, 232, .40),
+               0 2px 12px rgba(0, 0, 0, .85);
 }
 
 .premise {
   margin: -18px 0 30px;
   font-size: 15px;
-  line-height: 1.5;
-  color: #4d626c;
+  line-height: 1.55;
+  color: var(--ink-3);
   text-shadow: none;
   max-width: 560px;
   margin-left: auto; margin-right: auto;
 }
 
-.key em { font-style: normal; font-size: 10px; color: #97a0a4; }
-.key i  { color: #6d7c83; }
+.key em { font-style: normal; font-size: 10px; color: #b3c2c9; }
+.key i  { color: var(--ink-3); }
 
-.tally { margin: 22px 0 0; font-size: 12px; color: #5d727c; }
+.tally { margin: 22px 0 0; font-family: var(--prose); font-size: 12px;
+         color: var(--ink-3); }
 .minor { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
-.verdict-voice { margin: 0 0 8px; font-size: 17px; color: #46606c;
-                 text-shadow: none; }
+/* The result screen's line of narration is gone — the verdict and the
+   statistics are what the player came back for. */
 
 .arming-line {
   position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);
@@ -784,6 +881,12 @@ body.debug .answer-tag {
    typical display, and the scenes read as shots rather than as a panel with
    the page showing around it. The line sits over the picture on its own
    scrim, the way a subtitle does, instead of in a box underneath it. */
+/* The opening fills the screen, as it always did. What went wrong before was
+   the DRAWING running edge to edge inside it: the scenery was right against
+   the glass with nowhere for the eye to rest. The picture is now held inward
+   by padding on the SVG itself — it is a replaced element, so its viewBox
+   fits the content box and the drawing simply sits further in while the layer
+   still covers the whole screen. No frame, no box, no letterbox. */
 .cutscene {
   position: fixed; inset: 0; z-index: 100;
   background: radial-gradient(125% 95% at 50% 38%,
@@ -795,37 +898,52 @@ body.debug .answer-tag {
   user-select: none;
 }
 /* a vignette over the picture, not under it: the corners fall away and the
-   eye is held in the middle of the frame */
+   eye is held in the middle of the screen */
 .cutscene::after {
   content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background: radial-gradient(118% 88% at 50% 44%,
-              rgba(0, 0, 0, 0) 42%, rgba(0, 0, 0, .34) 78%,
-              rgba(0, 0, 0, .62) 100%);
+  background: radial-gradient(120% 90% at 50% 42%,
+              rgba(0, 0, 0, 0) 44%, rgba(0, 0, 0, .34) 80%,
+              rgba(0, 0, 0, .64) 100%);
 }
 .cs-stage {
   position: absolute; inset: 0;
   display: grid; place-items: center;
 }
-.cs-stage.in { animation: csFade 1.3s ease both; }
-@keyframes csFade { from { opacity: 0; } to { opacity: 1; } }
-.cs-art { width: 100%; height: 100%; display: block; }
+/* the outgoing beat, dissolving under the incoming one */
+.cs-ghost { z-index: 0; pointer-events: none; opacity: 0; }
+.cs-ghost.out { animation: csDissolve 1.15s ease both; }
+@keyframes csDissolve { from { opacity: 1; } to { opacity: 0; } }
 
+.cs-stage.in { animation: csFade 1.25s ease both; }
+@keyframes csFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* The inset that fixes "too close". The bottom is deeper than the top so the
+   drawing never runs under the line being read. */
+.cs-art {
+  width: 100%; height: 100%; display: block; box-sizing: border-box;
+  padding: clamp(26px, 7vh, 80px) clamp(28px, 6vw, 130px)
+           clamp(108px, 20vh, 200px);
+}
+
+/* the line, read across the bottom of the picture the way a subtitle is */
 .cs-box {
   position: absolute; z-index: 4;
   left: 50%; transform: translateX(-50%);
-  bottom: clamp(40px, 8vh, 104px);
-  width: min(1180px, 86vw);
-  min-height: 108px;
-  padding: 24px 34px;
-  display: flex; align-items: center; gap: 14px;
-  border-top: 1px solid rgba(78, 102, 112, .5);
+  bottom: clamp(28px, 6.5vh, 92px);
+  width: min(1180px, 88vw);
+  min-height: 92px;
+  padding: 20px 30px;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  text-align: center;
+  border-top: 1px solid rgba(96, 126, 140, .38);
   background: linear-gradient(to top,
-              rgba(4, 7, 9, .90) 0%, rgba(4, 7, 9, .66) 62%,
+              rgba(4, 7, 9, .92) 0%, rgba(4, 7, 9, .70) 58%,
               rgba(4, 7, 9, 0) 100%);
 }
-.cs-line { margin: 0; font-size: clamp(20px, 2.1vw, 31px); line-height: 1.45;
-           text-shadow: 0 2px 14px rgba(0, 0, 0, .85); }
+.cs-line { margin: 0; font-size: clamp(18px, 2vw, 30px); line-height: 1.45;
+           text-shadow: 0 2px 16px rgba(0, 0, 0, .9); }
 
+/* the "go on" caret, once a line has finished typing */
 .cs-prompt {
   width: 0; height: 0; flex: none; opacity: 0;
   border-left: 11px solid #8fb6c4;
@@ -838,11 +956,11 @@ body.debug .answer-tag {
 .cs-skip {
   position: absolute; z-index: 5; top: 22px; right: 24px;
   font-family: var(--round); font-size: 12px; letter-spacing: .16em;
-  color: #7e929b; background: transparent;
-  border: 2px solid #2a3940; border-radius: 10px;
+  color: #93a8b2; background: rgba(6, 10, 13, .5);
+  border: 2px solid #33474f; border-radius: 10px;
   padding: 8px 16px; cursor: pointer;
 }
-.cs-skip:hover { color: #d6e6ec; border-color: #4d626c; }
+.cs-skip:hover { color: #dff0f6; border-color: #5b757f; }
 
 /* --- scenery motion -------------------------------------------------------- */
 /* nothing rises into place: scenes appear, and the frame drifts in slowly */
@@ -852,8 +970,12 @@ body.debug .answer-tag {
 .cs-appear { transform-box: fill-box; transform-origin: 50% 50%;
              animation: csAppear 1.1s ease both; }
 
-@keyframes csZoom { from { transform: scale(1); } to { transform: scale(1.05); } }
-.cs-stage.in .cs-art { animation: csZoom 18s ease-out both; }
+/* A slow drift across the frame rather than a push into it. The old version
+   only scaled, which is why every beat felt like it was closing in on the
+   player; this starts a hair wide and settles, so the picture opens out. */
+@keyframes csZoom { from { transform: scale(1.028) translate(0.5%, 0.4%); }
+                    to   { transform: scale(1) translate(-0.4%, -0.3%); } }
+.cs-stage.in .cs-art { animation: csZoom 22s ease-out both; }
 
 @keyframes csGlow { 0%, 100% { opacity: .35; } 50% { opacity: .75; } }
 .cs-glow { animation: csGlow 7s ease-in-out infinite; }
@@ -937,7 +1059,9 @@ body.debug .answer-tag {
   border: 1px solid #2c4048; border-radius: 50%;
   cursor: pointer;
 }
-.nav:hover:not(:disabled) { border-color: var(--rim); background: #1e2f38; }
+.nav { text-shadow: 0 0 14px rgba(111,215,232,.3); }
+.nav:hover:not(:disabled) { border-color: var(--rim); background: #1e2f38;
+                            box-shadow: 0 0 18px rgba(111,215,232,.28); }
 .nav:active:not(:disabled) { transform: scale(.9); }
 .nav:disabled { opacity: .25; cursor: default; }
 
@@ -959,11 +1083,20 @@ body.debug .answer-tag {
 .card.done { border-color: var(--green); box-shadow: 0 0 0 1px rgba(116,201,140,.3); }
 .card.locked { opacity: .55; border-color: #1e2a30; }
 
-.idx { font-size: 11px; letter-spacing: .3em; text-indent: .3em; color: var(--ink-2); }
-.nm { font-size: clamp(22px, 3vw, 30px); letter-spacing: .1em; color: #e7f3f6; }
+.idx { font-family: var(--prose); font-size: var(--t-micro); font-weight: 700;
+        letter-spacing: var(--trk-hero); text-indent: var(--trk-hero);
+        color: var(--ink-3); }
+.nm { font-family: var(--seg); font-weight: 400;
+      font-size: var(--t-head); letter-spacing: .08em;
+      color: #f2fbfd; line-height: 1.1;
+      text-shadow: 0 0 5px color-mix(in srgb, var(--accent) 90%, #fff),
+                   0 0 22px color-mix(in srgb, var(--accent) 75%, transparent),
+                   0 0 54px color-mix(in srgb, var(--accent) 45%, transparent); }
 
-.emblem-wrap { color: var(--rim); line-height: 0; }
-.card.locked .emblem-wrap { color: #33454d; }
+.emblem-wrap { color: var(--rim); line-height: 0;
+                filter: drop-shadow(0 0 12px color-mix(in srgb,
+                        var(--accent, #6fd7e8) 55%, transparent)); }
+.card.locked .emblem-wrap { color: #33454d; filter: none; }
 .emblem { width: 108px; height: 108px; display: block; }
 
 .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 22px; width: 100%; }
@@ -971,13 +1104,18 @@ body.debug .answer-tag {
   display: flex; justify-content: space-between; align-items: baseline;
   border-bottom: 1px solid #22323a; padding-bottom: 5px;
 }
-.fact span { font-size: 10px; letter-spacing: .13em; color: var(--ink-2); }
-.fact b { font-size: 15px; color: var(--text); font-weight: 400; }
+.fact span { font-family: var(--prose); font-size: var(--t-micro); font-weight: 700;
+              letter-spacing: var(--trk-label); color: var(--ink-2); }
+.fact b { font-family: var(--mono); font-size: 15px; color: #eaf6fa;
+          font-weight: 500; }
 .card.locked .facts { visibility: hidden; }
 
-.blurb { font-size: 12px; color: var(--ink-2); max-width: 300px; line-height: 1.5; }
+.blurb { font-family: var(--prose); font-size: var(--t-label); color: var(--ink-2);
+          max-width: 300px; line-height: 1.55; }
 .engage { width: 100%; padding: 15px 10px; }
-.engage b { font-size: 15px; letter-spacing: .16em; }
+.engage b { font-size: 15px; letter-spacing: .16em;
+             text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 60%, transparent),
+                          0 1px 2px rgba(0,0,0,.6); }
 .engage:disabled { opacity: .4; cursor: default; }
 
 .card .choices { grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
@@ -996,10 +1134,11 @@ body.debug .answer-tag {
           box-shadow: 0 0 10px rgba(111,215,232,.6); }
 .dot.locked { background: #17222700; border-style: dashed; }
 
-/* the opening's last beat: it hands you a device, not a menu */
+/* the opening's last beat: it hands you a device, not a menu. It sits over
+   the picture, above the line, so nothing on screen moves when it appears. */
 .cs-begin {
-  position: absolute; z-index: 5;
-  left: 50%; bottom: 12%; transform: translateX(-50%);
+  position: absolute; z-index: 6;
+  left: 50%; bottom: clamp(140px, 26vh, 250px); transform: translateX(-50%);
   font-family: var(--round); font-size: 15px; letter-spacing: .3em;
   text-indent: .3em; color: #06121a;
   background: var(--rim); border: 0; border-radius: 12px;
@@ -1104,7 +1243,7 @@ body.debug .answer-tag {
               0 12px 30px rgba(0,0,0,.5);
 }
 .card .nm { color: var(--accent); }
-.card.locked .nm { color: #4a5a62; }
+.card.locked .nm { color: var(--ink-off); }
 .engage {
   background: color-mix(in srgb, var(--accent) 22%, #16232a);
   border-color: color-mix(in srgb, var(--accent) 55%, #16232a);
@@ -1261,7 +1400,7 @@ button, .key, .bay, .bay *, .zoom, .answer input, .field input,
   .choices { gap: 10px; }
   .key i { font-size: 11px; }
   .stats { max-width: none; }
-  .cs-box { padding: 16px 18px; width: 94vw; bottom: 24px; min-height: 84px; }
+  .cs-box { padding: 14px 16px; width: 94vw; min-height: 72px; }
   .cs-line { font-size: 16px; line-height: 1.5; }
 }
 
@@ -1343,153 +1482,342 @@ button, .key, .bay, .bay *, .zoom, .answer input, .field input,
 .sel-dots    { animation-delay: -5s; }
 
 /* ==========================================================================
-   MODES
-   Where the manual lives, and what it costs to read it.
+   THE MODE SCREEN
+   Three keys along the bottom and, above them, a panel big enough to show
+   what the mode looks like once a device is armed. The preview is the point:
+   "two devices" is a shape, and a player picks a shape from a picture of it
+   far more easily than from a sentence about it.
    ========================================================================== */
 
-.modes { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
-         margin: 4px 0 10px; }
-.mode-btn {
-  font-family: var(--round); font-size: 12px; letter-spacing: .14em;
+.mode-sheet { width: min(940px, 100%); }
+.mode-heading {
+  margin: 0 0 22px; font-family: var(--seg);
+  font-size: var(--t-head); letter-spacing: .1em;
+  color: #eaf7fb; font-weight: 400; line-height: 1.1;
+  text-shadow: 0 0 5px rgba(255,255,255,.6), 0 0 26px rgba(111,215,232,.55),
+               0 0 64px rgba(111,215,232,.3);
+}
+
+.mode-stage {
+  /* The width is capped in viewport HEIGHT: the panel is as tall as the
+     drawing makes it, so capping the width is how the drawing is kept from
+     eating the screen — and it keeps the art filling the panel instead of
+     floating in the middle of one. */
+  position: relative; overflow: hidden;
+  width: min(100%, 78vh); margin: 0 auto;
+  border: 1px solid #2c4048; border-radius: 16px;
+  background: linear-gradient(180deg, #1b2a32, #121d24);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 14px 34px rgba(0,0,0,.5);
+}
+.mode-track { display: flex; transition: transform .42s cubic-bezier(.3,.85,.3,1); }
+.mode-panel {
+  flex: 0 0 100%; padding: 14px 14px 18px;
+  display: grid; gap: 6px; justify-items: center;
+  color: var(--rim); opacity: .45;
+  transition: opacity .32s ease;
+}
+.mode-panel.on { opacity: 1; }
+.mode-art-wrap { width: 100%; line-height: 0; }
+.mode-art { width: 100%; height: auto; display: block; }
+
+/* the one extra choice a mode may carry */
+.mode-opts { margin: 12px 0 16px; }
+.mode-opt { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.mode-opt-label { font-family: var(--prose); font-size: var(--t-micro); font-weight: 700;
+                  letter-spacing: var(--trk-label); color: var(--ink-3);
+                  margin-top: 4px; text-shadow: 0 1px 10px rgba(0,0,0,.8); }
+.mode-opt-keys { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.opt-btn {
+  font-family: var(--round); font-size: 12px; letter-spacing: .12em;
   color: var(--ink-2); background: #16222a;
   border: 2px solid #2b3d46; border-radius: 10px;
-  padding: 9px 16px; min-height: 40px; cursor: pointer;
+  padding: 10px 16px; min-height: 42px; cursor: pointer;
   transition: color .15s ease, border-color .15s ease, background .15s ease;
 }
-.mode-btn:hover { color: var(--text); border-color: #486069; }
-.mode-btn.on { color: #06121a; background: var(--rim); border-color: var(--rim); }
-.mode-blurb { font-size: 12px; color: var(--ink-2); text-align: center;
-              margin: 0 auto 6px; max-width: 46ch; line-height: 1.5; }
-.mode-hint { font-size: 12px; color: var(--ink-2); text-align: center;
-             margin: 0 auto 10px; max-width: 46ch; line-height: 1.6; }
-.mode-hint code { color: var(--amber); font-family: var(--mono); font-size: 11px; }
-.mode-hint a { color: var(--rim); }
+.opt-btn:hover { color: var(--text); border-color: #486069; }
+.opt-btn.on { color: #06121a; background: var(--rim); border-color: var(--rim); }
 
-/* the in-round control, sitting under the other two case buttons */
-.manual-btn { top: 128px; }
+.mode-row {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px; margin-bottom: 16px;
+}
+.mode-key { display: grid; gap: 4px; padding: 14px 8px; }
+.mode-key i { font-style: normal; font-family: var(--prose); font-size: var(--t-micro);
+              font-weight: 700; letter-spacing: var(--trk-label); color: var(--ink-3); }
+.mode-key.on { border-color: var(--rim); background: #1e2f38;
+                box-shadow: 0 0 0 1px rgba(111,215,232,.35),
+                            0 0 28px rgba(111,215,232,.22); }
+.mode-key.on i { color: #a9e8f4; }
+
+.mode-go { display: flex; gap: 10px; justify-content: center; align-items: center; }
+.mode-go .key { min-width: 240px; padding: 0 22px; min-height: 56px;
+                display: grid; place-items: center; }
+/* the same height as the key beside it: two controls on one row that do not
+   share a baseline read as a mistake */
+.mode-go .sound { padding: 0 22px; min-height: 56px;
+                  display: grid; place-items: center; }
 
 /* ==========================================================================
-   THE MANUAL OVERLAY  (Solo)
-   It covers the case completely and on purpose: the cost of looking something
-   up is that you cannot look at the device while you do it. The clock is
-   repeated in the bar because the countdown does not stop.
+   THE SEED PAGE
+   OPEN PLAY dealt a new random device every time and gave the player no way
+   back to one. This takes the code the result screen printed.
    ========================================================================== */
 
-.manual-overlay {
-  position: fixed; inset: 0; z-index: 120;
+.seedbox { align-items: stretch; }
+.field.wide { width: 100%; }
+.field.wide input {
+  flex: 1 1 auto; min-width: 0; width: 100%;
+  font-family: var(--mono); letter-spacing: .18em; text-transform: uppercase;
+}
+.seed-note { margin: 0; font-family: var(--prose); font-size: var(--t-label);
+              line-height: 1.5; color: var(--ink-2); }
+.seed-note.bad { color: var(--red); }
+
+.seed-code {
+  font-family: var(--seg); font-size: 22px; font-weight: 400;
+  letter-spacing: .22em; color: var(--amber);
+  text-shadow: 0 0 20px rgba(255,200,97,.35), 0 1px 8px rgba(0,0,0,.8);
+  user-select: all; -webkit-user-select: all;
+}
+
+/* ==========================================================================
+   THE MANUAL, INSIDE THE GAME
+   Typeset for the screen it is on, not an embedded document. One mounted
+   view, used as half of a Solo split and as the whole of a second screen in
+   two-device mode. No search: the contents are how a module is found.
+   ========================================================================== */
+
+.manual-view {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
   background: #0b1115;
+}
+.mv-bar {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  padding: 11px max(14px, env(safe-area-inset-left)) 11px 14px;
+  padding-top: calc(11px + env(safe-area-inset-top, 0px));
+  background: linear-gradient(180deg, #16232b, #101a20);
+  border-bottom: 1px solid #2a3c45;
+}
+.mv-brand {
+  font-family: var(--round); font-size: 12px; font-weight: 700;
+  letter-spacing: .26em; color: #8fe0ef; white-space: nowrap;
+  text-shadow: 0 0 18px rgba(111,215,232,.45);
+}
+
+.mv-slot { position: relative; flex: 1 1 auto; min-height: 0; }
+.mv-paper {
+  position: absolute; inset: 0;
   overflow-y: auto; -webkit-overflow-scrolling: touch;
-  padding-bottom: 60px;
+  padding: 0 0 64px;
+  overscroll-behavior: contain;
 }
-body.manual-open .bomb,
-body.manual-open .flip-btn { visibility: hidden; }
-
-.mo-bar {
-  position: sticky; top: 0; z-index: 5;
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  background: rgba(11,17,21,.97);
-  border-bottom: 1px solid #22323a;
-  padding: 12px max(16px, env(safe-area-inset-left));
-  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+.mv-sheet { max-width: 70ch; margin: 0 auto;
+            padding: 22px max(18px, env(safe-area-inset-left)); }
+.mv-sheet-title {
+  margin: 0 0 10px; font-family: var(--round); font-size: var(--t-sub);
+  font-weight: 700; letter-spacing: var(--trk-label); color: #eaf7fb;
+  text-shadow: 0 0 26px rgba(111,215,232,.28), 0 2px 3px rgba(0,0,0,.6);
 }
-.mo-title { font-size: 13px; letter-spacing: .2em; color: var(--rim); }
-.mo-search {
-  flex: 1 1 200px; min-width: 0; min-height: 44px;
-  background: #16222a; color: var(--text);
-  border: 2px solid #2b3d46; border-radius: 10px;
-  padding: 8px 14px; font-family: var(--round); font-size: 15px;
-}
-.mo-search:focus { outline: none; border-color: var(--rim); }
-.mo-clock {
-  font-family: var(--mono); font-size: 20px; letter-spacing: .06em;
-  color: var(--amber); min-width: 5ch; text-align: right;
-}
-.mo-clock.urgent { color: var(--red); }
-.mo-close {
-  font-family: var(--round); font-size: 12px; letter-spacing: .12em;
-  color: var(--text); background: #1b2a33;
-  border: 1px solid #33495455; border-radius: 9px;
-  padding: 9px 14px; min-height: 40px; cursor: pointer;
-}
-.mo-close:hover { border-color: var(--rim); color: var(--rim); }
-
-.manual-overlay .toc,
-.manual-overlay .mo-body { max-width: 1080px; margin: 0 auto;
-                           padding: 0 max(16px, env(safe-area-inset-left)); }
-.manual-overlay .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px auto 20px; }
-.manual-overlay .toc a {
+.mv-sheet-sub { margin: 0 0 18px; font-family: var(--prose); font-size: var(--t-label);
+                line-height: 1.62; color: var(--ink-2); }
+.mv-toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 6px; }
+.mv-toc a {
   display: inline-block; padding: 8px 13px; min-height: 40px; line-height: 24px;
-  border: 1px solid #2b3d46; border-radius: 999px;
-  font-size: 13px; text-decoration: none; color: var(--text); background: #131f26;
+  border: 1px solid #33484f; border-radius: 999px;
+  font-family: var(--prose); font-size: 13px; font-weight: 600;
+  text-decoration: none; color: var(--text); background: #16242c;
 }
-.manual-overlay .toc a .dot { display: inline-block; width: 8px; height: 8px;
-  border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+.mv-toc a:hover { border-color: var(--rim); color: #bfeef8; }
+.mv-toc a .dot { display: inline-block; width: 8px; height: 8px;
+                 border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+.mv-missing { padding: 40px 20px; text-align: center; color: var(--red); }
+
+/* ==========================================================================
+   SOLO: THE SPLIT
+   The device and the manual share the glass. Either half can take all of it,
+   and the split turns. It starts vertical.
+   ========================================================================== */
+
+.play-manual {
+  position: fixed; z-index: 60;
+  border-left: 1px solid #22323a;
+  background: #0b1115;
+}
+
+/* The divider's position, as a percentage of the screen along the axis the
+   split runs. Both panes and the grip read the same number. */
+:root { --split-at: 50%; }
+
+/* side by side (the default) */
+body.split-v.playing #screen-game { right: calc(100% - var(--split-at)); }
+body.split-v .play-manual { top: 0; bottom: 0; right: 0;
+                            left: var(--split-at);
+                            border-left: 1px solid #22323a; border-top: 0; }
+
+/* one above the other */
+body.split-h.playing #screen-game { bottom: calc(100% - var(--split-at)); }
+body.split-h .play-manual { left: 0; right: 0; bottom: 0;
+                            top: var(--split-at);
+                            border-top: 1px solid #22323a; border-left: 0; }
+
+/* one half, all of it */
+body.pane-bomb.playing #screen-game { inset: 0; }
+body.pane-bomb .play-manual { display: none !important; }
+body.pane-manual.playing #screen-game { visibility: hidden; }
+body.pane-manual .play-manual { inset: 0; border: 0; }
+
+/* ---- the grip ----------------------------------------------------------
+   A wide invisible target over a hairline: the line wants to be 1px and the
+   finger wants 20, so the line is drawn and the target is not. */
+.split-grip {
+  position: fixed; z-index: 92;
+  touch-action: none;
+  display: grid; place-items: center;
+}
+body.split-v .split-grip {
+  top: 0; bottom: 0; left: var(--split-at);
+  width: 22px; margin-left: -11px; cursor: col-resize;
+}
+body.split-h .split-grip {
+  left: 0; right: 0; top: var(--split-at);
+  height: 22px; margin-top: -11px; cursor: row-resize;
+}
+/* the seam, so the boundary reads as something you can take hold of */
+.split-grip::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to right, transparent 45%,
+              rgba(111,215,232,.16) 45%, rgba(111,215,232,.16) 55%,
+              transparent 55%);
+}
+body.split-h .split-grip::before {
+  background: linear-gradient(to bottom, transparent 45%,
+              rgba(111,215,232,.16) 45%, rgba(111,215,232,.16) 55%,
+              transparent 55%);
+}
+/* the handle itself: a short bar sitting on the seam */
+.split-grip::after {
+  content: ''; display: block; position: relative; border-radius: 3px;
+  background: #6b8794;
+  box-shadow: 0 0 0 1px rgba(8, 13, 16, .8);
+  transition: background .15s ease, box-shadow .15s ease;
+}
+body.split-v .split-grip::after { width: 5px; height: 64px; }
+body.split-h .split-grip::after { width: 64px; height: 5px; }
+.split-grip:hover::after, .split-grip:focus-visible::after,
+.split-grip.dragging::after {
+  background: var(--rim);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--rim) 60%, transparent);
+}
+.split-grip:focus-visible { outline: none; }
+/* while it is being dragged nothing else should take the pointer, and the
+   case must not try to lean towards the cursor */
+body.resizing, body.resizing * { cursor: inherit !important; user-select: none; }
+body.resizing .bomb { transition: none; }
+
+/* the case's own controls follow its pane, so they only need to stand clear
+   of the layout bar at the bottom */
+.layout-bar {
+  position: fixed; z-index: 95;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  display: flex; gap: 6px; padding: 5px;
+  background: rgba(8, 13, 16, .94);
+  border: 1px solid #2b3d46; border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.55);
+}
+.lay-btn {
+  font-family: var(--round); font-size: 11px; letter-spacing: .12em;
+  color: var(--ink-2); background: transparent;
+  border: 1px solid transparent; border-radius: 9px;
+  padding: 8px 12px; min-height: 38px; cursor: pointer;
+}
+.lay-btn:hover { color: var(--text); }
+.lay-btn.on { color: #06121a; background: var(--rim); border-color: var(--rim); }
+.lay-btn:disabled { opacity: .35; cursor: default; }
+.lay-turn { display: grid; place-items: center; width: 42px; padding: 0; }
+.lay-turn svg { width: 20px; height: 20px; fill: none; stroke: currentColor;
+                stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.lay-turn .lay-h { display: none; }
+.lay-turn.horizontal .lay-v { display: none; }
+.lay-turn.horizontal .lay-h { display: block; }
+
+/* ==========================================================================
+   TWO DEVICES: THE SCREEN THAT IS THE MANUAL
+   ========================================================================== */
+
+.reader { background: #0b1115; }
+.reader-host { position: absolute; inset: 0 0 58px; }
+.reader-back {
+  position: absolute; z-index: 5;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+}
+/* the manual screen is a document, not a round: no rotate nag, no sky */
+body.reading #rotate-hint { display: none !important; }
 
 /* ==========================================================================
    MANUAL CONTENT
-   Shared by manual/index.html and by the Solo overlay inside the game, so a
-   rule looks the same wherever it is read.
+   Shared by manual/index.html and by the manual mounted inside the game, so
+   a rule looks the same wherever it is read. This is the longest prose in the
+   project and the only text a player reads under time pressure, so it is set
+   for reading: a humanist sans, a real measure, and headings that are a
+   different size and weight rather than the same size in a different colour.
    ========================================================================== */
 
-.mod { border-top: 1px solid #22323a; padding: 30px 0 10px; scroll-margin-top: 84px; }
+.mod { border-top: 1px solid #27383f; padding: 28px 0 12px;
+       scroll-margin-top: 84px; }
 .mod-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.mod h2 { margin: 0; font-size: 26px; letter-spacing: .02em; }
+.mod h2 {
+  margin: 0; font-family: var(--round); font-size: calc(var(--t-sub) * 1.3);
+  font-weight: 700; letter-spacing: .04em; color: #f0fafd;
+  text-shadow: 0 0 22px rgba(111,215,232,.22);
+}
 .badge {
-  font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  font-family: var(--prose); font-size: 10px; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase;
   border: 1px solid; border-radius: 6px; padding: 3px 9px;
 }
-.badge.easy   { color: #6cc48a; border-color: #36624a; }
-.badge.medium { color: #e0b552; border-color: #6b5628; }
-.badge.hard   { color: #e0766c; border-color: #6e3b36; }
-.tagline { margin: 6px 0 0; color: var(--ink-2); font-style: italic; font-size: 15px; }
-
-/* ---- the live example ---- */
-.example { margin: 20px 0 6px; }
-.example-head {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--ink-2); margin-bottom: 10px;
-}
-.example-head button {
-  font-family: var(--round); font-size: 12px; letter-spacing: .1em;
-  background: #1b2a33; color: var(--text);
-  border: 1px solid #33495459; border-radius: 8px;
-  padding: 7px 13px; min-height: 36px; cursor: pointer;
-}
-.example-head button:hover { border-color: var(--rim); color: var(--rim); }
-.serial-chip { color: var(--rim); letter-spacing: .22em; }
-.stage {
-  background: #7f9198; border-radius: 14px; padding: 12px;
-  overflow-x: auto; -webkit-overflow-scrolling: touch;
-}
-.stage .bay { position: relative; }
-.note {
-  font-size: 12px; color: var(--ink-2); margin: 8px 0 0; line-height: 1.55;
-}
+.badge.easy   { color: #86dda1; border-color: #3e7554; }
+.badge.medium { color: #f0c96a; border-color: #7d6631; }
+.badge.hard   { color: #f0897e; border-color: #83473f; }
+.tagline { margin: 7px 0 0; font-family: var(--prose); color: var(--ink-3);
+           font-style: italic; font-size: var(--t-body); }
 
 /* ---- the rules ---- */
-.rules { margin-top: 8px; max-width: 74ch; }
-.rules p { line-height: 1.62; margin: 13px 0; }
-.rules p.h { font-size: 17px; font-weight: 700; color: #dbe9ee;
-             margin: 26px 0 6px; letter-spacing: .01em; }
-.rules p.attn { color: var(--amber); font-weight: 700; letter-spacing: .06em;
-                margin: 24px 0 4px; }
-.rules li { line-height: 1.62; margin: 7px 0; }
-.rules ul { padding-left: 22px; margin: 10px 0; }
-.rules b { color: #fff; }
-.tablewrap { overflow-x: auto; margin: 14px 0; -webkit-overflow-scrolling: touch; }
-.rules table { border-collapse: collapse; font-size: 14px; min-width: 100%; }
-.rules th, .rules td {
-  border: 1px solid #2b3d46; padding: 7px 11px; text-align: left;
-  white-space: nowrap;
+.rules { margin-top: 10px; max-width: 64ch; font-family: var(--round); }
+.rules p { line-height: 1.68; margin: 14px 0; font-size: var(--t-body);
+           color: var(--text); }
+.rules p.h {
+  font-family: var(--round); font-size: var(--t-sub); font-weight: 700;
+  color: #bfe9f4; margin: 28px 0 4px; letter-spacing: .1em;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px rgba(111,215,232,.25);
 }
-.rules thead th { background: #16232b; color: #cfe3ea; font-weight: 700; }
-.rules tbody tr:nth-child(even) { background: rgba(255,255,255,.022); }
-.rules tr.subhead th { background: #16232b; color: #cfe3ea; font-weight: 700; }
+.rules p.attn {
+  color: var(--amber); font-weight: 700; letter-spacing: .05em;
+  margin: 26px 0 4px; text-transform: uppercase; font-size: 14px;
+}
+.rules li { line-height: 1.66; margin: 8px 0; font-size: var(--t-body);
+            color: var(--text); }
+.rules ul { padding-left: 22px; margin: 10px 0; }
+.rules b { color: #ffffff; font-weight: 700; }
 
+.tablewrap { overflow-x: auto; margin: 16px 0; -webkit-overflow-scrolling: touch; }
+.rules table { border-collapse: collapse; font-family: var(--mono);
+               font-size: 13px; min-width: 100%; }
+.rules th, .rules td {
+  border: 1px solid #33484f; padding: 8px 12px; text-align: left;
+  white-space: nowrap; color: var(--text);
+}
+.rules thead th { background: #1b2a33; color: #d9eef5; font-weight: 700;
+                  letter-spacing: .06em; }
+.rules tbody tr:nth-child(even) { background: rgba(255,255,255,.028); }
+.rules tr.subhead th { background: #1b2a33; color: #d9eef5; font-weight: 700;
+                       letter-spacing: .06em; }
 
-mark { background: var(--amber); color: #10181c; border-radius: 3px; padding: 0 2px; }
-.mod[hidden] { display: none !important; }
+/* There is no search anywhere any more, so there is nothing to highlight and
+   no module is ever hidden from the list. */
 
 /* ==========================================================================
    TOUCH
@@ -1529,3 +1857,559 @@ body.kb-open .flip-btn { opacity: .35; }
 }
 .focus-clock.urgent { color: var(--red); border-color: #6e3b36; }
 .focus-clock .fc-count { font-size: 13px; color: var(--ink-2); }
+
+/* ==========================================================================
+   THE OPENING ON A SHORT SCREEN
+   A phone held sideways is about 390 tall. The frame, the caption and the
+   BEGIN slot are stacked, so they have to be told to give ground — otherwise
+   the column is taller than the glass and the caption falls off the bottom.
+   These sit at the end of the file on purpose: they have to win against the
+   coarse-pointer minimums above, which exist for fingers on a tall screen.
+   ========================================================================== */
+
+@media (max-height: 540px) {
+  .cutscene { padding: 50px clamp(14px, 4vw, 40px) 10px; gap: 8px; }
+  .cs-art { padding: 26px 34px 96px; }
+  .cs-box { min-height: 56px; padding: 10px 18px; bottom: 12px; width: 94vw; }
+  .cs-line { font-size: 15px; line-height: 1.4; }
+  .cs-skip { top: 6px; right: 10px; padding: 6px 12px; min-height: 34px; }
+  .cs-begin { padding: 10px 26px; min-height: 40px; font-size: 12px;
+              bottom: 84px; }
+
+  /* the mode screen, on the same short glass */
+    .mode-heading { font-size: 17px; margin-bottom: 8px; }
+  .mode-stage { width: min(100%, 52vh); }
+    .mode-opts { margin: 8px 0 10px; }
+  .mode-opt { gap: 5px; }
+  .mode-row { margin-bottom: 10px; }
+  .mode-key { padding: 9px 6px; }
+  .mode-go .key { min-width: 170px; padding: 11px 18px; }
+  .menu { padding: 4px 8px; }
+  .mode-sheet { padding: 0; }
+
+  /* the device selector and the result screen, on the same short glass. A
+     phone held sideways is about 390 tall; the title alone was 40px of it and
+     the card asked for 396 more, so ENGAGE was below the fold. */
+  .sheet { padding: 4px 10px; }
+  .title { font-size: 20px; margin: 0 0 3px; letter-spacing: .26em;
+           text-indent: .26em; }
+  .title::after { width: 120px; height: 1px; margin: 6px auto 0; }
+  .card { min-height: 0; padding: 8px 14px 7px; gap: 5px; }
+  .nm { font-size: 18px; }
+  .emblem { width: 34px; height: 34px; }
+  .emblem-wrap { line-height: 0; }
+  .facts { gap: 1px 18px; }
+  .fact { padding-bottom: 2px; }
+  .fact span { font-size: 10px; letter-spacing: .1em; }
+  .fact b { font-size: 13px; }
+  .idx { font-size: 10px; }
+  .blurb { font-size: 12px; }
+  .progress { font-size: 11px; }
+  .engage { padding: 9px 10px; }
+  .engage b { font-size: 13px; }
+  .sel-dots { margin-top: 5px; }
+  .progress { margin: 5px 0 4px; }
+  .minor { gap: 6px; }
+  .sound { padding: 6px 11px; min-height: 32px; font-size: 11px; }
+  .nav { width: 42px; height: 42px; font-size: 24px; }
+  .blurb { font-size: 11px; }
+  .card .practice, .seedbox { gap: 8px; }
+
+  .verdict { font-size: 30px; margin: 0 0 8px; }
+  .stats { gap: 5px; margin-bottom: 12px; }
+  .stats .row { padding: 7px 14px; }
+  .stats .v { font-size: 15px; }
+  .choices.two { grid-template-columns: repeat(2, 150px); }
+  .key { min-height: 44px; }
+}
+
+/* A phone held sideways is wide and short, which is the wrong shape for a
+   column. The preview takes the left half and everything you press takes the
+   right, so nothing has to be scrolled to be reached. */
+@media (max-height: 540px) and (min-width: 660px) {
+  .mode-sheet {
+    display: grid; text-align: center;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    column-gap: 18px; align-items: center;
+  }
+  .mode-heading { grid-column: 1 / -1; grid-row: 1; margin-bottom: 6px; }
+  .mode-stage { grid-column: 1; grid-row: 2 / span 3; width: 100%; }
+  .mode-opts   { grid-column: 2; grid-row: 2; margin: 0 0 10px; }
+  .mode-row    { grid-column: 2; grid-row: 3; grid-template-columns: 1fr;
+                 gap: 6px; margin-bottom: 10px; }
+  .mode-go     { grid-column: 2; grid-row: 4; }
+  .mode-key { grid-template-columns: auto auto; justify-content: center;
+              gap: 10px; align-items: baseline; padding: 8px 10px;
+              min-height: 42px; }
+  .mode-go .key { min-width: 0; width: 100%; padding: 11px 14px; }
+}
+
+/* ==========================================================================
+   THE MOTION LAYER
+   Transform and opacity, everywhere, without exception. Those two are handed
+   to the compositor: they cost no layout and no repaint, so a phone can run
+   all of this and still hold sixty while a clock ticks and eight modules sit
+   on screen. Nothing below animates width, height, top, left, filter or
+   box-shadow on a loop — where a glow has to move it is a pre-composited
+   layer whose OPACITY changes, not a shadow being recalculated per frame.
+
+   The blanket prefers-reduced-motion rule at the end of this file switches
+   every one of them off.
+   ========================================================================== */
+
+/* ---- press ripples ------------------------------------------------------
+   One node, added at the point pressed and removed when it finishes. The
+   host only clips while a ripple is actually inside it, so no control is
+   permanently given a stacking context it did not need. */
+/* The host clips the ripple; it is only given a position if it does not
+   already have one. Forcing `position: relative` on every control took the
+   absolutely placed ones — SKIP, BEGIN — out of position the instant they
+   were pressed, so the button jumped away from the cursor and the click
+   landed on nothing. */
+.fx-clip { overflow: hidden; }
+.fx-anchor { position: relative; }
+.fx-ripple {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side,
+              rgba(160, 235, 252, .26), rgba(160, 235, 252, .07) 66%,
+              rgba(160, 235, 252, 0));
+  transform: scale(0); opacity: 0;
+  animation: fxRipple .72s cubic-bezier(.2, .7, .3, 1) forwards;
+  will-change: transform, opacity;
+}
+@keyframes fxRipple {
+  from { transform: scale(0); opacity: .75; }
+  60%  { opacity: .34; }
+  to   { transform: scale(1); opacity: 0; }
+}
+/* on the lit controls the ripple has to be dark to be seen at all */
+.go-btn .fx-ripple, .press-btn .fx-ripple, .null-btn .fx-ripple,
+.opt-btn.on .fx-ripple, .lay-btn.on .fx-ripple, .cs-begin .fx-ripple {
+  background: radial-gradient(closest-side,
+              rgba(6, 18, 26, .38), rgba(6, 18, 26, .12) 70%,
+              rgba(6, 18, 26, 0));
+}
+
+/* ---- the iris -----------------------------------------------------------
+   The cut between two places. A disc, scaled — never a clip-path, which
+   repaints its layer on every frame of the animation. */
+.fx-iris {
+  position: fixed; z-index: 400; border-radius: 50%;
+  pointer-events: none; transform: scale(0);
+  contain: strict;
+}
+/* while it is closing it swallows presses, so a second click cannot arm a
+   second device behind it; while it opens it is already out of the way */
+.fx-iris.close { pointer-events: auto; }
+/* a lit rim, so the disc reads as a lens closing rather than as a blob. It is
+   painted once when the node is sized, never animated. */
+.fx-iris::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  box-shadow: inset 0 0 90px 30px rgba(255, 255, 255, .05);
+}
+.fx-iris.close { animation: fxIrisClose var(--t-cut) cubic-bezier(.45, 0, .7, .15) forwards; }
+.fx-iris.open  { animation: fxIrisOpen calc(var(--t-cut) * 1.15) var(--ease-out) forwards; }
+@keyframes fxIrisClose { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes fxIrisOpen  { from { transform: scale(1); } to { transform: scale(0); } }
+
+/* ---- reveal on scroll ---------------------------------------------------- */
+.fx-reveal { opacity: 0; transform: translate3d(0, 14px, 0); }
+.fx-reveal.fx-seen {
+  opacity: 1; transform: none;
+  transition: opacity .5s ease, transform .5s cubic-bezier(.2, .8, .3, 1);
+}
+
+/* ==========================================================================
+   SCREENS
+   The swap itself is hidden. Every page change happens behind a cover that
+   opens from the control you pressed, closes over the glass, lets the screen
+   change where nobody can see it, and opens again — so the screens themselves
+   have nothing to hide and only have to settle into place. They used to slide
+   past each other in full view, which put the one uninteresting part of a
+   change of screen, the change, on show.
+   ========================================================================== */
+
+@keyframes scrSettle { from { opacity: 0; transform: scale(.985); }
+                       to   { opacity: 1; transform: none; } }
+@keyframes scrGone   { from { opacity: 1; } to { opacity: 0; } }
+
+.screen.entering { z-index: 3; animation: scrSettle var(--t-mid) var(--ease-out) both; }
+.screen.leaving  { z-index: 2; pointer-events: none;
+                   animation: scrGone .16s linear both; }
+
+/* The deck must never be scaled on its way in: it carries a perspective and a
+   preserve-3d case, and a transform on the container flattens the box. */
+#screen-game.entering, #screen-game.leaving { animation-name: scrGone !important; }
+#screen-game.entering { animation-direction: reverse; }
+
+/* ==========================================================================
+   ARRIVALS
+   A screen assembles rather than appearing. Every delay and duration here is
+   roughly half again what it was: the whole point of a transition is that it
+   is watched, and these were over before the eye had found them.
+   ========================================================================== */
+
+@keyframes fxRise { from { opacity: 0; transform: translate3d(0, 22px, 0); }
+                    to   { opacity: 1; transform: none; } }
+@keyframes fxRiseIn { from { opacity: 0; transform: translate3d(0, 34px, 0) scale(.95); }
+                      to   { opacity: 1; transform: none; } }
+@keyframes fxPop { from { opacity: 0; transform: scale(.78); }
+                   62%  { opacity: 1; transform: scale(1.05); }
+                   to   { opacity: 1; transform: scale(1); } }
+@keyframes fxSlideL { from { opacity: 0; transform: translate3d(-30px, 0, 0); }
+                      to   { opacity: 1; transform: none; } }
+@keyframes fxWiden { from { transform: scaleX(0); opacity: 0; }
+                     to   { transform: scaleX(1); opacity: 1; } }
+
+/* the menu */
+.menu.entering .title        { animation: fxRiseIn .9s var(--ease-out) both; }
+.menu.entering .title::after { animation: fxWiden 1s var(--ease-out) .34s both; }
+.menu.entering .select       { animation: fxRiseIn .8s var(--ease-out) .16s both; }
+.menu.entering .sel-dots     { animation: fxRise .6s var(--ease) .42s both; }
+.menu.entering .progress     { animation: fxRise .6s var(--ease) .5s both; }
+.menu.entering .minor > *    { animation: fxRiseIn .66s var(--ease-out) both; }
+.menu.entering .minor > *:nth-child(1) { animation-delay: .58s; }
+.menu.entering .minor > *:nth-child(2) { animation-delay: .66s; }
+
+/* the mode screen */
+.menu.entering .mode-heading { animation: fxRiseIn .7s var(--ease-out) .13s both; }
+.menu.entering .mode-stage   { animation: fxRiseIn .85s var(--ease-out) .22s both; }
+.menu.entering .mode-opts    { animation: fxRise .62s var(--ease) .54s both; }
+.menu.entering .mode-row .mode-key { animation: fxRiseIn .7s var(--ease-out) both; }
+.menu.entering .mode-row .mode-key:nth-child(1) { animation-delay: .6s; }
+.menu.entering .mode-row .mode-key:nth-child(2) { animation-delay: .7s; }
+.menu.entering .mode-row .mode-key:nth-child(3) { animation-delay: .8s; }
+.menu.entering .mode-go      { animation: fxRise .7s var(--ease-out) .92s both; }
+
+/* settings */
+.menu.entering .set-heading  { animation: fxRiseIn .7s var(--ease-out) .06s both; }
+.menu.entering .set-row      { animation: fxSlideL .66s var(--ease-out) both; }
+.menu.entering .set-row:nth-child(1) { animation-delay: .2s; }
+.menu.entering .set-row:nth-child(2) { animation-delay: .3s; }
+.menu.entering .set-row:nth-child(3) { animation-delay: .4s; }
+
+/* the result, read top to bottom */
+@keyframes fxVerdict { from { opacity: 0; transform: scale(1.38); }
+                       55%  { opacity: 1; }
+                       to   { opacity: 1; transform: scale(1); } }
+.menu.entering .verdict { animation: fxVerdict .95s var(--ease-out) both; }
+.menu.entering .stats .row { animation: fxSlideL .7s var(--ease-out) both; }
+.menu.entering .stats .row:nth-child(1) { animation-delay: .38s; }
+.menu.entering .stats .row:nth-child(2) { animation-delay: .5s; }
+.menu.entering .stats .row:nth-child(3) { animation-delay: .62s; }
+.menu.entering .stats .row:nth-child(4) { animation-delay: .74s; }
+.menu.entering .choices .key { animation: fxRiseIn .7s var(--ease-out) both; }
+.menu.entering .choices .key:nth-child(1) { animation-delay: .86s; }
+.menu.entering .choices .key:nth-child(2) { animation-delay: .95s; }
+.menu.entering .choices .key:nth-child(3) { animation-delay: 1.04s; }
+.menu.entering .code-plate { animation: fxRiseIn .8s var(--ease-out) 1.14s both; }
+
+/* the manual, wherever it is mounted */
+@keyframes fxSlideDown { from { opacity: 0; transform: translate3d(0, -100%, 0); }
+                         to   { opacity: 1; transform: none; } }
+.manual-view .mv-bar { animation: fxSlideDown .62s var(--ease-out) both; }
+.mv-sheet-title { animation: fxSlideL .7s var(--ease-out) .14s both; }
+.mv-sheet-sub   { animation: fxRise .7s var(--ease) .26s both; }
+.mv-toc a { animation: fxPop .56s var(--ease-out) both;
+            animation-delay: calc(.34s + var(--i, 0) * .055s); }
+
+/* ---- a half of the split arriving ----------------------------------------
+   The geometry still snaps — animating `inset` on two full-screen panes is
+   layout work on every frame for the whole of both. What travels is a
+   transform, and it travels from the side the half actually lives on. */
+@keyframes fxFromRight { from { opacity: 0; transform: translate3d(14%, 0, 0); }
+                         to   { opacity: 1; transform: none; } }
+@keyframes fxFromLeft  { from { opacity: 0; transform: translate3d(-14%, 0, 0); }
+                         to   { opacity: 1; transform: none; } }
+@keyframes fxFromBelow { from { opacity: 0; transform: translate3d(0, 16%, 0); }
+                         to   { opacity: 1; transform: none; } }
+.fx-slide.from-right { animation: fxFromRight .58s var(--ease-out) both; }
+.fx-slide.from-left  { animation: fxFromLeft .58s var(--ease-out) both; }
+.fx-slide.from-below { animation: fxFromBelow .58s var(--ease-out) both; }
+
+/* something worth noticing changed in place */
+@keyframes fxFlash { 0%   { color: var(--rim); }
+                     100% { color: inherit; } }
+.fx-flash { animation: fxFlash .9s var(--ease) both; }
+
+/* ==========================================================================
+   HOVER
+   Only where a pointer can actually hover. Each is a transform or an opacity
+   on an element that already has its own layer while the transition runs.
+   ========================================================================== */
+
+@media (hover: hover) {
+  .key, .sound, .nav, .opt-btn, .lay-btn, .mv-toc a, .dot, .flip-btn {
+    transition: transform .18s cubic-bezier(.2, .9, .3, 1),
+                background-color .18s ease, border-color .18s ease,
+                color .18s ease, box-shadow .22s ease;
+  }
+  .key:hover:not(:disabled)   { transform: translateY(-3px); }
+  .sound:hover                { transform: translateY(-2px); }
+  .opt-btn:hover:not(.on)     { transform: translateY(-2px); }
+  .lay-btn:hover:not(.on)     { transform: translateY(-1px); }
+  .mv-toc a:hover             { transform: translateY(-2px); }
+  .nav:hover:not(:disabled)   { transform: scale(1.09); }
+  .dot:hover                  { transform: scale(1.35); }
+  .flip-btn:hover             { transform: translateY(-2px); }
+  .mode-key:hover:not(.on)    { transform: translateY(-4px); }
+
+  /* No hover transform on a bay, and no transform transition on one. A bay
+     lives inside the case's preserve-3d tree, which the cursor tilt already
+     rewrites every frame; giving each of eight bays its own 3D transform to
+     interpolate meant the whole tree re-composited as the pointer crossed it,
+     and a focused bay — which carries an INLINE transform — fought the rule
+     outright. The case answers the pointer by leaning, once, as a whole. */
+
+  /* the card under the pointer lifts out of the carousel */
+  .card { transition: transform .3s cubic-bezier(.2, .9, .3, 1),
+                      border-color .3s ease, box-shadow .3s ease; }
+  .page:hover .card:not(.locked) { transform: translateY(-4px); }
+}
+
+/* pressing always answers, pointer or not */
+.key:active:not(:disabled), .sound:active, .opt-btn:active, .lay-btn:active,
+.mode-key:active, .mv-toc a:active { transform: scale(.965); }
+
+/* ==========================================================================
+   THE CAROUSELS
+   The track already slides. What was missing is that the page you are ON
+   should look nearer than the ones you are not.
+   ========================================================================== */
+
+/* The card you are on sits nearer than the ones sliding past it. Scoped by
+   the class the carousel already sets, not by :has(): a structural selector
+   re-evaluated on every DOM change buys nothing here. */
+.card:not(.focused-page) { transform: scale(.94); }
+.mode-panel { transition: transform .42s cubic-bezier(.3,.85,.3,1), opacity .32s ease; }
+.mode-panel:not(.on) { transform: scale(.9); }
+
+/* the dots answer the page landing on them */
+.dot { transition: transform .3s cubic-bezier(.2,1.4,.4,1), background-color .3s ease; }
+.dot.on { transform: scale(1.5); }
+
+/* ==========================================================================
+   THE DEVICE
+   ========================================================================== */
+
+/* the case's own zoom, when the defuser pulls back or pushes in */
+.bomb.zooming { transition: transform .52s cubic-bezier(.22, 1, .28, 1); }
+
+/* a module coming forward, and the rest of the case falling away behind it */
+/* The base `.bay` rule already carries the transform, border and background
+   transitions the case is built around — a focused module coming forward, a
+   solved bay fading green. Nothing here overrides them: an earlier pass set
+   `transition: none` on unfocused bays and silently took the solve fade with
+   it. */
+.scrim { transition: opacity .32s ease; }
+
+/* a solve: the bay flashes, then a ring leaves it */
+@keyframes fxSolveRing {
+  from { opacity: .85; transform: scale(1); }
+  to   { opacity: 0; transform: scale(1.14); }
+}
+.bay.module.solved::after {
+  content: ''; position: absolute; inset: -3px; border-radius: 16px;
+  border: 3px solid var(--green); pointer-events: none;
+  animation: fxSolveRing .62s ease-out forwards;
+}
+
+/* a strike: the bay recoils */
+/* Every frame keeps the bay's own translateZ(14px): a bay sits proud of the
+   panel, and a keyframe that forgets that drops it flat for the length of the
+   kick and pops it back out at the end. */
+@keyframes fxStrikeKick {
+  0%   { transform: translateZ(14px); }
+  18%  { transform: translateZ(14px) translate3d(-7px, 2px, 0) rotate(-.5deg); }
+  42%  { transform: translateZ(14px) translate3d(6px, -2px, 0) rotate(.45deg); }
+  68%  { transform: translateZ(14px) translate3d(-3px, 1px, 0) rotate(-.2deg); }
+  100% { transform: translateZ(14px); }
+}
+.bay.striking:not(.focused) {
+  animation: fxStrikeKick .5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* ==========================================================================
+   THE SPLIT
+   The geometry snaps — animating `inset` on two full-screen panes is layout
+   work on every frame, for the whole of both panes, and the case inside one
+   of them has to be re-measured as it goes. The panes FADE instead: the same
+   read, off the compositor.
+   ========================================================================== */
+
+@keyframes fxPaneIn { from { opacity: 0; transform: scale(.985); }
+                      to   { opacity: 1; transform: none; } }
+@keyframes fxFade   { from { opacity: 0; } to { opacity: 1; } }
+.play-manual.fx-pane { animation: fxPaneIn .3s cubic-bezier(.2,.9,.3,1) both; }
+/* The deck fades, never the case: opacity on an element inside preserve-3d
+   flattens the box, and the case is mid-turn often enough to matter. */
+#screen-game.fx-pane { animation: fxFade .3s ease both; }
+
+@keyframes fxBarIn { from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+                     to   { opacity: 1; transform: translateX(-50%); } }
+.layout-bar.fx-in { animation: fxBarIn .34s cubic-bezier(.2,1.15,.35,1) both; }
+.split-grip.fx-in { animation: fxFade .4s ease .1s both; }
+
+/* ==========================================================================
+   OFF
+   One rule, and none of the above happens. It sits last so it wins.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-ripple, .fx-iris { display: none !important; }
+  .fx-reveal { opacity: 1 !important; transform: none !important; }
+  .mode-panel, .dot, .card { transition: none !important; }
+  .card:not(.focused-page) { transform: none; }
+  .mode-panel:not(.on) { transform: none; }
+}
+
+/* ==========================================================================
+   EMPHASIS
+   There used to be four buttons of identical weight under the device card:
+   MODE, SOUND, REPLAY INTRO, RESET PROGRESS. Nothing told the eye which of
+   them mattered, and one of them wipes your progress. There are two controls
+   here now — the one decision that changes how the game is played, and a
+   door to everything that is housekeeping.
+   ========================================================================== */
+
+.minor { display: flex; gap: 12px; justify-content: center; align-items: stretch;
+         margin-top: 6px; }
+
+/* MODE: a statement of what the mode currently IS, not a button whose label
+   you have to remember the meaning of */
+.wide-key {
+  display: grid; gap: 3px; justify-items: center;
+  min-width: 240px; padding: 13px 26px;
+}
+.wide-key b { font-size: var(--t-label); letter-spacing: var(--trk-label); }
+.wide-key i {
+  font-style: normal; font-family: var(--prose); font-weight: 700;
+  font-size: var(--t-micro); letter-spacing: .16em; color: var(--rim);
+}
+
+/* settings: present, reachable, and not competing */
+.icon-key {
+  flex: none; width: 52px; padding: 0;
+  display: grid; place-items: center;
+  font-family: var(--round); color: var(--ink-2);
+  background: #16232a; border: 1px solid #2c4048; border-radius: 12px;
+  cursor: pointer;
+}
+.icon-key svg { width: 21px; height: 21px; fill: none; stroke: currentColor;
+                stroke-width: 1.9; stroke-linecap: round; }
+.icon-key:hover { color: var(--rim); border-color: var(--rim); }
+
+/* ==========================================================================
+   SETTINGS
+   ========================================================================== */
+
+.set-sheet { width: min(560px, 100%); }
+.set-heading {
+  margin: 0 0 24px; font-family: var(--seg); font-weight: 400;
+  font-size: var(--t-head); letter-spacing: .1em; color: #eaf7fb;
+  line-height: 1.1;
+  text-shadow: 0 0 5px rgba(255,255,255,.6), 0 0 26px rgba(111,215,232,.55),
+               0 0 64px rgba(111,215,232,.3);
+}
+.set-list { display: grid; gap: 10px; margin-bottom: 26px; text-align: left; }
+.set-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 16px 13px 20px;
+  background: linear-gradient(180deg, #1b2a32, #141f26);
+  border: 1px solid #2c4048; border-radius: 13px;
+}
+.set-row > b {
+  flex: 1 1 auto; min-width: 0; text-align: left;
+  font-family: var(--round); font-weight: 700; font-size: var(--t-label);
+  letter-spacing: var(--trk-label); color: #e7f3f6;
+}
+.set-val {
+  flex: none; font-family: var(--seg); font-size: var(--t-sub);
+  color: var(--ink-2); letter-spacing: .06em;
+}
+.set-row.danger { border-color: #4a2f2c; }
+.set-row .opt-btn { flex: none; min-width: 84px; }
+.opt-btn.bad { color: #f0a49b; border-color: #5e3833; }
+.opt-btn.bad:hover { color: #fff; background: var(--red); border-color: var(--red); }
+
+/* ==========================================================================
+   THE CODE, ON THE RESULT SCREEN
+   It was a label, a code and a button strung along one line under everything
+   else, which is why it read as debris. It is a plate now: the thing the
+   player is meant to take away from the round has an edge around it.
+   ========================================================================== */
+
+.result-sheet { width: min(460px, 100%); }
+
+.code-plate {
+  margin: 26px auto 0; max-width: 420px; text-align: left;
+  padding: 14px 16px 13px;
+  background: linear-gradient(180deg, #17242c, #111b21);
+  border: 1px solid #2c4048; border-radius: 13px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+}
+.code-head { display: flex; align-items: baseline; justify-content: space-between;
+             gap: 10px; margin-bottom: 8px; }
+.code-label {
+  font-family: var(--prose); font-weight: 700; font-size: var(--t-micro);
+  letter-spacing: var(--trk-label); color: var(--ink-3);
+}
+.code-detail {
+  font-family: var(--mono); font-size: var(--t-micro); color: var(--ink-3);
+  letter-spacing: .08em; white-space: nowrap;
+}
+.code-row { display: flex; align-items: center; gap: 12px; }
+.code-row .seed-code { flex: 1 1 auto; min-width: 0; }
+.code-row .opt-btn { flex: none; min-width: 78px; padding: 9px 12px;
+                     min-height: 38px; }
+
+/* a control that refuses: the panel shakes its head */
+@keyframes fxShake {
+  0%, 100% { transform: translate3d(0,0,0); }
+  15% { transform: translate3d(-8px,0,0); }
+  33% { transform: translate3d(7px,0,0); }
+  52% { transform: translate3d(-5px,0,0); }
+  71% { transform: translate3d(3px,0,0); }
+  87% { transform: translate3d(-1px,0,0); }
+}
+.fx-shake { animation: fxShake .44s cubic-bezier(.36,.07,.19,.97) both; }
+@media (prefers-reduced-motion: reduce) { .fx-shake { animation: none; } }
+
+/* ==========================================================================
+   THE SEGMENTED CONTROL
+   Two cells, one lit pill, and the pill is the only thing that moves. What was
+   here before rebuilt both buttons on every press, so the labels changed width
+   and every line under them jumped to match — choosing what a screen is looked
+   like the page coming apart.
+   ========================================================================== */
+
+.seg {
+  position: relative; display: grid;
+  grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr));
+  gap: 0; padding: 4px;
+  background: #121d24; border: 1px solid #2b3d46; border-radius: 12px;
+  min-width: min(320px, 78vw);
+}
+.seg-pill {
+  position: absolute; z-index: 0;
+  top: 4px; bottom: 4px; left: 4px;
+  width: calc((100% - 8px) / var(--n, 2));
+  border-radius: 9px;
+  background: var(--rim);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--rim) 45%, transparent);
+  transition: transform var(--t-mid) var(--ease-out);
+}
+.seg-btn {
+  position: relative; z-index: 1;
+  font-family: var(--round); font-size: var(--t-label);
+  letter-spacing: var(--trk-label);
+  color: var(--ink-2); background: transparent; border: 0;
+  padding: 11px 10px; min-height: 42px; cursor: pointer;
+  transition: color var(--t-mid) var(--ease);
+}
+.seg-btn.on { color: #06121a; }
+.seg-btn:hover:not(.on) { color: var(--text); }
+
+@media (prefers-reduced-motion: reduce) {
+  .seg-pill { transition: none; }
+}

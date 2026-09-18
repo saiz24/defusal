@@ -117,15 +117,26 @@
       ' rotateY(' + tiltY.toFixed(2) + 'deg)';
   }
 
+  /* The case is fitted to the PANE it is in, not to the window. In Solo the
+     deck is half the screen, and a case sized to the whole of it simply ran
+     off the side of its own half. Hidden elements report no size, so the
+     window is the fallback. */
+  function paneBox() {
+    var node = dom['screen-game'];
+    var w = (node && node.clientWidth) || window.innerWidth || 1280;
+    var h = (node && node.clientHeight) || window.innerHeight || 720;
+    return { w: w, h: h };
+  }
+
   function fit() {
     /* On a desktop the case used to run edge to edge, so there was no room
        around it and the device read as a screen rather than as an object on a
        table. A margin costs a few per cent of size and buys the whole of it.
        Small viewports keep the old tight fit — there, legibility wins. */
-    var vw = window.innerWidth || 1280, vh = window.innerHeight || 720;
-    var pad = vw >= 1100 ? 108 : 24;
-    scaleNow = Math.min((vw - pad) / (BOMB_W || 1724),
-                        (vh - pad) / (BOMB_H || 938));
+    var box = paneBox();
+    var pad = box.w >= 1100 ? 108 : 24;
+    scaleNow = Math.min((box.w - pad) / (BOMB_W || 1724),
+                        (box.h - pad) / (BOMB_H || 938));
     applyBombTransform();
   }
 
@@ -267,19 +278,6 @@
     });
   }
 
-  /* stencilled text, the way it is sprayed on a real case */
-  function stencil(svg, x, y, str, size, anchor) {
-    /* No font-family here: a CSS custom property is not a legal SVG
-       presentation attribute, and the fallback serif ran wider than the
-       plate it was meant to sit inside. */
-    var t = D.svg.text(svg, x, y, str, {
-      'text-anchor': anchor || 'start', fill: 'rgba(214,226,231,.42)',
-      'font-size': size || 20, 'font-weight': '700', 'letter-spacing': '2'
-    });
-    t.setAttribute('dominant-baseline', 'middle');
-    return t;
-  }
-
   /* wear: a handful of faint scratches so the shell is not factory-new */
   function scuffs(svg, seed) {
     var S = D.svg, rng = D.makeRng(seed >>> 0), i, x, y, len, ang;
@@ -371,24 +369,22 @@
         bolt(svg, bx + 14, by + 48, 6);
         bolt(svg, bx + bw - 14, by + 48, 6);
         pilotLamp(svg, bx + 30, by + 28, side < 0 ? '#d0574f' : '#ffc861');
-        /* Anchored from the left, at a fixed inset. text-anchor:"end" did not
-           land where getComputedTextLength said it would and the label ran off
-           the right of the plate, so nothing here relies on it. */
-        if (bw > 128) {
-          stencil(svg, bx + 56, by + 28, side < 0 ? 'ARMED' : 'LIVE', 13);
-        }
+        /* The plate used to carry a stencilled ARMED / LIVE. Nothing on the
+           case is ever read by a module, so lettering here is decoration that
+           competes with the only text that matters — the clock, the serial and
+           the modules. The lamp says the same thing without words. */
+        S.el('rect', { x: bx + 56, y: by + 20, width: Math.max(0, bw - 76),
+          height: 16, rx: 5, fill: '#2b3439', stroke: INK,
+          'stroke-width': 2.5 }, svg);
       }
 
-      /* the bottom rail: one hazard bar per flank, and a stencil under it */
+      /* the bottom rail: one hazard bar per flank */
       if (flank > 110) {
         var hw = Math.min(flank + 40, half - 150);
         /* The rail's lowest band carries the case bevel and swallows anything
-           drawn into it, so both pieces sit in its upper half. */
+           drawn into it, so the bar sits in its upper half. */
         var hx = side < 0 ? 34 : BOMB_W - 34 - hw;
-        /* clear of the bay panel's drop shadow, which was clipping the top of
-           the lettering */
-        stencil(svg, hx + 4, botY + 14, side < 0 ? 'DO NOT CUT' : 'CHARGE LIVE', 15);
-        hazardBar(svg, hx, botY + 32, hw, 24);
+        hazardBar(svg, hx, botY + 22, hw, 28);
       }
     });
 
@@ -546,7 +542,7 @@
       var done = function () {
         leaving.abort = false;
         teardown();
-        show('menu');
+        D.showMenu();
       };
       if (reducedMotion()) done(); else setTimeout(done, 620);
     });
@@ -559,14 +555,14 @@
                       strikes: strikes, count: count });
   }
 
-  /* the reverse has no clock: turning the case over costs you sight of it */
+  /* The reverse has no clock: turning the case over costs you sight of it.
+     It carries the serial and nothing else — the serial is read by modules,
+     so it is the one piece of lettering on the shell that earns its place. */
   function buildBackPlate(host) {
     host.innerHTML = '';
     var strip = el('div', 'strip plate-only', host);
     var mark = el('div', 'stamp', strip);
     mark.textContent = state.ctx.serial;
-    var sub = el('div', 'stamp-sub', strip);
-    sub.textContent = 'REVERSE';
   }
 
   /* ---------- slot packing --------------------------------------------------- */
@@ -698,18 +694,11 @@
 
   /* ---------- the voice ------------------------------------------------------- */
 
-  var SAID_WON = [
-    'One device answered. The tally holds.',
-    'Recorded. You may continue, for now.',
-    'Answered. Another will be set.',
-    'Noted. The count moves your way, for now.'
-  ];
-  var SAID_LOST = [
-    'One mark against you. There are others still working.',
-    'This one goes dark. The tally is long.',
-    'Recorded. Others are still answering.',
-    'A mark, no more. The count continues elsewhere.'
-  ];
+  /* The result screen used to carry a line of its own above the statistics,
+     one of four each way. It is gone: after a round the player wants the
+     verdict and the numbers, and a sentence of narration between the two put
+     the story in the way of the scoreboard. The devices still speak while a
+     case arms, which is where the voice belongs. */
   var SAID_ARM = [
     'A device is set. The rules are not here.',
     'Another trial. Reach each other.',
@@ -729,6 +718,66 @@
     { name: 'INTRACTABLE',  count: 8, seconds: 600, rule: 'insane' }
   ];
   var STAGE_KEY = 'defusal.stage';
+
+  /* ---------- round codes --------------------------------------------------
+     Every round is a seed plus the shape of the device it was dealt into, and
+     both have to travel together: a seed alone reproduces nothing, because the
+     same seed poured into a three-module device and an eight-module one deals
+     two different bombs. One short string carries both, the result screen
+     prints it, and typing it back arms the identical device.
+
+       S3-K7A2XQ     device 3, that seed
+       F4M8-K7A2XQ   a sandbox device: 4 modules, 8 minutes, that seed
+       DH-K7A2XQ     a free device at PATHOLOGICAL, that seed
+
+     A round entered as a code never counts towards progress — otherwise the
+     last device could be cleared by typing somebody else's code for it. */
+
+  var DIFF_LETTER = { easy: 'E', medium: 'M', hard: 'H', insane: 'I' };
+  var LETTER_DIFF = { E: 'easy', M: 'medium', H: 'hard', I: 'insane' };
+
+  function makeCode(config, seed) {
+    var tail = (seed >>> 0).toString(36).toUpperCase();
+    if (config.stage) return 'S' + config.stage + '-' + tail;
+    if (config.difficulty === 'practice') {
+      return 'F' + config.count + 'M' + Math.round(config.seconds / 60) +
+             '-' + tail;
+    }
+    return 'D' + (DIFF_LETTER[config.difficulty] || 'E') + '-' + tail;
+  }
+
+  function seedOf(text) {
+    var n = parseInt(text, 36);
+    return (isFinite(n) && n >= 0) ? (n >>> 0) : null;
+  }
+
+  function parseCode(raw) {
+    var t = String(raw || '').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    var m, seed;
+
+    if ((m = /^S([1-5])-([0-9A-Z]{1,7})$/.exec(t))) {
+      seed = seedOf(m[2]);
+      if (seed === null) return null;
+      var st = STAGES[Number(m[1]) - 1];
+      return { difficulty: st.rule, count: st.count, seconds: st.seconds,
+               stage: Number(m[1]), seed: seed, noRecord: true };
+    }
+    if ((m = /^F([1-8])M([0-9]{1,2})-([0-9A-Z]{1,7})$/.exec(t))) {
+      seed = seedOf(m[3]);
+      if (seed === null) return null;
+      var mins = D.clamp(Number(m[2]), 1, 30);
+      return { difficulty: 'practice', count: Number(m[1]),
+               seconds: mins * 60, seed: seed, noRecord: true };
+    }
+    if ((m = /^D([EMHI])-([0-9A-Z]{1,7})$/.exec(t))) {
+      seed = seedOf(m[2]);
+      if (seed === null) return null;
+      var d = LETTER_DIFF[m[1]];
+      return { difficulty: d, count: DIFFICULTIES[d].count,
+               seconds: DIFFICULTIES[d].seconds, seed: seed, noRecord: true };
+    }
+    return null;
+  }
 
   function cleared() {
     try {
@@ -796,40 +845,12 @@
   /* cool to hot as the devices get harder */
   var ACCENT = ['#6fd7e8', '#5fc79a', '#e3c65a', '#e8974a', '#e0645c'];
 
-  /* the two halves of the premise, drawn either side of the selector */
-  function flankArt(kind) {
-    var S = D.svg, svg = S.root(0, 0, 132, 150);
-    function ink(tag, a) {
-      a.fill = a.fill || 'none'; a.stroke = 'currentColor';
-      a['stroke-width'] = a['stroke-width'] || 2.4;
-      a['stroke-linejoin'] = 'round';
-      return S.el(tag, a, svg);
-    }
-    if (kind === 'device') {
-      ink('rect', { x: 12, y: 30, width: 108, height: 78, rx: 9, 'stroke-width': 3 });
-      [0, 1].forEach(function (r) {
-        [0, 1, 2].forEach(function (c) {
-          ink('rect', { x: 22 + c * 33, y: 40 + r * 32, width: 25, height: 24, rx: 4 });
-        });
-      });
-      ink('rect', { x: 46, y: 18, width: 40, height: 10, rx: 5 });
-    } else {
-      ink('rect', { x: 20, y: 24, width: 92, height: 96, rx: 6, 'stroke-width': 3 });
-      ink('rect', { x: 20, y: 24, width: 22, height: 96, rx: 6, 'stroke-width': 3 });
-      [42, 62, 82, 102].forEach(function (y) {
-        ink('circle', { cx: 31, cy: y, r: 4, 'stroke-width': 2 });
-      });
-      [40, 54, 68].forEach(function (y) {
-        ink('line', { x1: 52, y1: y, x2: 100, y2: y, 'stroke-width': 2 });
-      });
-      ink('line', { x1: 52, y1: 82, x2: 84, y2: 82, 'stroke-width': 2 });
-    }
-    var t = S.text(svg, 66, 140, kind === 'device' ? 'THE DEVICE' : 'THE RULES', {
-      'text-anchor': 'middle', fill: 'currentColor', 'font-size': 9,
-      'letter-spacing': 2, 'font-family': 'inherit'
-    });
-    return t && svg;
-  }
+  /* The premise used to be drawn either side of the selector — a device on one
+     side, the rules on the other. It never had a line of CSS, so both halves
+     collapsed to nothing and all they did was add two flex gaps to a centred
+     row, which is what put the carousel 16px left of the middle of the screen.
+     The mode screen draws the same idea properly, at a size somebody can see.
+     ------------------------------------------------------------------------ */
 
   function card(parent) {
     var page = el('div', 'page', parent);
@@ -846,13 +867,6 @@
     dom.track.innerHTML = '';
     pages = [];
 
-    if (!dom.select.querySelector('.flank')) {
-      ['device', 'rules'].forEach(function (kind, i) {
-        var f = el('div', 'flank ' + (i ? 'right' : 'left'), dom.select);
-        f.appendChild(flankArt(kind));
-      });
-    }
-
     STAGES.forEach(function (st, i) {
       var c = card(dom.track);
       el('div', 'idx', c).textContent = 'DEVICE ' + (i + 1);
@@ -867,11 +881,15 @@
       var go = el('button', 'key go engage', c);
       go.type = 'button';
       el('b', '', go).textContent = 'ENGAGE';
-      go.addEventListener('click', function () {
+      go.addEventListener('click', function (e) {
         if (go.disabled) return;
         D.audio.click();
-        start({ difficulty: st.rule, count: st.count, seconds: st.seconds,
-                stage: i + 1 });
+        /* the device's own colour, taken right down: a full screen of raw
+           accent is a flashbulb, a deep wash of it is the device arriving */
+        cutTo(e, D.shade(ACCENT[i], -0.76), function () {
+          start({ difficulty: st.rule, count: st.count, seconds: st.seconds,
+                  stage: i + 1 });
+        });
       });
       c.style.setProperty('--accent', ACCENT[i]);
       pages.push({ el: c, kind: 'stage', i: i, go: go, accent: ACCENT[i],
@@ -881,18 +899,23 @@
     var sc = card(dom.track);
     el('div', 'idx', sc).textContent = 'FREE';
     el('div', 'nm', sc).textContent = 'SANDBOX';
-    el('div', 'blurb', sc).textContent =
-      'Set your own device. Nothing here is recorded.';
     sc.appendChild(dom.practicePanel);
     dom.practicePanel.hidden = false;
     pages.push({ el: sc, kind: 'sandbox', need: 1 });
 
+    /* OPEN PLAY is gone. A row of difficulties dealt a new random device
+       every time and there was no way back to one you had just played — the
+       one thing a player asks for after a round they want to show somebody.
+       This page takes the code the result screen printed and arms that exact
+       device again. */
     var fc = card(dom.track);
     el('div', 'idx', fc).textContent = 'FREE';
-    el('div', 'nm', fc).textContent = 'OPEN PLAY';
-    el('div', 'blurb', fc).textContent = 'Any device, in any order.';
-    fc.appendChild(dom.freeRow);
-    pages.push({ el: fc, kind: 'free', need: STAGES.length });
+    el('div', 'nm', fc).textContent = 'SEED';
+    fc.appendChild(dom.seedPanel);
+    dom.seedPanel.hidden = false;
+    /* Never locked. A code reproduces a device and records nothing, and the
+       first thing a player wants a code for is the round they just lost. */
+    pages.push({ el: fc, kind: 'seed', need: 0 });
 
     dom.dots.innerHTML = '';
     pages.forEach(function (pg, i) {
@@ -913,11 +936,19 @@
     dom.prev.disabled = (selIndex === 0);
     dom.next.disabled = (selIndex === pages.length - 1);
 
+    var pg = pages[selIndex];
+
     /* each device brings its own weather with it */
     if (D.backdrop && D.backdrop.sky) {
-      var pg = pages[selIndex];
       D.backdrop.sky(pg && pg.kind === 'stage' ? pg.i : -1);
     }
+
+    /* ...and its own light. The title is a lit readout, and what lights it is
+       whichever device you are looking at: cool at TRIVIAL, hot at
+       INTRACTABLE. Setting it on the screen means the title, the dots and
+       anything else that asks for --accent all change together. */
+    var accent = (pg && pg.kind === 'stage') ? ACCENT[pg.i] : '#6fd7e8';
+    dom['screen-menu'].style.setProperty('--accent', accent);
   }
 
   function paintMenu() {
@@ -945,46 +976,360 @@
       pg.dot.classList.toggle('locked', locked);
       if (pg.accent) pg.dot.style.setProperty('--dot', pg.accent);
       if (pg.kind === 'sandbox') dom.practiceStart.disabled = locked;
-      if (pg.kind === 'free') {
-        [].forEach.call(dom.freeRow.querySelectorAll('[data-diff]'), function (b) {
-          b.disabled = locked;
-          b.classList.toggle('locked', locked);
-        });
+      if (pg.kind === 'seed') {
+        dom.seedStart.disabled = locked;
+        dom.seedCode.disabled = locked;
       }
     });
 
     dom.progress.textContent = (done >= STAGES.length)
-      ? 'all five devices answered'
-      : 'device ' + (done + 1) + ' of ' + STAGES.length;
+      ? 'ALL ' + STAGES.length + ' ANSWERED'
+      : 'DEVICE ' + (done + 1) + ' / ' + STAGES.length;
+
+    /* the MODE key says what the mode IS, so it is a statement of the current
+       state rather than a button whose meaning you have to remember */
+    if (dom.modeNow) {
+      var meta = D.mode.META[D.mode.get()];
+      dom.modeNow.textContent = meta.label +
+        (D.mode.is('twodevice')
+          ? ' \u00b7 ' + (D.mode.getRole() === 'manual' ? 'MANUAL' : 'DEVICE')
+          : '');
+    }
+    if (dom.setProgress) {
+      dom.setProgress.textContent = done + ' / ' + STAGES.length;
+    }
     gotoPage(selIndex);
+  }
+
+  /* ---------- the mode screen ---------------------------------------------
+     The first thing the opening hands over, and the only place the mode is
+     chosen. It is a carousel: three keys along the bottom, and above them a
+     panel big enough to show what the mode actually looks like once a device
+     is armed. "Two devices" and "solo" are shapes, not sentences, and a
+     player picks a shape far better from a picture of it than from a blurb.
+     ------------------------------------------------------------------------ */
+
+  var MODE_ORDER = ['printed', 'twodevice', 'solo'];
+  var modeIndex = 0, modeAfter = null, modePanels = [], modeKeys = [];
+
+  /* --- the previews, drawn the way everything else in the game is drawn ---
+     No captions on them. A picture of two screens with one showing a grid and
+     the other showing lines of rules does not need to be told to anybody in
+     words underneath it. --------------------------------------------------- */
+
+  function pv(parent, tag, attrs) {
+    attrs = attrs || {};
+    attrs.fill = attrs.fill || 'none';
+    attrs.stroke = attrs.stroke || 'currentColor';
+    attrs['stroke-width'] = attrs['stroke-width'] || 2.4;
+    attrs['stroke-linejoin'] = 'round';
+    attrs['stroke-linecap'] = 'round';
+    return D.svg.el(tag, attrs, parent);
+  }
+
+  /* a device face: the clock strip and a few module bays */
+  function pvDevice(svg, x, y, w, h, cols, rows) {
+    var g = D.svg.el('g', {}, svg);
+    pv(g, 'rect', { x: x, y: y, width: w, height: h, rx: 10, 'stroke-width': 3,
+      fill: 'rgba(111,215,232,.05)' });
+    var strip = 22;
+    pv(g, 'rect', { x: x + 9, y: y + 8, width: w - 18, height: strip, rx: 5,
+      'stroke-width': 2, fill: 'rgba(255,200,97,.14)', stroke: '#ffc861' });
+    D.svg.el('rect', { x: x + 16, y: y + 14, width: 34, height: 10, rx: 3,
+      fill: '#ffc861', opacity: .75 }, g);
+    var pad = 9, top = y + strip + 16;
+    var cw = (w - pad * (cols + 1)) / cols;
+    var ch = (h - strip - 16 - pad * (rows + 1) - 2) / rows;
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        pv(g, 'rect', { x: x + pad + c * (cw + pad), y: top + r * (ch + pad),
+          width: cw, height: ch, rx: 6, 'stroke-width': 2,
+          fill: 'rgba(236,239,240,.10)' });
+      }
+    }
+    return g;
+  }
+
+  /* a page of rules: a run of text lines, no picture anywhere on it */
+  function pvPage(svg, x, y, w, h, lines) {
+    var g = D.svg.el('g', {}, svg);
+    pv(g, 'rect', { x: x, y: y, width: w, height: h, rx: 6, 'stroke-width': 3,
+      fill: 'rgba(216,192,122,.05)', stroke: '#d8c07a' });
+    var i, gap = (h - 34) / lines;
+    D.svg.el('rect', { x: x + 14, y: y + 14, width: Math.min(w - 28, 64),
+      height: 7, rx: 3, fill: '#d8c07a', opacity: .8 }, g);
+    for (i = 0; i < lines; i++) {
+      var lw = (w - 28) * (i % 3 === 2 ? 0.62 : 0.92);
+      D.svg.el('rect', { x: x + 14, y: y + 30 + i * gap, width: lw, height: 4,
+        rx: 2, fill: '#d8c07a', opacity: .34 }, g);
+    }
+    return g;
+  }
+
+  function pvGap(svg, x, y0, y1) {
+    D.svg.el('line', { x1: x, y1: y0, x2: x, y2: y1, stroke: 'currentColor',
+      'stroke-width': 2, 'stroke-dasharray': '3 12', opacity: .5 }, svg);
+  }
+
+  var MODE_ART = {
+    printed: function () {
+      var svg = D.svg.root(0, 36, 640, 226, 'mode-art');
+      pvDevice(svg, 44, 54, 240, 186, 3, 2);
+      pvGap(svg, 320, 52, 268);
+      pvPage(svg, 356, 60, 118, 174, 7);
+      pvPage(svg, 478, 60, 118, 174, 7);
+      return svg;
+    },
+    twodevice: function () {
+      var svg = D.svg.root(0, 36, 640, 226, 'mode-art');
+      pvDevice(svg, 52, 50, 228, 194, 3, 2);
+      pvGap(svg, 320, 48, 268);
+      pv(svg, 'rect', { x: 360, y: 50, width: 228, height: 194, rx: 10,
+        'stroke-width': 3, fill: 'rgba(216,192,122,.05)', stroke: '#d8c07a' });
+      pvPage(svg, 374, 64, 200, 166, 8);
+      return svg;
+    },
+    solo: function () {
+      var svg = D.svg.root(0, 36, 640, 226, 'mode-art');
+      pv(svg, 'rect', { x: 56, y: 44, width: 528, height: 206, rx: 12,
+        'stroke-width': 3, fill: 'rgba(111,215,232,.04)' });
+      pvDevice(svg, 70, 58, 244, 178, 2, 2);
+      D.svg.el('line', { x1: 320, y1: 58, x2: 320, y2: 236,
+        stroke: 'currentColor', 'stroke-width': 3, opacity: .75 }, svg);
+      pvPage(svg, 326, 58, 244, 178, 8);
+      return svg;
+    }
+  };
+
+  function buildModeScreen() {
+    if (!dom.modeTrack) return;
+    dom.modeTrack.innerHTML = '';
+    dom.modeRow.innerHTML = '';
+    modePanels = []; modeKeys = [];
+
+    MODE_ORDER.forEach(function (id, i) {
+      var meta = D.mode.META[id];
+
+      var panel = el('div', 'mode-panel', dom.modeTrack);
+      var art = el('div', 'mode-art-wrap', panel);
+      art.appendChild(MODE_ART[id]());
+      modePanels.push(panel);
+
+      var key = el('button', 'key mode-key', dom.modeRow);
+      key.type = 'button';
+      el('b', '', key).textContent = meta.label;
+      el('i', '', key).textContent = meta.players;
+      key.addEventListener('click', function () {
+        D.audio.click();
+        gotoMode(i);
+      });
+      modeKeys.push(key);
+    });
+
+    dom.modeConfirm.addEventListener('click', function (e) { confirmMode(e); });
+    dom.modeBack.addEventListener('click', function (e) {
+      D.audio.click();
+      modeAfter = null;
+      D.showMenu(e);
+    });
+
+    modeIndex = Math.max(0, MODE_ORDER.indexOf(D.mode.get()));
+    gotoMode(modeIndex);
+  }
+
+  /* the options that only one mode has: who this screen is, and which way a
+     Solo split runs */
+  function paintModeOpts() {
+    var id = MODE_ORDER[modeIndex];
+    dom.modeOpts.innerHTML = '';
+
+    /* A segmented control: two fixed cells with one lit pill that SLIDES
+       between them. The old version rebuilt both buttons on every press and
+       re-flowed everything under them to match the new label widths, which is
+       why choosing what this screen is looked like the page breaking. Nothing
+       reflows now — the cells never change size and only a transform moves. */
+    function group(items, read, write) {
+      var row = el('div', 'mode-opt', dom.modeOpts);
+      var seg = el('div', 'seg', row);
+      seg.style.setProperty('--n', items.length);
+      var pill = el('i', 'seg-pill', seg);
+      var btns = [];
+
+      function paint() {
+        var at = 0;
+        items.forEach(function (it, k) { if (read() === it.value) at = k; });
+        pill.style.transform = 'translateX(' + (at * 100) + '%)';
+        btns.forEach(function (b, k) { b.classList.toggle('on', k === at); });
+      }
+
+      items.forEach(function (it) {
+        var b = el('button', 'seg-btn', seg);
+        b.type = 'button';
+        b.textContent = it.label;
+        b.addEventListener('click', function () {
+          if (read() === it.value) return;
+          D.audio.click();
+          write(it.value);
+          paint();
+          paintModeConfirm();
+        });
+        btns.push(b);
+      });
+      paint();
+    }
+
+    if (id === 'twodevice') {
+      dom.modeOpts.hidden = false;
+      group([
+        { value: 'bomb', label: 'DEVICE' },
+        { value: 'manual', label: 'MANUAL' }
+      ], function () { return D.mode.getRole(); },
+         function (v) { D.mode.setRole(v); });
+    } else if (id === 'solo') {
+      dom.modeOpts.hidden = false;
+      group([
+        { value: 'vertical', label: 'SIDE BY SIDE' },
+        { value: 'horizontal', label: 'STACKED' }
+      ], function () { return D.mode.getSplit(); },
+         function (v) { D.mode.setSplit(v); });
+    } else {
+      dom.modeOpts.hidden = true;
+    }
+  }
+
+  function paintModeConfirm() {
+    var id = MODE_ORDER[modeIndex];
+    var manualScreen = (id === 'twodevice' && D.mode.getRole() === 'manual');
+    dom.modeConfirm.querySelector('b').textContent =
+      manualScreen ? 'OPEN THE MANUAL' : 'CONTINUE';
+  }
+
+  /* Everything under the copy has to travel when the copy changes length or
+     a mode grows a row of options — PRINTED has none, TWO DEVICES has two. */
+  function modeShifters() {
+    return [dom.modeCopy, dom.modeOpts, dom.modeRow, dom.modeGo]
+      .filter(Boolean);
+  }
+
+  function gotoMode(i) {
+    modeIndex = D.clamp(i, 0, MODE_ORDER.length - 1);
+    var id = MODE_ORDER[modeIndex];
+    D.mode.set(id);
+    dom.modeTrack.style.transform = 'translateX(' + (-modeIndex * 100) + '%)';
+    modePanels.forEach(function (p, k) { p.classList.toggle('on', k === modeIndex); });
+    modeKeys.forEach(function (b, k) { b.classList.toggle('on', k === modeIndex); });
+
+    var change = function () {
+      paintModeOpts();
+      paintModeConfirm();
+    };
+    if (D.fx) D.fx.flip(modeShifters(), change, { duration: 460 });
+    else change();
+  }
+
+  function confirmMode(e) {
+    D.audio.click();
+    var after = modeAfter;
+    modeAfter = null;
+    cutTo(e, '#0a1318', function () {
+      if (D.mode.is('twodevice') && D.mode.getRole() === 'manual') {
+        mountReader();
+        show('reader');
+        return;
+      }
+      if (after) after(); else { paintMenu(); show('menu'); }
+    });
+  }
+
+  function openReader(e) {
+    mountReader();
+    goTo('reader', e);
   }
 
   /* ---------- screens --------------------------------------------------------- */
 
+  var SCREENS = ['mode', 'menu', 'settings', 'game', 'result', 'reader'];
+
+  /* How far in each screen is. A move to a higher number goes forward — the
+     old screen is pushed left and the new one comes in from the right — and a
+     move to a lower one reverses it, so the player can always tell which way
+     through the game they just went. The result is not further in, it is an
+     interruption, so it drops from above. */
+  /* NOT `DEPTH`: that name is already the case's thickness in units, at the
+     top of this file, and `var` is function-scoped — redeclaring it turned
+     the number into an object, `DEPTH / 2` into NaN, and every face and rim
+     transform into an invalid string that was silently dropped. The box lost
+     its thickness, the two faces ended up coplanar, and the case z-fought
+     with itself. */
+  var SCREEN_DEPTH = { mode: 0, menu: 1, reader: 1, settings: 2, game: 2,
+                       result: 3 };
+  var atScreen = null;
+
   function show(screen) {
-    ['menu', 'game', 'result'].forEach(function (name) {
+    var from = atScreen === null ? -1 : SCREEN_DEPTH[atScreen];
+    var to = SCREEN_DEPTH[screen];
+    var back = to < from;
+    var drop = (screen === 'result');
+    var sink = (atScreen === 'result');
+    atScreen = screen;
+
+    SCREENS.forEach(function (name) {
       var node = dom['screen-' + name];
+      if (!node) return;
       if (name === screen) {
         if (leaving[name]) { clearTimeout(leaving[name]); leaving[name] = null; }
-        node.classList.remove('leaving', 'aborting');
+        node.classList.remove('leaving', 'aborting', 'back', 'drop', 'sink');
         node.hidden = false;
         node.classList.remove('entering');
         void node.offsetWidth;
+        if (back) node.classList.add('back');
+        if (drop) node.classList.add('drop');
         node.classList.add('entering');
-        setTimeout(function () { node.classList.remove('entering'); }, 1000);
+        setTimeout(function () {
+          node.classList.remove('entering', 'back', 'drop');
+        }, 1600);
       } else if (!node.hidden) {
-        node.classList.remove('entering');
+        node.classList.remove('entering', 'back', 'drop', 'sink');
+        if (back) node.classList.add('back');
+        if (sink) node.classList.add('sink');
         node.classList.add('leaving');
         if (leaving[name]) clearTimeout(leaving[name]);
         leaving[name] = setTimeout(function () {
-          node.classList.remove('leaving');
+          node.classList.remove('leaving', 'back', 'sink');
           node.hidden = true;
           leaving[name] = null;
-        }, 300);
+        }, 260);
       }
     });
     document.body.classList.toggle('playing', screen === 'game');
+    document.body.classList.toggle('reading', screen === 'reader');
     if (screen === 'game') fit();
+  }
+
+  /* EVERY page change goes through here. The screens used to slide past each
+     other, which meant the swap itself was on show — and a swap is the one
+     part of a change of screen that has nothing to look at. So the cover is
+     the transition: you press, something takes the glass, the page changes
+     behind it where nobody can see it happen, and it opens again on the new
+     one. The screens themselves now only settle into place underneath. */
+  function cutTo(e, color, fn) {
+    var x, y;
+    if (e && e.clientX !== undefined && (e.clientX || e.clientY)) {
+      x = e.clientX; y = e.clientY;
+    } else if (e && e.currentTarget && e.currentTarget.getBoundingClientRect) {
+      var r = e.currentTarget.getBoundingClientRect();
+      x = r.left + r.width / 2; y = r.top + r.height / 2;
+    }
+    if (!D.fx) { fn(); return; }
+    D.audio.whoosh();
+    D.fx.iris({ x: x, y: y, color: color, hold: fn });
+  }
+
+  /* Go to a screen behind the cover. `e` is the press that asked for it, so
+     the cover opens from the control the player actually touched. */
+  function goTo(screen, e, color) {
+    if (atScreen === screen) return;
+    cutTo(e, color || '#070d11', function () { show(screen); });
   }
 
   function flash(kind) {
@@ -1014,7 +1359,9 @@
     focused.bay.classList.remove('focused');
     focused.bay.style.transform = '';
     if (focusBoost !== 1 || focusShiftY !== 0) {
-      focusBoost = 1; focusShiftY = 0; applyBombTransform();
+      focusBoost = 1; focusShiftY = 0;
+      if (!silent) springZoom();
+      applyBombTransform();
     }
     if (dom.focusClock) dom.focusClock.hidden = true;
     dom.faces[focused.faceIndex].casing.classList.remove('focusing');
@@ -1046,9 +1393,10 @@
        Apple and Google publish as the floor. Push the whole case in until the
        focused module fills most of the screen; the scrim hides the rest, so
        there is nothing to see around it anyway. */
+    springZoom();
     if (coarse()) {
       var onScreen = w * k * scaleNow;
-      var want = (window.innerWidth || 844) * 0.82;
+      var want = paneBox().w * 0.82;
       focusBoost = D.clamp(want / Math.max(1, onScreen), 1, 2.4);
       /* The grid is not centred in the case — the top rail carries the control
          strip and is 90 units deeper than the bottom one — so a bay pushed to
@@ -1068,12 +1416,27 @@
 
   /* Pull the whole case back. The per-module zoom goes the other way; this is
      for seeing all of it at once, which matters on a small screen. */
+  /* The case's default transition is 16ms, because the cursor tilt rides on
+     the same transform and has to feel immediate. A deliberate zoom wants a
+     longer curve, so it borrows one for the length of the move and hands it
+     straight back. */
+  var zoomTimer = 0;
+  function springZoom() {
+    if (!dom.bomb || (D.fx && D.fx.reduced())) return;
+    dom.bomb.classList.add('zooming');
+    clearTimeout(zoomTimer);
+    zoomTimer = setTimeout(function () {
+      dom.bomb.classList.remove('zooming');
+    }, 560);
+  }
+
   function toggleWide() {
     clearFocus(true);
     wide = !wide;
     viewScale = wide ? 0.66 : 1;
     if (dom.wideBtn) dom.wideBtn.classList.toggle('on', wide);
     D.audio.zoom(!wide);
+    springZoom();
     applyBombTransform();
   }
 
@@ -1107,8 +1470,7 @@
       seed: seed, config: config, ctx: ctx,
       total: config.seconds, remaining: config.seconds,
       strikes: 0, solved: 0, instances: [],
-      running: true, last: Date.now(), timer: null, nextBeep: 0,
-      manualMs: 0, manualOpenedAt: 0, manualOpens: 0
+      running: true, last: Date.now(), timer: null, nextBeep: 0
     };
 
     clearFocus(true);
@@ -1207,7 +1569,7 @@
     ];
 
     lastClock = '';
-    dom.manualBtn.hidden = !(D.mode && D.mode.is('solo'));
+    applyLayout();
     renderStrikes();
     renderTimer();
     updateCount();
@@ -1378,10 +1740,6 @@
     });
 
     if (ticked) lastClock = text;
-    /* the overlay covers the case, so it carries the clock itself: the player
-       must be able to see what reading the manual is costing them */
-    if (ticked && dom.moClock) dom.moClock.textContent = text;
-    if (dom.moClock) dom.moClock.classList.toggle('urgent', t <= 30);
     if (ticked && dom.focusClockTime) dom.focusClockTime.textContent = text;
     if (dom.focusClock) dom.focusClock.classList.toggle('urgent', t <= 30);
     dom['screen-game'].classList.toggle('critical', t <= 30 && state.running);
@@ -1436,57 +1794,96 @@
     renderTimer();
   }
 
-  /* ---------- the manual, in Solo ------------------------------------------
-     Built once from the same renderer the standalone manual page uses, with
-     the live examples left off: the player has the real device in front of
-     them, so a second drawing of it would only confuse. Opening it hides the
-     case and the clock keeps running, which is the whole point — in the other
-     two modes a second person reads the manual while the Defuser keeps
-     working, and Solo has to pay for that somehow. */
+  /* ---------- the manual, beside the device ---------------------------------
+     Solo shows the device and the manual at the same time now, in two panes,
+     and two-device mode gives the manual a screen of its own. Both are the
+     same mounted view (js/manual-view.js), and neither is a link the player
+     has to follow: the manual is part of the game.
 
-  var manualBuilt = false, manualSections = [];
+     The old Solo overlay covered the case and billed the player for the time
+     it was open. That made looking something up feel like a penalty rather
+     than like consulting a manual, and on a phone it meant the device and the
+     rule were never on the glass together. */
 
-  function buildManual() {
-    if (manualBuilt) return;
-    if (!window.MANUAL_RENDER || !window.MANUAL_RULES) return;
-    MANUAL_RENDER.toc(dom.moToc, 'mo-');
-    manualSections = MANUAL_RENDER.build(dom.moBody, {
-      examples: false, idPrefix: 'mo-'
-    });
-    dom.moQ.addEventListener('input', function () {
-      MANUAL_RENDER.search(manualSections, dom.moQ.value);
-    });
-    manualBuilt = true;
+  var manualMounted = false, readerMounted = false;
+
+  function mountPlayManual() {
+    if (manualMounted || !D.manualView || !dom.playManual) return;
+    D.manualView.mount(dom.playManual, { title: 'MANUAL' });
+    manualMounted = true;
   }
 
-  function manualIsOpen() { return !dom.manualOverlay.hidden; }
-
-  function openManual() {
-    if (!state || !state.running || manualIsOpen()) return;
-    buildManual();
-    if (!manualBuilt) return;
-    state.manualOpenedAt = Date.now();
-    state.manualOpens++;
-    dom.manualOverlay.hidden = false;
-    document.body.classList.add('manual-open');
-    D.audio.click();
-    dom.moQ.focus();
+  function mountReader() {
+    if (readerMounted || !D.manualView || !dom.readerHost) return;
+    D.manualView.mount(dom.readerHost, { title: 'MATHEMATICKS · MANUAL' });
+    readerMounted = true;
   }
 
-  function closeManual() {
-    if (!manualIsOpen()) return;
-    if (state && state.manualOpenedAt) {
-      state.manualMs += Date.now() - state.manualOpenedAt;
-      state.manualOpenedAt = 0;
+  /* Solo only: which panes are on screen, and which way the split runs. */
+  function applyLayout() {
+    var solo = D.mode && D.mode.is('solo');
+    var live = solo && !!state && state.running;
+    var wasManual = dom.playManual && !dom.playManual.hidden;
+    var wasBomb = dom['screen-game'] && !dom['screen-game'].hidden;
+    var pane = D.mode.getPane(), split = D.mode.getSplit();
+    var showManual = live && pane !== 'bomb';
+    var showBomb = live && pane !== 'manual';
+
+    if (dom.playManual) dom.playManual.hidden = !showManual;
+    if (dom.layoutBar) dom.layoutBar.hidden = !live;
+    if (dom.splitGrip) dom.splitGrip.hidden = !live || pane !== 'both';
+
+    /* The geometry snaps and the panes fade. Animating `inset` on two
+       full-screen panes is layout work on every frame of the move, for the
+       whole of both of them, with the case inside one having to be measured
+       again as it goes — a fade reads the same and costs a composite. */
+    if (D.fx) {
+      /* which way a half travels says which half it is: the manual lives on
+         the right (or below), so it arrives from there and leaves that way */
+      var side = split === 'vertical' ? 'from-right' : 'from-below';
+      if (showManual && !wasManual) {
+        D.fx.play(dom.playManual, 'fx-slide ' + side, 620);
+      }
+      if (showBomb && !wasBomb) {
+        D.fx.play(dom['screen-game'], 'fx-slide from-left', 620);
+      }
+      if (live && dom.layoutBar) {
+        D.fx.play(dom.layoutBar, 'fx-in', 620);
+        if (!dom.splitGrip.hidden) D.fx.play(dom.splitGrip, 'fx-in', 720);
+      }
     }
-    dom.manualOverlay.hidden = true;
-    document.body.classList.remove('manual-open');
+
+    if (!live) return;
+    mountPlayManual();
+    if (dom.layBomb) dom.layBomb.classList.toggle('on', pane === 'bomb');
+    if (dom.layBoth) dom.layBoth.classList.toggle('on', pane === 'both');
+    if (dom.layManual) dom.layManual.classList.toggle('on', pane === 'manual');
+    if (dom.layTurn) {
+      dom.layTurn.classList.toggle('horizontal', split === 'horizontal');
+      dom.layTurn.disabled = (pane !== 'both');
+    }
+    /* the pane changed shape, so the case has to be measured again */
+    clearFocus(true);
+    fit();
+  }
+
+  function setPane(which) {
+    if (D.mode.getPane() === which) return;
     D.audio.click();
+    var before = D.mode.getPane();
+    D.mode.setPane(which);
+    applyLayout();
+    /* coming back from a full-screen half, the other one should arrive rather
+       than simply be there again */
+    if (D.fx && before !== 'both' && which === 'both') {
+      var side = D.mode.getSplit() === 'vertical' ? 'from-right' : 'from-below';
+      D.fx.play(dom.playManual, 'fx-slide ' + side, 620);
+      D.fx.play(dom['screen-game'], 'fx-slide from-left', 620);
+    }
   }
 
   function finish(won, cause) {
     if (!state || !state.running) return;
-    closeManual();
     state.running = false;
     clearInterval(state.timer);
     D.audio.stopBeeps();
@@ -1495,6 +1892,7 @@
     });
 
     dom['screen-game'].classList.remove('critical');
+    applyLayout();               /* the panes go with the round */
     flash(won ? 'safe' : 'boom');
     if (won) D.audio.defused(); else D.audio.exploded();
 
@@ -1503,12 +1901,12 @@
 
     dom.resultTitle.textContent = won ? 'DEFUSED' : 'EXPLODED';
     dom.resultTitle.className = 'verdict ' + (won ? 'good' : 'bad');
-    dom.resultVoice.textContent = pickSaying(won ? SAID_WON : SAID_LOST);
     dom.resultCause.textContent = won ? 'every module solved' : cause;
 
-    /* clearing a stage moves the story on */
+    /* clearing a stage moves the story on — unless the round was armed from a
+       typed code, which reproduces a device without earning it */
     var pending = null;
-    if (won && state.config.stage) {
+    if (won && state.config.stage && !state.config.noRecord) {
       var n = state.config.stage;
       if (n > cleared()) setCleared(n);
       bumpStat(n, 'best', left);
@@ -1523,25 +1921,36 @@
     state.pending = pending;
 
     dom.resultStats.innerHTML = '';
+    var total = state.instances.length;
     var rows = [
-      [won ? 'TIME REMAINING' : 'TIME ELAPSED', mmss(won ? left : spent)],
-      ['MODULES SOLVED', state.solved + ' / ' + state.instances.length],
-      ['STRIKES', state.strikes + ' / 3']
+      [won ? 'TIME REMAINING' : 'TIME ELAPSED', mmss(won ? left : spent),
+        (won ? left : spent), mmss],
+      ['MODULES SOLVED', state.solved + ' / ' + total, state.solved,
+        function (n) { return n + ' / ' + total; }],
+      ['STRIKES', state.strikes + ' / 3', state.strikes,
+        function (n) { return n + ' / 3'; }]
     ];
-    /* In Solo the manual is the thing that costs time, so the round is not
-       honestly described without saying how much. */
-    if (D.mode && D.mode.is('solo')) {
-      rows.push(['IN THE MANUAL',
-        mmss(Math.round(state.manualMs / 1000)) +
-        (state.manualOpens ? '  (' + state.manualOpens + ')' : '')]);
-    }
-    rows.forEach(function (r) {
+    rows.forEach(function (r, i) {
       var row = el('div', 'row', dom.resultStats);
       el('span', 'k', row).textContent = r[0];
-      el('span', 'v', row).textContent = r[1];
+      var v = el('span', 'v', row);
+      /* The figures roll up to their value rather than being there already.
+         It is one rAF each, for about half a second, and then it stops —
+         there is nothing left ticking on the result screen. */
+      if (D.fx && r[2] !== undefined) {
+        v.textContent = r[3] ? r[3](0) : '0';
+        setTimeout(function () {
+          D.fx.countUp(v, r[2], { duration: 700, format: r[3] });
+        }, 260 + i * 90);
+      } else {
+        v.textContent = r[1];
+      }
     });
-    dom.resultSeed.textContent = 'seed ' + state.seed + ' · ' +
-      state.config.difficulty + ' · ' + state.ctx.serial;
+    state.code = makeCode(state.config, state.seed);
+    dom.resultSeed.textContent = state.code;
+    dom.resultDetail.textContent = state.config.difficulty +
+      ' \u00b7 ' + state.ctx.serial;
+    if (dom.resultCopy) dom.resultCopy.textContent = 'COPY';
 
     show('result');
   }
@@ -1576,6 +1985,7 @@
       state.running = false;
     }
     state = null;
+    applyLayout();
   }
 
   /* ---------- debug ------------------------------------------------------------ */
@@ -1609,7 +2019,10 @@
 
   D.boot = function () {
     dom = {
+      'screen-mode': q('screen-mode'),
       'screen-menu': q('screen-menu'),
+      'screen-settings': q('screen-settings'),
+      'screen-reader': q('screen-reader'),
       'screen-game': q('screen-game'),
       'screen-result': q('screen-result'),
       bomb: q('bomb'),
@@ -1619,33 +2032,44 @@
       clocks: [],
       resultTitle: q('result-title'),
       resultCause: q('result-cause'),
-      resultVoice: q('result-voice'),
       resultContinue: q('result-continue'),
       resultReplay: q('result-replay'),
       resultMenu: q('result-menu'),
       track: q('sel-track'),
+      modeTrack: q('mode-track'),
+      modeRow: q('mode-row'),
+      modeCopy: q('mode-copy'),
+      modeOpts: q('mode-opts'),
+      modeConfirm: q('mode-confirm'),
+      modeNow: q('mode-now'),
+      setProgress: q('set-progress'),
+      modeBack: q('mode-back'),
+      playManual: q('play-manual'),
+      layoutBar: q('layout-bar'),
+      layBomb: q('lay-bomb'),
+      layBoth: q('lay-both'),
+      layManual: q('lay-manual'),
+      layTurn: q('lay-turn'),
+      readerHost: q('reader-host'),
+      splitGrip: q('split-grip'),
+      seedPanel: q('seed-panel'),
+      seedCode: q('seed-code'),
+      seedNote: q('seed-note'),
+      seedStart: q('seed-start'),
+      resultDetail: q('result-detail'),
+      resultCopy: q('result-copy'),
       dots: q('sel-dots'),
       select: document.querySelector('.select'),
       prev: q('sel-prev'),
       next: q('sel-next'),
-      freeRow: q('free-row'),
       practicePanel: q('practice-panel'),
       practiceStart: q('practice-start'),
       progress: q('progress'),
       armingLine: q('arming-line'),
       resultStats: q('result-stats'),
-      manualBtn: q('manual-btn'),
       focusClock: q('focus-clock'),
       focusClockTime: q('focus-clock-time'),
       focusClockCount: q('focus-clock-count'),
-      manualOverlay: q('manual-overlay'),
-      moBody: q('mo-body'),
-      moToc: q('mo-toc'),
-      moQ: q('mo-q'),
-      moClock: q('mo-clock'),
-      modes: q('modes'),
-      modeBlurb: q('mode-blurb'),
-      modeHint: q('mode-hint'),
       resultSeed: q('result-seed'),
       faces: [].map.call(document.querySelectorAll('[data-face]'), function (casing) {
         return {
@@ -1672,12 +2096,32 @@
 
     buildSelect();
     paintMenu();
-    D.showMenu = function () { paintMenu(); show('menu'); };
+
+    /* A screen that was told it is the manual has no menu: the menu is a list
+       of devices, and this screen does not carry one. It goes to the manual
+       and stays there until somebody changes what this screen is. */
+    D.showMenu = function (e) {
+      if (D.mode.is('twodevice') && D.mode.getRole() === 'manual') {
+        openReader(e);
+        return;
+      }
+      paintMenu();
+      goTo('menu', e);
+    };
+
+    /* the mode screen, wherever it is reached from */
+    D.showModeSelect = function (after, e) {
+      modeAfter = after || null;
+      dom.modeBack.hidden = !!after;   /* from the opening there is no back */
+      modeIndex = Math.max(0, MODE_ORDER.indexOf(D.mode.get()));
+      gotoMode(modeIndex);
+      goTo('mode', e);
+    };
 
     /* the opening hands the player a device rather than a menu */
     D.startFirstDevice = function () {
       paintMenu();
-      if (cleared() > 0) { show('menu'); return; }
+      if (cleared() > 0) { D.showMenu(); return; }
       var st = STAGES[0];
       start({ difficulty: st.rule, count: st.count, seconds: st.seconds, stage: 1 });
     };
@@ -1689,28 +2133,165 @@
       D.audio.click(); gotoPage(selIndex + 1);
     });
 
-    /* the mode selector */
-    function paintModes() {
-      var m = D.mode.get();
-      [].forEach.call(dom.modes.querySelectorAll('.mode-btn'), function (b) {
-        b.classList.toggle('on', b.dataset.mode === m);
-      });
-      dom.modeBlurb.textContent = D.mode.META[m].blurb;
-      dom.modeHint.hidden = m !== 'twodevice';
-    }
-    [].forEach.call(dom.modes.querySelectorAll('.mode-btn'), function (b) {
-      b.addEventListener('click', function () {
-        D.audio.click();
-        D.mode.set(b.dataset.mode);
-        paintModes();
-      });
-    });
-    D.mode.apply();
-    paintModes();
+    /* ?mode=solo&split=horizontal, ?mode=twodevice&role=manual — so a layout
+       can be reopened exactly as it was reported, the same way ?seed= reopens
+       a bomb. They write through to storage like any other choice. */
+    var modeParam = /[?&]mode=(printed|twodevice|solo)/.exec(location.search);
+    if (modeParam) D.mode.set(modeParam[1]);
+    var roleParam = /[?&]role=(bomb|manual)/.exec(location.search);
+    if (roleParam) D.mode.setRole(roleParam[1]);
+    var splitParam = /[?&]split=(vertical|horizontal)/.exec(location.search);
+    if (splitParam) D.mode.setSplit(splitParam[1]);
 
-    /* the manual, in Solo */
-    dom.manualBtn.addEventListener('click', openManual);
-    q('mo-close').addEventListener('click', closeManual);
+    D.mode.apply();
+    buildModeScreen();
+
+    q('mode-open').addEventListener('click', function (e) {
+      D.audio.click();
+      D.showModeSelect(null, e);
+    });
+
+    q('settings-open').addEventListener('click', function (e) {
+      D.audio.click();
+      paintMenu();
+      goTo('settings', e);
+    });
+    q('settings-back').addEventListener('click', function (e) {
+      D.audio.click();
+      D.showMenu(e);
+    });
+
+    q('reader-back').addEventListener('click', function (e) {
+      D.audio.click();
+      D.showModeSelect(null, e);
+    });
+
+    /* the Solo split controls */
+    dom.layBomb.addEventListener('click', function () { setPane('bomb'); });
+    dom.layBoth.addEventListener('click', function () { setPane('both'); });
+    dom.layManual.addEventListener('click', function () { setPane('manual'); });
+    dom.layTurn.addEventListener('click', function () {
+      D.audio.click();
+      D.mode.toggleSplit();
+      applyLayout();
+    });
+
+    /* Dragging the divider. Pointer events rather than mouse events: the same
+       three handlers then cover a finger, a pen and a mouse, and pointer
+       capture means a fast drag that leaves the grip behind still tracks. */
+    (function () {
+      var grip = dom.splitGrip;
+      if (!grip) return;
+      var dragging = false, raf = 0, want = 0;
+
+      function flush() {
+        raf = 0;
+        D.mode.setRatio(want);
+        fit();
+      }
+
+      function at(e) {
+        var vertical = D.mode.getSplit() === 'vertical';
+        var span = vertical ? (window.innerWidth || 1) : (window.innerHeight || 1);
+        var px = vertical ? e.clientX : e.clientY;
+        want = (px / span) * 100;
+        if (!raf && window.requestAnimationFrame) {
+          raf = window.requestAnimationFrame(flush);
+        } else if (!window.requestAnimationFrame) {
+          flush();
+        }
+      }
+
+      grip.addEventListener('pointerdown', function (e) {
+        if (grip.hidden) return;
+        dragging = true;
+        grip.classList.add('dragging');
+        document.body.classList.add('resizing');
+        try { grip.setPointerCapture(e.pointerId); } catch (err) {}
+        e.preventDefault();
+      });
+      grip.addEventListener('pointermove', function (e) {
+        if (dragging) { at(e); e.preventDefault(); }
+      });
+      function end(e) {
+        if (!dragging) return;
+        dragging = false;
+        grip.classList.remove('dragging');
+        document.body.classList.remove('resizing');
+        try { grip.releasePointerCapture(e.pointerId); } catch (err) {}
+        clearFocus(true);
+        fit();
+      }
+      grip.addEventListener('pointerup', end);
+      grip.addEventListener('pointercancel', end);
+
+      /* back to the middle, the way a split pane always does it */
+      grip.addEventListener('dblclick', function () {
+        D.audio.click();
+        D.mode.resetRatio();
+        clearFocus(true);
+        fit();
+      });
+
+      /* and from the keyboard, since the grip can be tabbed to */
+      grip.addEventListener('keydown', function (e) {
+        var vertical = D.mode.getSplit() === 'vertical';
+        var back = vertical ? 'ArrowLeft' : 'ArrowUp';
+        var fwd = vertical ? 'ArrowRight' : 'ArrowDown';
+        var step = e.shiftKey ? 10 : 2;
+        if (e.key === back) D.mode.setRatio(D.mode.getRatio() - step);
+        else if (e.key === fwd) D.mode.setRatio(D.mode.getRatio() + step);
+        else if (e.key === 'Home' || e.key === 'Enter') D.mode.resetRatio();
+        else return;
+        e.preventDefault();
+        clearFocus(true);
+        fit();
+      });
+    })();
+
+    /* the seed page: one code in, that exact device out */
+    function engageCode(e) {
+      var config = parseCode(dom.seedCode.value);
+      if (!config) {
+        dom.seedNote.hidden = false;
+        dom.seedNote.textContent = 'S3-K7A2XQ';
+        dom.seedNote.classList.add('bad');
+        if (D.fx) D.fx.play(dom.seedPanel, 'fx-shake', 460);
+        D.audio.strike();
+        dom.seedCode.focus();
+        return;
+      }
+      dom.seedNote.hidden = true;
+      dom.seedNote.classList.remove('bad');
+      D.audio.click();
+      cutTo(e, '#0a1318', function () { start(config); });
+    }
+    dom.seedStart.addEventListener('click', engageCode);
+    dom.seedCode.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); engageCode(); }
+    });
+
+    dom.resultCopy.addEventListener('click', function () {
+      D.audio.click();
+      var code = (state && state.code) || dom.resultSeed.textContent;
+      var done = function () { dom.resultCopy.textContent = 'COPIED'; };
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(code).then(done, function () {});
+          return;
+        }
+      } catch (e) {}
+      /* file:// and older browsers have no clipboard API — select it instead,
+         so one keystroke still takes it */
+      try {
+        var r = document.createRange();
+        r.selectNodeContents(dom.resultSeed);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+        dom.resultCopy.textContent = 'SELECTED';
+      } catch (e2) {}
+    });
 
     q('replay-intro').addEventListener('click', function () {
       D.audio.click();
@@ -1722,21 +2303,13 @@
       saveStats({});        /* the per-device record, or BEST and TRIES
                                survive the reset on every device played */
       paintMenu();
-    });
-
-    [].forEach.call(document.querySelectorAll('[data-diff]'), function (btn) {
-      btn.addEventListener('click', function () {
-        var d = btn.getAttribute('data-diff');
-        if (d === 'practice') return;      /* sandbox has its own page */
-        D.audio.click();
-        start({ difficulty: d, count: DIFFICULTIES[d].count,
-                seconds: DIFFICULTIES[d].seconds });
-      });
+      if (D.fx) D.fx.play(dom.setProgress, 'fx-flash', 700);
     });
 
     var soundBtn = q('sound');
     function paintSound() {
-      soundBtn.textContent = 'SOUND ' + (D.audio.isOn() ? 'ON' : 'OFF');
+      soundBtn.textContent = D.audio.isOn() ? 'ON' : 'OFF';
+      soundBtn.classList.toggle('on', D.audio.isOn());
       soundBtn.classList.toggle('off', !D.audio.isOn());
     }
     paintSound();
@@ -1746,28 +2319,32 @@
       document.addEventListener(evt, function () { D.audio.unlock(); });
     });
 
-    q('practice-start').addEventListener('click', function () {
+    q('practice-start').addEventListener('click', function (e) {
       var n = D.clamp(parseInt(q('practice-modules').value, 10) || 1, 1, 8);
       var mins = D.clamp(parseInt(q('practice-minutes').value, 10) || 1, 1, 30);
       q('practice-modules').value = n;
       q('practice-minutes').value = mins;
-      start({ difficulty: 'practice', count: n, seconds: mins * 60 });
+      cutTo(e, '#0a1318', function () {
+        start({ difficulty: 'practice', count: n, seconds: mins * 60 });
+      });
     });
 
-    q('result-continue').addEventListener('click', function () {
+    q('result-continue').addEventListener('click', function (e) {
       D.audio.click();
       var next = state && state.pending;
       teardown();
       if (next && D.cutscene) D.cutscene.play(next, function () { D.showMenu(); });
-      else D.showMenu();
+      else D.showMenu(e);
     });
-    q('result-replay').addEventListener('click', function () {
+    q('result-replay').addEventListener('click', function (e) {
       D.audio.click();
-      start({ difficulty: state.config.difficulty, count: state.config.count,
-              seconds: state.config.seconds, stage: state.config.stage });
+      var cfg = { difficulty: state.config.difficulty,
+                  count: state.config.count, seconds: state.config.seconds,
+                  stage: state.config.stage, noRecord: state.config.noRecord };
+      cutTo(e, '#0a1318', function () { start(cfg); });
     });
-    q('result-menu').addEventListener('click', function () {
-      D.audio.click(); teardown(); D.showMenu();
+    q('result-menu').addEventListener('click', function (e) {
+      D.audio.click(); teardown(); D.showMenu(e);
     });
 
     [].forEach.call(document.querySelectorAll('[data-flip]'), function (b) {
@@ -1778,6 +2355,9 @@
     });
 
     window.addEventListener('resize', fit);
+    window.addEventListener('orientationchange', function () {
+      setTimeout(fit, 120);
+    });
 
     /* The on-screen keyboard does not resize the window on most phones — it
        shrinks the VISUAL viewport and leaves layout alone, so a centred case
@@ -1813,6 +2393,14 @@
       applyDebug();
       runSelfTest();
     }
+    /* Debug builds only. tools/run-play.js drives real rounds through this:
+       the free-difficulty buttons it used to click are gone with OPEN PLAY,
+       and a harness should not have to fake its way through the menu. */
+    if (debug) {
+      D.startRound = start;
+      D.makeCode = makeCode;
+      D.parseCode = parseCode;
+    }
     document.addEventListener('keydown', function (e) {
       if (D.cutscene && D.cutscene.isActive()) return;   /* the opening owns keys */
       if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
@@ -1827,20 +2415,12 @@
         return;
       }
       if (e.key === 'Escape') {
-        /* the overlay is the innermost thing on screen, so it goes first:
-           Escape out of the manual must not also abandon the round */
-        if (manualIsOpen()) { closeManual(); return; }
         if (focused) clearFocus();
-        else if (state) { teardown(); show('menu'); }
+        else if (state) { teardown(); D.showMenu(); }
       }
-      if (manualIsOpen()) return;   /* the manual owns the keyboard while open */
       var typing = e.target && e.target.tagName === 'INPUT';
       if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && state && !typing) {
         flip();
-      }
-      if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && !typing &&
-          state && state.running && D.mode && D.mode.is('solo')) {
-        openManual();
       }
       if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey && !typing) {
         D.audio.toggle();
@@ -1865,6 +2445,12 @@
       return;
     }
 
-    show('menu');
+    /* ?modes=1 opens the mode screen directly, for checking its previews */
+    if (/[?&]modes=1(&|$)/.test(location.search)) {
+      D.showModeSelect(null);
+      return;
+    }
+
+    D.showMenu();
   };
 })(DEFUSAL);
