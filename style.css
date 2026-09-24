@@ -840,13 +840,14 @@ body.debug .answer-tag {
 @keyframes readoutIn { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
 .readout, .expr { animation: readoutIn .45s cubic-bezier(.2,1.2,.4,1) .1s both; }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+/* was @media (prefers-reduced-motion) — now the REDUCE MOTION setting,
+   which follows the system unless the player overrides it (js/settings.js) */
+body.rm, body.rm *, body.rm *::before, body.rm *::after {
     animation-duration: .001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: .001ms !important;
   }
-}
+
 
 /* ==========================================================================
    THE VOICE
@@ -1307,7 +1308,10 @@ body.playing::after {
                    50%      { opacity: .7;  transform: scale(2.1); } }
 .pilot-halo { transform-box: fill-box; transform-origin: 50% 50%;
               animation: pilot 2.6s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .pilot-halo { animation: none; } }
+/* was @media (prefers-reduced-motion) — now the REDUCE MOTION setting,
+   which follows the system unless the player overrides it (js/settings.js) */
+body.rm .pilot-halo { animation: none; }
+
 
 /* the menu's sky still holds its position rather than animating when hidden */
 body.playing .backdrop *,
@@ -1467,9 +1471,10 @@ button, .key, .bay, .bay *, .zoom, .answer input, .field input,
   60%, 100% { transform: rotate(0deg) scale(1); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  #rotate-hint .rot-glyph { animation: none; transform: none; }
-}
+/* was @media (prefers-reduced-motion) — now the REDUCE MOTION setting,
+   which follows the system unless the player overrides it (js/settings.js) */
+body.rm #rotate-hint .rot-glyph { animation: none; transform: none; }
+
 
 /* ==========================================================================
    MENU MOTION
@@ -2285,13 +2290,14 @@ body.kb-open .flip-btn { opacity: .35; }
    One rule, and none of the above happens. It sits last so it wins.
    ========================================================================== */
 
-@media (prefers-reduced-motion: reduce) {
-  .fx-ripple, .fx-iris { display: none !important; }
-  .fx-reveal { opacity: 1 !important; transform: none !important; }
-  .mode-panel, .dot, .card { transition: none !important; }
-  .card:not(.focused-page) { transform: none; }
-  .mode-panel:not(.on) { transform: none; }
-}
+/* was @media (prefers-reduced-motion) — now the REDUCE MOTION setting,
+   which follows the system unless the player overrides it (js/settings.js) */
+body.rm .fx-ripple, body.rm .fx-iris { display: none !important; }
+body.rm .fx-reveal { opacity: 1 !important; transform: none !important; }
+body.rm .mode-panel, body.rm .dot, body.rm .card { transition: none !important; }
+body.rm .card:not(.focused-page) { transform: none; }
+body.rm .mode-panel:not(.on) { transform: none; }
+
 
 /* ==========================================================================
    EMPHASIS
@@ -2403,7 +2409,10 @@ body.kb-open .flip-btn { opacity: .35; }
   87% { transform: translate3d(-1px,0,0); }
 }
 .fx-shake { animation: fxShake .44s cubic-bezier(.36,.07,.19,.97) both; }
-@media (prefers-reduced-motion: reduce) { .fx-shake { animation: none; } }
+/* was @media (prefers-reduced-motion) — now the REDUCE MOTION setting,
+   which follows the system unless the player overrides it (js/settings.js) */
+body.rm .fx-shake { animation: none; }
+
 
 /* ==========================================================================
    THE SEGMENTED CONTROL
@@ -2440,9 +2449,10 @@ body.kb-open .flip-btn { opacity: .35; }
 .seg-btn.on { color: #06121a; }
 .seg-btn:hover:not(.on) { color: var(--text); }
 
-@media (prefers-reduced-motion: reduce) {
-  .seg-pill { transition: none; }
-}
+/* was @media (prefers-reduced-motion) — now the REDUCE MOTION setting,
+   which follows the system unless the player overrides it (js/settings.js) */
+body.rm .seg-pill { transition: none; }
+
 
 /* ---- level sliders -------------------------------------------------------
    A lit bar, the same cyan as every other thing that is ON, filled up to the
@@ -2619,4 +2629,71 @@ body.view-panning .bomb { transition: none !important; }
 @media (pointer: coarse) {
   .mv-zbtn { width: 40px; height: 40px; }
   .mv-zval { height: 40px; }
+}
+
+/* ==========================================================================
+   PLAYER SETTINGS
+   Every one of these is a class or a custom property set by js/settings.js;
+   nothing below runs any script.
+   ========================================================================== */
+
+/* SCREEN SHAKE off: the case, a struck bay and the seed box stay still. The
+   strike still flashes and still sounds — it is only the movement that goes. */
+body.no-shake .casing.shake,
+body.no-shake .bay.striking:not(.focused),
+body.no-shake .fx-shake { animation: none !important; }
+
+/* FLASHES: every full-screen wash, the red room under thirty seconds, a
+   struck bay's red fill and the white pop as the strip powers up are scaled by
+   --flash-k. `filter: opacity()` multiplies with the opacity each animation
+   sets, so the animations themselves are untouched. */
+.flash, .deck.critical::after, .bay.striking::after,
+.casing.arming .panel .strip::after { filter: opacity(var(--flash-k, 1)); }
+/* at zero, gone — and the clock stops blinking, holding a steady red instead */
+body.no-flash .flash, body.no-flash .deck.critical::after,
+body.no-flash .bay.striking::after,
+body.no-flash .casing.arming .panel .strip::after { display: none; }
+body.no-flash .lcd.urgent { animation: none; color: #ff8a70; }
+
+/* TEXT SIZE: the menus, the opening's caption and the split's controls. CSS
+   `zoom` re-lays the text out at the new size instead of stretching a
+   picture of it. The case is a scaled drawing with its own zoom; the manual
+   multiplies this into its own size in js/manual-view.js. */
+.menu .sheet, .cs-box, .cs-skip, .cs-begin, .layout-bar, .reader-back,
+.mv-bar, .arming-line, .focus-clock { zoom: var(--ui-text, 1); }
+
+/* COLOUR LABELS: a letter on every key whose colour is the rule. */
+.cb-tag { display: none; pointer-events: none; }
+body.cb .cb-tag { display: inline; }
+.swatch { display: grid; place-items: center; }
+body.cb .swatch-word {
+  display: block; font-family: var(--round); font-weight: 700; font-size: 20px;
+  letter-spacing: .12em; color: #fff;
+  text-shadow: 0 0 3px #1a2429, 0 1px 2px #1a2429, 0 0 1px #1a2429;
+}
+
+/* ---- the settings screen's tabs and rows ------------------------------- */
+.set-sheet { width: min(620px, 100%); }
+.set-tabs { margin: 0 0 16px; }
+.set-tabs .seg-btn { font-weight: 700; }
+/* the pages are laid over one another in one grid cell, so the sheet is as
+   tall as the tallest page and switching tabs never moves DONE */
+.set-pages { display: grid; margin-bottom: 26px; }
+.set-pages > .set-list { grid-area: 1 / 1; margin: 0; align-content: start; }
+.set-pages > .set-list[hidden] { display: grid !important; visibility: hidden; }
+.set-row { min-height: 64px; }
+.set-lbl { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column;
+           gap: 3px; text-align: left; }
+.set-lbl b { font-family: var(--round); font-weight: 700; font-size: var(--t-label);
+             letter-spacing: var(--trk-label); color: #e7f3f6; }
+.set-lbl small { font-family: var(--prose); font-size: 11px; color: var(--ink-3);
+                 line-height: 1.35; }
+.set-slide .set-lbl { flex: 0 0 150px; }
+.set-seg { flex: none; min-width: 200px; }
+.set-seg .seg-btn { padding: 8px 10px; min-height: 36px; font-weight: 700; }
+.set-row[hidden] { display: none !important; }
+@media (max-width: 560px) {
+  .set-slide .set-lbl { flex-basis: 100px; }
+  .set-lbl small { display: none; }
+  .set-seg { min-width: 150px; }
 }

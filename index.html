@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="MATHEMATICKS">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="style.css?v=20260924a">
+<link rel="stylesheet" href="style.css?v=20260924b">
 </head>
 <body>
 <div id="backdrop" class="backdrop"></div>
@@ -128,7 +128,19 @@
   <div class="sheet set-sheet">
     <h2 class="set-heading">SETTINGS</h2>
 
-    <div class="set-list">
+    <!-- Four tabs, the way most games file their options. Fourteen rows in
+         one column ran off the bottom of a laptop screen, and a player
+         looking for the volume should not have to scroll past the flashes. -->
+    <div class="seg set-tabs" id="set-tabs" role="tablist" aria-label="settings">
+      <i class="seg-pill"></i>
+      <button type="button" class="seg-btn on" role="tab" data-tab="sound" aria-selected="true">SOUND</button>
+      <button type="button" class="seg-btn" role="tab" data-tab="display" aria-selected="false">DISPLAY</button>
+      <button type="button" class="seg-btn" role="tab" data-tab="access" aria-selected="false">ACCESS</button>
+      <button type="button" class="seg-btn" role="tab" data-tab="game" aria-selected="false">GAME</button>
+    </div>
+
+    <div class="set-pages">
+    <div class="set-list" data-page="sound" role="tabpanel">
       <div class="set-row">
         <b>SOUND</b>
         <button type="button" id="sound" class="opt-btn">ON</button>
@@ -155,10 +167,55 @@
                data-level="effects" aria-labelledby="lbl-effects">
         <span class="set-val" id="val-effects">100</span>
       </div>
+    </div>
 
+    <div class="set-list" data-page="display" role="tabpanel" hidden>
+      <div class="set-row" id="row-fullscreen">
+        <div class="set-lbl"><b>FULLSCREEN</b><small>the whole screen, no window edges</small></div>
+        <button type="button" id="pref-fullscreen" class="opt-btn">OFF</button>
+      </div>
+      <div class="set-row set-slide">
+        <div class="set-lbl"><b id="lbl-scale">DEVICE SIZE</b><small>the case at rest in its pane</small></div>
+        <input type="range" id="pref-scale" class="slider" min="80" max="120" step="5"
+               aria-labelledby="lbl-scale">
+        <span class="set-val" id="val-scale">100</span>
+      </div>
+      <div class="set-row">
+        <div class="set-lbl"><b>TEXT SIZE</b><small>menus, captions and the manual</small></div>
+        <div class="seg set-seg" id="pref-text" style="--n:4"><i class="seg-pill"></i></div>
+      </div>
+    </div>
+
+    <div class="set-list" data-page="access" role="tabpanel" hidden>
+      <div class="set-row">
+        <div class="set-lbl"><b>REDUCE MOTION</b><small id="motion-note">AUTO follows your system</small></div>
+        <div class="seg set-seg" id="pref-motion" style="--n:3"><i class="seg-pill"></i></div>
+      </div>
+      <div class="set-row">
+        <div class="set-lbl"><b>SCREEN SHAKE</b><small>the case kicking on a strike</small></div>
+        <button type="button" id="pref-shake" class="opt-btn">ON</button>
+      </div>
+      <div class="set-row set-slide">
+        <div class="set-lbl"><b id="lbl-flash">FLASHES</b><small>strike, blast and red-alert washes</small></div>
+        <input type="range" id="pref-flash" class="slider" min="0" max="100" step="5"
+               aria-labelledby="lbl-flash">
+        <span class="set-val" id="val-flash">100</span>
+      </div>
+      <div class="set-row">
+        <div class="set-lbl"><b>COLOUR LABELS</b><small>names on every colour-coded key</small></div>
+        <button type="button" id="pref-colorblind" class="opt-btn">OFF</button>
+      </div>
+    </div>
+
+    <div class="set-list" data-page="game" role="tabpanel" hidden>
       <div class="set-row">
         <b>OPENING</b>
         <button type="button" id="replay-intro" class="opt-btn">REPLAY</button>
+      </div>
+
+      <div class="set-row">
+        <div class="set-lbl"><b>SETTINGS</b><small>every option here back to default</small></div>
+        <button type="button" id="reset-settings" class="opt-btn">RESET</button>
       </div>
 
       <div class="set-row danger">
@@ -166,6 +223,7 @@
         <span id="set-progress" class="set-val">0 / 5</span>
         <button type="button" id="reset-progress" class="opt-btn bad">RESET</button>
       </div>
+    </div>
     </div>
 
     <div class="mode-go">
@@ -286,30 +344,31 @@
   </div>
 </section>
 
-<script src="js/core.js?v=20260924a"></script>
-<script src="js/fx.js?v=20260924a"></script>
-<script src="js/mode.js?v=20260924a"></script>
-<script src="js/audio.js?v=20260924a"></script>
-<script src="js/svg.js?v=20260924a"></script>
-<script src="js/backdrop.js?v=20260924a"></script>
-<script src="js/modules/cards.js?v=20260924a"></script>
-<script src="js/modules/sequences.js?v=20260924a"></script>
-<script src="js/modules/mutex.js?v=20260924a"></script>
-<script src="js/modules/rationality.js?v=20260924a"></script>
-<script src="js/modules/parallel.js?v=20260924a"></script>
-<script src="js/modules/venn.js?v=20260924a"></script>
-<script src="js/modules/triangles.js?v=20260924a"></script>
-<script src="js/modules/angles.js?v=20260924a"></script>
-<script src="js/modules/units.js?v=20260924a"></script>
-<script src="js/modules/units-render.js?v=20260924a"></script>
-<script src="manual/rules.js?v=20260924a"></script>
-<script src="manual/render.js?v=20260924a"></script>
-<script src="js/zoom.js?v=20260924a"></script>
-<script src="js/manual-view.js?v=20260924a"></script>
-<script src="js/cutscene.js?v=20260924a"></script>
-<script src="js/selftest.js?v=20260924a"></script>
-<script src="js/game.js?v=20260924a"></script>
-<script src="js/main.js?v=20260924a"></script>
+<script src="js/core.js?v=20260924b"></script>
+<script src="js/settings.js?v=20260924b"></script>
+<script src="js/fx.js?v=20260924b"></script>
+<script src="js/mode.js?v=20260924b"></script>
+<script src="js/audio.js?v=20260924b"></script>
+<script src="js/svg.js?v=20260924b"></script>
+<script src="js/backdrop.js?v=20260924b"></script>
+<script src="js/modules/cards.js?v=20260924b"></script>
+<script src="js/modules/sequences.js?v=20260924b"></script>
+<script src="js/modules/mutex.js?v=20260924b"></script>
+<script src="js/modules/rationality.js?v=20260924b"></script>
+<script src="js/modules/parallel.js?v=20260924b"></script>
+<script src="js/modules/venn.js?v=20260924b"></script>
+<script src="js/modules/triangles.js?v=20260924b"></script>
+<script src="js/modules/angles.js?v=20260924b"></script>
+<script src="js/modules/units.js?v=20260924b"></script>
+<script src="js/modules/units-render.js?v=20260924b"></script>
+<script src="manual/rules.js?v=20260924b"></script>
+<script src="manual/render.js?v=20260924b"></script>
+<script src="js/zoom.js?v=20260924b"></script>
+<script src="js/manual-view.js?v=20260924b"></script>
+<script src="js/cutscene.js?v=20260924b"></script>
+<script src="js/selftest.js?v=20260924b"></script>
+<script src="js/game.js?v=20260924b"></script>
+<script src="js/main.js?v=20260924b"></script>
 
 <script>
 /* Service workers need a real origin, so this simply does not run when the

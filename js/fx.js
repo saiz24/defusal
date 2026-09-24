@@ -46,6 +46,7 @@
 
   function reduced() {
     if (!canAnimate()) return true;
+    if (D.prefs) return D.prefs.reducedMotion();   /* the REDUCE MOTION setting */
     try {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     } catch (e) { return false; }

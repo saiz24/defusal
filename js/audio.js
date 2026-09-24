@@ -352,6 +352,14 @@
     /* The three sliders. `which` is 'volume', 'music' or 'effects'; the
        value is the slider's 0..1, stored as shown. */
     level: function (which) { return level[which]; },
+
+    /* RESET SETTINGS: sound on, every level back where it shipped */
+    resetLevels: function () {
+      enabled = true;
+      level.volume = 1; level.music = 0.7; level.effects = 1;
+      remember();
+      apply();
+    },
     setLevel: function (which, v) {
       if (!(which in level)) return;
       level[which] = Math.max(0, Math.min(1, Number(v) || 0));

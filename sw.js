@@ -7,7 +7,7 @@
    serve a stale one. The page itself carries no stamp, so it goes to the
    network first and falls back to the cache when there isn't one. */
 
-var CACHE = 'defusal-v7';
+var CACHE = 'defusal-v8';
 
 self.addEventListener('install', function () { self.skipWaiting(); });
 

@@ -222,9 +222,32 @@ order of how often they are wanted:
   `MODE / TWO DEVICES · MANUAL`.
 * a small **settings** icon, which is a door rather than a decision.
 
-`#screen-settings` holds everything that is housekeeping: sound on/off, three
-level sliders (VOLUME, MUSIC, EFFECTS), replaying the opening, and resetting
-progress — the last marked in red and kept away from anything pressed by habit.
+`#screen-settings` holds everything that is housekeeping, filed under four
+tabs the way most games do it — fourteen rows in one column ran off a laptop
+screen. The tabs share one grid cell, so switching never moves DONE.
+
+| tab | setting | what it does |
+|---|---|---|
+| SOUND | SOUND, VOLUME, MUSIC, EFFECTS | on/off and three levels (see *Sound*) |
+| DISPLAY | FULLSCREEN | the Fullscreen API; read back from the document, so Esc keeps it honest. Hidden where the browser has none (iPhone) |
+| | DEVICE SIZE | 80–120% of the case's fitted size at rest; over 100% it may overhang its pane and can then be dragged |
+| | TEXT SIZE | S M L XL (90–130%) for the menus, the opening's captions, the split's controls and the manual — the manual's own `− 100% +` is relative to it |
+| ACCESS | REDUCE MOTION | AUTO follows the system and follows it live; ON and OFF override it either way |
+| | SCREEN SHAKE | the case, a struck bay and the seed box stop moving; the strike still flashes and sounds |
+| | FLASHES | 0–100% for the strike, blast and win washes, the red room under thirty seconds and the strip's power-up pop. At 0 they are gone and the clock holds a steady red instead of blinking |
+| | COLOUR LABELS | the colour's letter on every Triangles and Rationality key, and the colour's name on the Angles lamp — six neighbouring hues, the hardest thing in the game to tell apart without full colour vision |
+| GAME | OPENING | replay it |
+| | SETTINGS | every option back to default, including the sound levels and the manual's size. Progress is not a setting and is left alone |
+| | PROGRESS | reset, in red |
+
+`js/settings.js` owns all of it: each setting's default, storage
+(`defusal.pref.*`), effect and control. The effects are a class or a custom
+property on `<body>`/`<html>` (`rm`, `no-shake`, `no-flash`, `cb`,
+`--flash-k`, `--ui-text`), so CSS does the work and nothing is redrawn — the
+colour letters are always in the drawing and only shown by `body.cb`. Every
+`@media (prefers-reduced-motion)` rule became `body.rm`, which is what lets
+the setting override the system. `tools/check-settings.js` drives each
+control in headless Chrome and checks its effect, a reload, and the reset.
 
 ## Zoom
 
@@ -429,7 +452,7 @@ repainted with the whole case on every tilt.
 
 Game state always changes synchronously; the motion layer is presentation only,
 so nothing about timing or fairness depends on an animation finishing.
-`prefers-reduced-motion` disables the lot.
+REDUCE MOTION in settings disables the lot; on AUTO it follows the system's `prefers-reduced-motion`.
 
 ## Motion
 
@@ -640,6 +663,8 @@ node tools/check-zoom.js          # real wheel/drag/key/Ctrl+wheel input
                                   # through headless Chrome against the
                                   # case and manual zoom
 node tools/measure-audio.js [vol] # peak and loudness of every sound
+node tools/check-settings.js      # every setting through the real screen:
+                                  # its effect, a reload, and RESET
 tools/sheet.html                  # contact sheet: one live bay per module at
                                   # real size, ?seed=N to reroll
 ```

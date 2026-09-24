@@ -308,11 +308,21 @@
     split.appendChild(bar);
     host.appendChild(split);
 
+    /* COLOUR LABELS: the name of the colour on the lamp. Six hues a step
+       apart on the spectrum is the hardest thing in the game to tell apart
+       without full colour vision, and the manual names them. */
+    var word = document.createElement('span');
+    word.className = 'cb-tag swatch-word';
+    panel.appendChild(word);
+
     var idx = p.phase;
     function show() {
       var c = HEX[p.cycle[idx]];
       panel.style.background = c;
-      panel.style.boxShadow = 'inset 0 -8px 0 rgba(0,0,0,.18)';
+      /* it is a lamp, so it throws its own colour */
+      panel.style.boxShadow = 'inset 0 -8px 0 rgba(0,0,0,.18), 0 0 18px ' + c +
+                              ', 0 0 40px ' + c + '66';
+      word.textContent = p.cycle[idx].toUpperCase();
     }
     show();
 

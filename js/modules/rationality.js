@@ -215,6 +215,7 @@
       var pos = POSITIONS[i], pt = pts[pos];
       var g = S.el('g', { class: 'hit' }, svg);
       S.dome(g, pt[0], pt[1], r, HEX[color]);
+      S.colourTag(g, pt[0], pt[1], color, Math.round(r * 0.9));
       g.addEventListener('click', function () {
         if (inst.isSolved()) return;
         if (color === s.sequence[pressed]) {

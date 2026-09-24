@@ -100,8 +100,12 @@
     if (saved >= ZMIN && saved <= ZMAX) zoomNow = saved;
   } catch (e) {}
 
+  /* TEXT SIZE in settings sets the size everything is read at; the manual's
+     own - 100% + is relative to that, so the two never fight. */
+  function base() { return D.prefs ? D.prefs.get('text') : 1; }
+
   function paint(p) {
-    p.sheet.style.zoom = String(zoomNow);
+    p.sheet.style.zoom = String(zoomNow * base());
     p.readout.textContent = Math.round(zoomNow * 100) + '%';
     p.minus.disabled = zoomNow <= ZMIN + 1e-3;
     p.plus.disabled = zoomNow >= ZMAX - 1e-3;
@@ -130,7 +134,7 @@
       var a = anchor.getBoundingClientRect();
       frac = a.height ? (clientY - a.top) / a.height : 0;
     }
-    var docY = (p.paper.scrollTop + clientY - r.top) / zoomNow;
+    var docY = (p.paper.scrollTop + clientY - r.top) / (zoomNow * base());
 
     zoomNow = next;
     panes.forEach(paint);
@@ -139,7 +143,7 @@
       var b = anchor.getBoundingClientRect();
       p.paper.scrollTop += (b.top + frac * b.height) - clientY;
     } else {
-      p.paper.scrollTop = docY * zoomNow - (clientY - r.top);
+      p.paper.scrollTop = docY * zoomNow * base() - (clientY - r.top);
     }
     try { window.localStorage.setItem('defusal.manualZoom', String(zoomNow)); }
     catch (e) {}
@@ -182,6 +186,21 @@
         zoom: function (f, x, y) { setZoom(p, zoomNow * f, x, y); }
       });
     }
+  }
+
+  /* Settings changed: repaint every pane at the new text size, and RESET
+     SETTINGS puts the manual's own size back to 100% as well. */
+  if (D.prefs) {
+    D.prefs.onChange(function (key) {
+      if (key === '*') {
+        zoomNow = 1;
+        try { window.localStorage.removeItem('defusal.manualZoom'); } catch (e) {}
+      }
+      if (key === '*' || key === 'text') {
+        panes = panes.filter(function (q) { return q.paper.isConnected !== false; });
+        panes.forEach(paint);
+      }
+    });
   }
 
   D.manualView = { mount: mount };

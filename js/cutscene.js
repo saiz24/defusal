@@ -137,6 +137,7 @@
   }
 
   function reduced() {
+    if (D.prefs) return D.prefs.reducedMotion();
     try {
       return window.matchMedia &&
              window.matchMedia('(prefers-reduced-motion: reduce)').matches;

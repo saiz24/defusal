@@ -303,6 +303,7 @@
         fill: DARK[color] }, g);
       S.el('rect', { x: bx, y: by, width: 58, height: 58, rx: 12,
         fill: HEX[color], stroke: '#333b3f', 'stroke-width': 4 }, g);
+      S.colourTag(g, bx + 29, by + 29, color, 26);
       g.addEventListener('click', function () { hit(color); });
     });
 

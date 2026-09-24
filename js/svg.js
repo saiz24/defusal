@@ -33,6 +33,21 @@
     return t;
   }
 
+  /* A colour's initial, drawn on a key whose colour is the rule, for the
+     COLOUR LABELS setting. Always in the drawing, shown only by CSS
+     (body.cb), so turning it on mid-round needs no redraw. White with a dark
+     outline so it reads on every one of the key colours. */
+  function colourTag(parent, cx, cy, colour, size) {
+    var t = text(parent, cx, cy, colour.charAt(0).toUpperCase(), {
+      class: 'cb-tag', 'text-anchor': 'middle', 'dominant-baseline': 'central',
+      'font-size': size || 24, 'font-weight': '700', fill: '#ffffff',
+      stroke: '#1a2429', 'stroke-width': 4, 'paint-order': 'stroke',
+      'font-family': 'Plex Sans Condensed, Plex Sans, sans-serif'
+    });
+    t.setAttribute('aria-hidden', 'true');
+    return t;
+  }
+
   /* Math-convention polar point (0deg = east, angles increase counter-clockwise
      on screen because SVG's y axis points down and we negate it). */
   function polar(cx, cy, r, deg) {
@@ -98,6 +113,6 @@
 
   D.svg = {
     NS: NS, el: el, root: root, text: text, polar: polar, arcPath: arcPath,
-    dome: dome, keycap: keycap
+    dome: dome, keycap: keycap, colourTag: colourTag
   };
 })(DEFUSAL);

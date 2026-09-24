@@ -137,8 +137,17 @@
        Small viewports keep the old tight fit — there, legibility wins. */
     var box = paneBox();
     var pad = box.w >= 1100 ? 108 : 24;
-    scaleNow = Math.min((box.w - pad) / (BOMB_W || 1724),
-                        (box.h - pad) / (BOMB_H || 938));
+    /* DISPLAY SCALE: the player's own size for the case at rest. Above 100%
+       it may overhang the pane a little, which the zoom's drag then reaches. */
+    var own = D.prefs ? D.prefs.get('scale') : 1;
+    scaleNow = own * Math.min((box.w - pad) / (BOMB_W || 1724),
+                              (box.h - pad) / (BOMB_H || 938));
+    /* a new size can put the view past its limits, or give a case at rest
+       something off-screen to drag to */
+    clampPan();
+    if (document.body && document.body.classList) {
+      document.body.classList.toggle('view-zoomed', viewScale > 1.001 || overhangs());
+    }
     applyBombTransform();
   }
 
@@ -152,6 +161,7 @@
   }
 
   function reducedMotion() {
+    if (D.prefs) return D.prefs.reducedMotion();
     try {
       return window.matchMedia &&
              window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1464,8 +1474,17 @@
      travel until an edge of the case reaches the centre, and no further; at
      rest or pulled back there is nothing to travel to, so it recentres, with
      the zoom's own curve so it glides there instead of jumping. */
+  /* Bigger than its pane: zoomed in, or a DEVICE SIZE over 100% on a pane
+     the case already filled. Either way there is something off-screen to
+     drag to. */
+  function overhangs() {
+    var box = paneCentre();
+    return (BOMB_W || 1724) * scaleNow * viewScale > box.w + 1 ||
+           (BOMB_H || 938) * scaleNow * viewScale > box.h + 1;
+  }
+
   function clampPan() {
-    if (viewScale <= 1.001) {
+    if (viewScale <= 1.001 && !overhangs()) {
       if (panX || panY) springZoom();
       panX = 0; panY = 0;
       return;
@@ -1483,7 +1502,7 @@
       dom.wideBtn.classList.toggle('on', moved);
       dom.wideBtn.title = moved ? 'back to the whole case' : 'pull back from the case';
     }
-    document.body.classList.toggle('view-zoomed', viewScale > 1.001);
+    document.body.classList.toggle('view-zoomed', viewScale > 1.001 || overhangs());
     if (!viewRaf && window.requestAnimationFrame) {
       viewRaf = window.requestAnimationFrame(function () {
         viewRaf = 0; applyBombTransform();
@@ -1547,7 +1566,7 @@
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (drag && e.pointerType === 'touch') { drag = null; return; }  /* 2nd finger: a pinch */
     if (e.target && e.target.closest && e.target.closest(NOT_A_HANDLE)) return;
-    if (viewScale <= 1.001) return;
+    if (viewScale <= 1.001 && !overhangs()) return;
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY,
              px: panX, py: panY, live: false };
   }
@@ -2473,6 +2492,17 @@
       });
     });
     paintLevels();
+
+    if (D.prefs) {
+      D.prefs.initUI({
+        click: function () { D.audio.click(); },
+        resetSound: function () { D.audio.resetLevels(); paintSound(); paintLevels(); }
+      });
+      /* DEVICE SIZE changes the case's rest size; nothing else here moves */
+      D.prefs.onChange(function (key) {
+        if (key === 'scale' || key === '*') { fit(); clampPan(); paintView(); }
+      });
+    }
 
     ['pointerdown', 'keydown'].forEach(function (evt) {
       document.addEventListener(evt, function () { D.audio.unlock(); });
