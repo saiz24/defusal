@@ -8,15 +8,47 @@
    viewport in one transform, so nothing ever reflows.
    ========================================================================== */
 
-/* The one thing the game loads that it does not draw. It is bundled rather
-   than asked for by name: a font installed on the machine this was built on
-   is not on the machine it is shown on, and there is no network to fall back
-   to. 29KB, next to the page, same as everything else. */
+/* Every face the game uses is bundled. A font installed on the machine this
+   was built on is not on the machine it is shown on — American Typewriter and
+   Avenir, which the old stacks leaned on, do not exist on Windows at all, so
+   half the players were reading Courier New — and there is no network to fall
+   back to.
+
+   Two families, not four. The segment face is the device talking; IBM Plex
+   is everything else, one superfamily in four cuts that were drawn to sit
+   together (OFL, fonts/plex/OFL.txt). That is the pattern in the games this
+   borrows from: Keep Talking pairs one display face with one document face;
+   Alien: Isolation runs its whole interface in one grotesque and keeps a
+   second, diegetic face for the terminals. Latin subsets, about 260KB. */
 @font-face {
   font-family: "Seven Segment";
   src: url("fonts/seven-segment.ttf") format("truetype");
   font-weight: normal; font-style: normal; font-display: block;
 }
+@font-face { font-family: "Plex Sans"; src: url("fonts/plex/ibm-plex-sans-latin-400-normal.woff2") format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Plex Sans"; src: url("fonts/plex/ibm-plex-sans-latin-600-normal.woff2") format("woff2");
+  font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Plex Sans"; src: url("fonts/plex/ibm-plex-sans-latin-700-normal.woff2") format("woff2");
+  font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Plex Sans Condensed"; src: url("fonts/plex/ibm-plex-sans-condensed-latin-500-normal.woff2") format("woff2");
+  font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Plex Sans Condensed"; src: url("fonts/plex/ibm-plex-sans-condensed-latin-600-normal.woff2") format("woff2");
+  font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Plex Sans Condensed"; src: url("fonts/plex/ibm-plex-sans-condensed-latin-700-normal.woff2") format("woff2");
+  font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Plex Mono"; src: url("fonts/plex/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Plex Mono"; src: url("fonts/plex/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+  font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Plex Mono"; src: url("fonts/plex/ibm-plex-mono-latin-600-normal.woff2") format("woff2");
+  font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Plex Serif"; src: url("fonts/plex/ibm-plex-serif-latin-400-normal.woff2") format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Plex Serif"; src: url("fonts/plex/ibm-plex-serif-latin-400-italic.woff2") format("woff2");
+  font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Plex Serif"; src: url("fonts/plex/ibm-plex-serif-latin-700-normal.woff2") format("woff2");
+  font-weight: 700; font-style: normal; font-display: swap; }
 
 :root {
   --bg:      #070d11;
@@ -41,35 +73,30 @@
   --violet:  #7a6bb0;
   --text:    #dbe9ef;   /* body copy, lifted off the old #cfdde2 */
 
-  /* ---- three voices, and only three -----------------------------------
-     Everything used to be set in ONE face at ONE weight, which is why a
-     heading, a button, a caption and a paragraph all looked like the same
-     thing. The typewriter is the game — it keeps the title, the verdicts,
-     the device names, the manual and every key. What it stops doing is the
-     small print: a 10px label with thin slab strokes, over a moving sky, is
-     where it stopped being readable.
+  /* ---- two families, five roles ---------------------------------------
+     The old set was four unrelated families — a seven-segment readout, a
+     slab typewriter, a geometric sans and the system mono — and it looked
+     like it: every screen had a join where one voice met another. Now the
+     segment face is the device, and every other role is a cut of Plex.
 
-       --round    the game's face. Titles, verdicts, the manual, controls.
-       --prose    the small print — labels, blurbs, captions, notes. It is
-                  here for legibility at 11px and for contrast against the
-                  typewriter, nothing else.
-       --mono     readouts: the clock, a serial, a round code, a figure in a
-                  table. Numbers that have to line up.
-     -------------------------------------------------------------------- */
-  /* The display face. Everything the device says about itself — its name, a
-     verdict, the title over all of it — is the same lit segment readout the
-     clock is, so the screen and the thing on the table are speaking in one
-     voice. It carries a glow that takes the colour of whichever device is in
-     front of you. */
-  --seg: "Seven Segment", ui-monospace, "SF Mono", Menlo, monospace;
-
-  --round: "American Typewriter", "Courier New", ui-rounded,
-           "SF Pro Rounded", "Hiragino Maru Gothic ProN", Avenir,
-           "Trebuchet MS", system-ui, sans-serif;
-  --prose: "Avenir Next", "Avenir", "Segoe UI Variable Text", "Segoe UI",
-           system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Roboto Mono", Menlo,
-          Consolas, monospace;
+       --seg     the device: the clock, a serial, the title, a verdict, a
+                 device's name. Lit, and glows.
+       --round   controls and labels: every key, button, tab and heading in
+                 a panel. Plex Sans Condensed, set in capitals and tracked —
+                 the printed legend on a piece of equipment.
+       --prose   small print and interface sentences: blurbs, captions, a
+                 note under a field. Plex Sans, drawn for screens.
+       --doc     the manual's prose. Plex Serif — the manual is a document,
+                 as it is in Keep Talking, and the serif is the one change
+                 that says "paper" without leaving the family.
+       --mono    figures that must line up: a table, a round code. Plex Mono.
+     The name --round is kept so every rule that meant "the game's face"
+     still does. -------------------------------------------------------- */
+  --seg: "Seven Segment", "Plex Mono", ui-monospace, monospace;
+  --round: "Plex Sans Condensed", "Plex Sans", "Arial Narrow", system-ui, sans-serif;
+  --prose: "Plex Sans", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --doc: "Plex Serif", Georgia, "Times New Roman", serif;
+  --mono: "Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   /* ---- one scale, used everywhere -------------------------------------
      The sizes used to be picked per rule: 10, 11, 12, 13, 15, 17, 19, 21,
@@ -1781,11 +1808,11 @@ body.reading #rotate-hint { display: none !important; }
 .badge.easy   { color: #86dda1; border-color: #3e7554; }
 .badge.medium { color: #f0c96a; border-color: #7d6631; }
 .badge.hard   { color: #f0897e; border-color: #83473f; }
-.tagline { margin: 7px 0 0; font-family: var(--prose); color: var(--ink-3);
+.tagline { margin: 7px 0 0; font-family: var(--doc); color: var(--ink-3);
            font-style: italic; font-size: var(--t-body); }
 
 /* ---- the rules ---- */
-.rules { margin-top: 10px; max-width: 64ch; font-family: var(--round); }
+.rules { margin-top: 10px; max-width: 64ch; font-family: var(--doc); }
 .rules p { line-height: 1.68; margin: 14px 0; font-size: var(--t-body);
            color: var(--text); }
 .rules p.h {
@@ -2087,6 +2114,9 @@ body.kb-open .flip-btn { opacity: .35; }
 .menu.entering .set-row:nth-child(1) { animation-delay: .2s; }
 .menu.entering .set-row:nth-child(2) { animation-delay: .3s; }
 .menu.entering .set-row:nth-child(3) { animation-delay: .4s; }
+.menu.entering .set-row:nth-child(4) { animation-delay: .48s; }
+.menu.entering .set-row:nth-child(5) { animation-delay: .56s; }
+.menu.entering .set-row:nth-child(6) { animation-delay: .64s; }
 
 /* the result, read top to bottom */
 @keyframes fxVerdict { from { opacity: 0; transform: scale(1.38); }
@@ -2412,4 +2442,181 @@ body.kb-open .flip-btn { opacity: .35; }
 
 @media (prefers-reduced-motion: reduce) {
   .seg-pill { transition: none; }
+}
+
+/* ---- level sliders -------------------------------------------------------
+   A lit bar, the same cyan as every other thing that is ON, filled up to the
+   thumb. The fill is --fill, set from JS as the value changes. */
+.set-slide > b { flex: 0 0 96px; }
+.slider {
+  -webkit-appearance: none; appearance: none;
+  flex: 1 1 auto; min-width: 0; height: 30px; margin: 0;
+  background: transparent; cursor: pointer; --fill: 100%;
+}
+.slider:focus { outline: none; }
+.slider::-webkit-slider-runnable-track {
+  height: 8px; border-radius: 6px; border: 1px solid #2b3d46;
+  background: linear-gradient(90deg, var(--rim) 0 var(--fill), #0e181d var(--fill) 100%);
+  box-shadow: 0 0 12px rgba(111,215,232,.35), inset 0 1px 2px rgba(0,0,0,.5);
+}
+.slider::-moz-range-track {
+  height: 8px; border-radius: 6px; border: 1px solid #2b3d46; background: #0e181d;
+}
+.slider::-moz-range-progress {
+  height: 8px; border-radius: 6px; background: var(--rim);
+  box-shadow: 0 0 12px rgba(111,215,232,.45);
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 22px; height: 22px; margin-top: -8px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ffffff, #bfeff7 55%, #6fd7e8);
+  border: 2px solid #06121a;
+  box-shadow: 0 0 0 2px var(--rim), 0 0 16px rgba(111,215,232,.8);
+  transition: transform var(--t-quick) var(--ease);
+}
+.slider::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%; background: #dff8fc;
+  border: 2px solid #06121a; box-shadow: 0 0 0 2px var(--rim), 0 0 16px rgba(111,215,232,.8);
+}
+.slider:hover::-webkit-slider-thumb, .slider:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+.slider:focus-visible::-webkit-slider-runnable-track { border-color: var(--rim); }
+/* sound OFF: the levels are kept, but they read as switched off */
+.slider.muted { filter: grayscale(1) brightness(.6); }
+.set-slide .set-val { min-width: 3ch; text-align: right; color: var(--rim);
+  text-shadow: 0 0 10px rgba(111,215,232,.6); }
+@media (max-width: 520px) {
+  .set-slide > b { flex-basis: 70px; }
+}
+
+/* ==========================================================================
+   LIGHT
+   Everything on the case that is a light source now reads as one: a hot core,
+   a tight bloom, and a wide spill onto whatever is around it. Before, most of
+   them were flat colour with at best one soft shadow, so the clock and a
+   painted sticker looked the same kind of thing.
+
+   All of it is static box-shadow and text-shadow. Those rasterise once with
+   the layer; a CSS filter or an animated shadow inside the 3D tree would be
+   repainted with the whole case on every tilt and zoom (see "Cut the
+   per-frame work" in the history).
+   ========================================================================== */
+
+/* the clock: segments burning through a smoked window */
+.lcd {
+  text-shadow:
+    0 0 2px #fff3d6,
+    0 0 10px rgba(255,200,97,.95),
+    0 0 26px rgba(255,190,80,.7),
+    0 0 52px rgba(255,170,60,.45);
+  box-shadow:
+    inset 0 0 26px rgba(255,190,80,.16),
+    inset 0 0 0 1px rgba(255,200,97,.12),
+    0 0 22px rgba(255,190,80,.22);
+}
+.lcd.urgent { text-shadow: 0 0 2px #ffe0da, 0 0 12px rgba(255,120,100,.9),
+                           0 0 30px rgba(230,80,70,.65), 0 0 56px rgba(210,60,50,.4); }
+
+/* the serial and the counter are readouts too */
+.plate {
+  text-shadow: 0 0 2px #e6fbff, 0 0 9px rgba(111,215,232,.9),
+               0 0 22px rgba(111,215,232,.55);
+  box-shadow: inset 0 0 18px rgba(111,215,232,.14), 0 0 16px rgba(111,215,232,.18);
+}
+.panel .count {
+  text-shadow: 0 0 2px #e5ffe9, 0 0 9px rgba(116,201,140,.9),
+               0 0 22px rgba(116,201,140,.5);
+}
+
+/* the drain bar is a lit tube, and its colour is the light it throws */
+.fuse { box-shadow: 0 0 16px rgba(79,157,93,.45), inset 0 0 0 1px rgba(255,255,255,.04); }
+.fuse.warn   { box-shadow: 0 0 16px rgba(221,182,63,.5); }
+.fuse.danger { box-shadow: 0 0 18px rgba(208,87,79,.6); }
+.fuse i { box-shadow: inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 6px rgba(0,0,0,.25); }
+
+/* strike lamps: dark glass until lit, then a hot core and a wide spill */
+.strike-row i { box-shadow: inset 0 3px 6px rgba(0,0,0,.6), inset 0 -1px 0 rgba(255,255,255,.06); }
+.strike-row i.lit {
+  background: radial-gradient(circle at 42% 38%, #ffd9d3 0 14%, #ff6a5c 38%, var(--red) 70%);
+  box-shadow: 0 0 6px 2px rgba(255,120,100,.95), 0 0 22px 8px rgba(208,87,79,.7),
+              0 0 48px 14px rgba(208,87,79,.35), inset 0 1px 0 rgba(255,255,255,.5);
+}
+
+/* the ABORT key is backlit */
+.abort { box-shadow: 0 3px 0 var(--ink), 0 0 16px rgba(208,87,79,.45); }
+
+/* A module's face is a backlit panel, and its rim is where the light leaks:
+   a thin cool edge and a soft spill onto the tray between the bays. */
+.bay.module {
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.95),
+    inset 0 -3px 0 rgba(0,0,0,.14),
+    inset 0 0 22px rgba(190,236,245,.4),
+    0 0 0 1.5px rgba(160,228,240,.5),
+    0 0 14px rgba(140,220,236,.45),
+    0 0 34px rgba(111,215,232,.22),
+    0 5px 9px rgba(0,0,0,.5),
+    0 12px 22px rgba(0,0,0,.4);
+}
+.bay.module.solved {
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.95),
+    inset 0 0 26px rgba(120,210,140,.35),
+    0 0 0 1px rgba(120,210,140,.55),
+    0 0 26px rgba(79,157,93,.55),
+    0 5px 9px rgba(0,0,0,.5);
+}
+/* the tray the modules sit in catches their light */
+.bays {
+  box-shadow:
+    inset 0 4px 10px rgba(0,0,0,.75),
+    inset 0 0 40px rgba(111,215,232,.08),
+    inset 0 -2px 0 rgba(255,255,255,.05),
+    0 1px 0 rgba(255,255,255,.08);
+}
+
+/* status lamp in each bay's corner: dim glass, then green and burning */
+.led { box-shadow: inset 0 2px 3px rgba(0,0,0,.25); }
+.bay.solved .led {
+  background: radial-gradient(circle at 40% 35%, #e6ffe9 0 18%, #6ad07e 45%, var(--green) 80%);
+  box-shadow: 0 0 5px 2px rgba(140,230,160,.95), 0 0 16px 6px rgba(79,157,93,.75),
+              0 0 34px 10px rgba(79,157,93,.35), inset 0 1px 0 rgba(255,255,255,.6);
+}
+
+/* the conversion module's indicator lamps */
+.uc-lamps i.on {
+  background: radial-gradient(circle at 40% 35%, #effdff 0 16%, #9fe8f4 42%, var(--rim) 80%);
+  box-shadow: 0 0 5px 2px rgba(170,238,248,.95), 0 0 16px 6px rgba(111,215,232,.7),
+              0 0 32px 10px rgba(111,215,232,.3), inset 0 1px 0 rgba(255,255,255,.5);
+}
+
+/* press-progress pips light up as they are earned */
+.dots i { box-shadow: 0 0 8px 2px rgba(111,215,232,.75), 0 0 18px 4px rgba(111,215,232,.3); }
+
+/* ---- zoom -----------------------------------------------------------------
+   The case zooms under the pointer and can be dragged once it is bigger than
+   its pane; a finger pinch is handled in script, so the browser must not take
+   the gesture for a page zoom. The manual keeps vertical scrolling native. */
+#screen-game { touch-action: none; }
+body.view-zoomed #screen-game { cursor: grab; }
+body.view-panning #screen-game, body.view-panning #screen-game * { cursor: grabbing !important; }
+body.view-panning .bomb { transition: none !important; }
+.mv-paper { touch-action: pan-x pan-y; }
+
+.mv-zoom { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.mv-zbtn, .mv-zval {
+  font-family: var(--round); font-weight: 700; color: #bfeef8;
+  background: #0f1a20; border: 1px solid #2b3d46; border-radius: 8px;
+  height: 30px; cursor: pointer;
+  transition: color var(--t-quick) ease, border-color var(--t-quick) ease;
+}
+.mv-zbtn { width: 30px; font-size: 17px; line-height: 1; padding: 0; }
+.mv-zval { min-width: 56px; padding: 0 8px; font-family: var(--mono);
+           font-size: 12px; font-weight: 500; color: var(--ink-2); }
+.mv-zbtn:hover:not(:disabled), .mv-zval:hover { border-color: var(--rim); color: #fff; }
+.mv-zbtn:disabled { opacity: .35; cursor: default; }
+@media (pointer: coarse) {
+  .mv-zbtn { width: 40px; height: 40px; }
+  .mv-zval { height: 40px; }
 }

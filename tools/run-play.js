@@ -18,7 +18,7 @@ var FILES = [
   'js/modules/cards.js', 'js/modules/sequences.js', 'js/modules/mutex.js',
   'js/modules/rationality.js', 'js/modules/parallel.js', 'js/modules/venn.js',
   'js/modules/triangles.js', 'js/modules/angles.js', 'js/modules/units.js',
-  'js/modules/units-render.js', 'js/fx.js', 'js/cutscene.js', 'js/selftest.js',
+  'js/modules/units-render.js', 'js/fx.js', 'js/zoom.js', 'js/cutscene.js', 'js/selftest.js',
   'js/game.js'
 ];
 

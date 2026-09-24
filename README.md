@@ -153,17 +153,28 @@ the Expert is supposed to read the section.
 
 ## Type and colour
 
-Everything was set in one typewriter stack at one weight, so a heading, a
-button, a caption and a paragraph all looked like the same thing, and the
-quiet labels — 10 and 11px, thin slab strokes, over a moving sky — were the
-part that stopped being readable. There are now three voices and only three:
+The type used to be four unrelated families — the segment readout, American
+Typewriter, Avenir and the system mono — and every screen had a seam where one
+voice met another. Two of them do not exist on Windows at all, so half the
+players were reading Courier New. It is now **two families, both bundled**:
+the segment face for the device, and IBM Plex for everything else, one
+superfamily in four cuts drawn to sit together.
+
+That is the pattern in the games this borrows from. *Keep Talking and Nobody
+Explodes* pairs one display face with one document face for its manual;
+*Alien: Isolation* runs its whole interface in one grotesque and keeps a
+second, diegetic face for the terminals.
 
 | | |
 |---|---|
-| `--seg` | **the display face.** Everything the device says about itself is a lit segment readout: the title, a verdict, a device's name, a screen's heading, and the clock, serial and counter on the case itself. The screen and the thing on the table speak in one voice. `fonts/seven-segment.ttf`, bundled — a font installed on the machine this was built on is not on the machine it is shown on, and there is no network to fall back to. |
-| `--round` | the typewriter: the manual, every key and button. |
-| `--prose` | the small print only — labels and figures' names. There for legibility at 11px and for contrast against the other two. |
-| `--mono` | numbers that have to line up in a table. |
+| `--seg` | **the device.** The clock, serial and counter on the case, the title, a verdict, a device's name, a screen heading. Lit, and glows. `fonts/seven-segment.ttf`. |
+| `--round` | controls and labels — every key, button, tab and panel heading. Plex Sans Condensed, capitals, tracked: the printed legend on equipment. |
+| `--prose` | small print and interface sentences. Plex Sans. |
+| `--doc` | the manual's prose. Plex Serif: the manual is a document, and the serif says "paper" without leaving the family. The printed PDF uses the same cuts. |
+| `--mono` | figures that must line up — a table, a round code. Plex Mono. |
+
+`fonts/plex/` holds the Latin subsets as woff2 (about 250KB, OFL — licence
+beside them). A face is only fetched when a rule on screen asks for it.
 
 **The glow follows the device.** `--accent` is set on the menu from whichever
 device is in front of you — cool at TRIVIAL, hot at INTRACTABLE — and the
@@ -211,9 +222,30 @@ order of how often they are wanted:
   `MODE / TWO DEVICES · MANUAL`.
 * a small **settings** icon, which is a door rather than a decision.
 
-`#screen-settings` holds everything that is housekeeping: sound, replaying the
-opening, and resetting progress — the last marked in red and kept away from
-anything pressed by habit.
+`#screen-settings` holds everything that is housekeeping: sound on/off, three
+level sliders (VOLUME, MUSIC, EFFECTS), replaying the opening, and resetting
+progress — the last marked in red and kept away from anything pressed by habit.
+
+## Zoom
+
+Both halves zoom continuously, about the point under the pointer.
+
+| | the case | the manual |
+|---|---|---|
+| mouse wheel | zooms | scrolls (it is read top to bottom) |
+| Ctrl/Cmd + wheel, trackpad pinch | zooms | zooms |
+| two fingers | zooms | zooms |
+| drag | moves a zoomed case | — |
+| keys / buttons | `+` `-` `0`; the lens button pulls back, or resets from any zoom | `−` `100%` `+` in its bar |
+
+The case ranges from half to 3.2x its fitted size and cannot be dragged past
+the point where its edge reaches the middle of the pane. A press only becomes
+a drag after six pixels, so taps and clicks on modules land exactly as before,
+and a drag swallows the click it would otherwise end in. The manual scales with
+CSS `zoom` rather than a transform, so its lines re-wrap to the pane instead of
+running off the side; its size (70–220%) is remembered. `js/zoom.js`
+normalises every input into one call; `tools/check-zoom.js` drives real wheel,
+drag, key and Ctrl+wheel input through headless Chrome and checks all of it.
 
 ## The interface
 
@@ -370,7 +402,30 @@ white, and a defusal rings out.
 **Every sound is synthesised at runtime** with the Web Audio API — oscillators,
 filtered noise and envelopes — so there are still no asset files and it all
 works from `file://`. Audio starts on the first click, as browsers require.
-Toggle it with the SOUND button on the menu or the `M` key.
+Toggle it with SOUND in settings or the `M` key.
+
+**Levels.** Effects and the music bed are separate buses under one master,
+each with a slider in settings (the slider is squared, so its travel sounds
+even), and a limiter at -4 dBFS keeps overlapping sounds from clipping. The
+old mix measured quiet — a key press peaked at -32 dBFS and the countdown beep
+at -14, under a music bed at -4 — so the effects were lifted and the bed pulled
+under them. `node tools/measure-audio.js [volume]` renders every sound offline
+in headless Chrome and prints its peak and loudest 100ms:
+
+| | before | now |
+|---|---|---|
+| key press, peak | -31.9 | -10.7 |
+| countdown beep, loudest 100ms | -22.2 | -11.0 |
+| solve | -21.7 | -12.7 |
+| strike | -14.8 | -11.0 |
+| music bed (at 70%) | -9.5 | -16.4 |
+
+**Light.** Everything on the case that is a light source — the clock, serial,
+counter, drain bar, strike and status lamps, pilot lamps, the conversion
+module's indicators and the backlit rim of every module — carries a hot core,
+a tight bloom and a wide spill. It is all static box- and text-shadow, which
+rasterises once; a filter or an animated shadow inside the 3D tree would be
+repainted with the whole case on every tilt.
 
 Game state always changes synchronously; the motion layer is presentation only,
 so nothing about timing or fairness depends on an animation finishing.
@@ -581,6 +636,10 @@ tools/shoot.sh                    # screenshots the real page through headless
                                   # Chrome into tools/shots/ (macOS); add
                                   # --virtual-time-budget to catch a frame
                                   # mid-animation
+node tools/check-zoom.js          # real wheel/drag/key/Ctrl+wheel input
+                                  # through headless Chrome against the
+                                  # case and manual zoom
+node tools/measure-audio.js [vol] # peak and loudness of every sound
 tools/sheet.html                  # contact sheet: one live bay per module at
                                   # real size, ?seed=N to reroll
 ```

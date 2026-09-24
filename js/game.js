@@ -104,14 +104,16 @@
      top of it: the defuser cannot pick the case up, but the view leans with
      the cursor, which is enough to read it as an object in a room. */
   var scaleNow = 1, tiltX = 0, tiltY = 0;
-  var viewScale = 1, wide = false;     /* the defuser's own zoom-out */
+  var viewScale = 1, wide = false;     /* the defuser's own zoom */
+  var panX = 0, panY = 0;              /* ...and where the zoomed view looks */
   var armFactor = 1, armTilt = 0;      /* the arming pull-back */
   var focusBoost = 1;                  /* touch only: fill the screen on focus */
   var focusShiftY = 0;                 /* ...and re-centre it while we are there */
 
   function applyBombTransform() {
     dom.bomb.style.transform =
-      'translate(-50%, calc(-50% + ' + focusShiftY.toFixed(1) + 'px)) scale(' +
+      'translate(calc(-50% + ' + panX.toFixed(1) + 'px), calc(-50% + ' +
+        (focusShiftY + panY).toFixed(1) + 'px)) scale(' +
         (scaleNow * armFactor * viewScale * focusBoost).toFixed(4) + ')' +
       ' rotateX(' + (tiltX + armTilt).toFixed(2) + 'deg)' +
       ' rotateY(' + tiltY.toFixed(2) + 'deg)';
@@ -254,6 +256,12 @@
   /* an armed pilot lamp in a bezel. The pulse is opacity on one small node. */
   function pilotLamp(svg, x, y, color) {
     var S = D.svg, g = S.el('g', {}, svg);
+    /* the light spilling onto the case round the bezel: three soft rings
+       rather than an SVG blur filter, which would be re-rasterised with the
+       whole 3D tree every time the case moves */
+    [[46, 0.07], [34, 0.12], [25, 0.2]].forEach(function (h) {
+      S.el('circle', { cx: x, cy: y, r: h[0], fill: color, opacity: h[1] }, g);
+    });
     S.el('circle', { cx: x, cy: y, r: 17, fill: '#28343a', stroke: INK,
       'stroke-width': 3.5 }, g);
     S.el('circle', { cx: x, cy: y, r: 10, fill: color }, g);
@@ -1374,6 +1382,9 @@
     clearFocus(true);
     if (was === inst) { D.audio.zoom(false); return; }
 
+    if (Math.abs(viewScale - 1) > 0.001 || panX || panY) {
+      viewScale = 1; panX = 0; panY = 0; paintView();
+    }
     focused = inst;
     var c = slotCentre(inst.slot);
     var w = slotWidth(inst.slot.span);
@@ -1430,19 +1441,133 @@
     }, 560);
   }
 
+  /* ---- the defuser's zoom ---------------------------------------------
+     Continuous now, not two fixed steps: the wheel, a trackpad pinch and two
+     fingers all scale the case about the point under the pointer, the way a
+     map does, and a drag moves it when it is bigger than the pane. The lens
+     button is still here and still one press: pulled back if the view is at
+     rest, and straight back to rest from anywhere else. */
+  var VIEW_MIN = 0.5, VIEW_MAX = 3.2;
+  var viewRaf = 0;
+
+  function paneCentre() {
+    var node = dom['screen-game'];
+    var r = node && node.getBoundingClientRect ? node.getBoundingClientRect() : null;
+    if (!r || !r.width) {
+      return { x: (window.innerWidth || 1280) / 2, y: (window.innerHeight || 720) / 2,
+               w: window.innerWidth || 1280, h: window.innerHeight || 720 };
+    }
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height };
+  }
+
+  /* Keep the case under the middle of the pane. Zoomed in, the view may
+     travel until an edge of the case reaches the centre, and no further; at
+     rest or pulled back there is nothing to travel to, so it recentres, with
+     the zoom's own curve so it glides there instead of jumping. */
+  function clampPan() {
+    if (viewScale <= 1.001) {
+      if (panX || panY) springZoom();
+      panX = 0; panY = 0;
+      return;
+    }
+    var hw = (BOMB_W || 1724) * scaleNow * viewScale / 2;
+    var hh = (BOMB_H || 938) * scaleNow * viewScale / 2;
+    panX = D.clamp(panX, -hw, hw);
+    panY = D.clamp(panY, -hh, hh);
+  }
+
+  function paintView() {
+    wide = viewScale < 0.999;
+    var moved = Math.abs(viewScale - 1) > 0.001 || panX !== 0 || panY !== 0;
+    if (dom.wideBtn) {
+      dom.wideBtn.classList.toggle('on', moved);
+      dom.wideBtn.title = moved ? 'back to the whole case' : 'pull back from the case';
+    }
+    document.body.classList.toggle('view-zoomed', viewScale > 1.001);
+    if (!viewRaf && window.requestAnimationFrame) {
+      viewRaf = window.requestAnimationFrame(function () {
+        viewRaf = 0; applyBombTransform();
+      });
+    } else if (!window.requestAnimationFrame) {
+      applyBombTransform();
+    }
+  }
+
+  function zoomAt(factor, cx, cy) {
+    if (!state || state.arming || !(factor > 0)) return;
+    if (focused) {
+      /* a focused module is already as close as it goes; pulling back out of
+         it is the only zoom that means anything */
+      if (factor < 0.98) clearFocus();
+      return;
+    }
+    var old = viewScale;
+    var next = D.clamp(old * factor, VIEW_MIN, VIEW_MAX);
+    if (Math.abs(next - old) < 1e-4) return;
+    var c = paneCentre();
+    /* hold the point under the pointer still: it sits (p - pan) from the
+       case's centre at the old scale and must sit (p - pan') at the new */
+    var px = cx - c.x, py = cy - c.y;
+    panX = px - (px - panX) * (next / old);
+    panY = py - (py - panY) * (next / old);
+    viewScale = next;
+    clampPan();
+    paintView();
+  }
+
+  function setView(scale) {
+    viewScale = scale; panX = 0; panY = 0;
+    springZoom();
+    paintView();
+  }
+
   function toggleWide() {
     clearFocus(true);
-    wide = !wide;
-    viewScale = wide ? 0.66 : 1;
-    if (dom.wideBtn) dom.wideBtn.classList.toggle('on', wide);
-    D.audio.zoom(!wide);
-    springZoom();
-    applyBombTransform();
+    var atRest = Math.abs(viewScale - 1) < 0.001 && !panX && !panY;
+    setView(atRest ? 0.66 : 1);
+    D.audio.zoom(!atRest);
   }
 
   function resetWide() {
-    wide = false; viewScale = 1;
+    wide = false; viewScale = 1; panX = 0; panY = 0;
     if (dom.wideBtn) dom.wideBtn.classList.remove('on');
+    document.body.classList.remove('view-zoomed');
+  }
+
+  /* Drag to move a zoomed case. A press only becomes a drag after it has
+     travelled a few pixels, so every tap and click on the case still lands
+     exactly where it did; and a drag that did happen swallows the click that
+     would otherwise fire on whatever it was released over. */
+  var drag = null, eatClick = false;
+  var NOT_A_HANDLE = 'button, input, select, textarea, a, .hit, .zoom, ' +
+                     '.flip-btn, .layout-bar, .split-grip, .focus-clock';
+
+  function onPanDown(e) {
+    if (!state || state.arming || focused) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (drag && e.pointerType === 'touch') { drag = null; return; }  /* 2nd finger: a pinch */
+    if (e.target && e.target.closest && e.target.closest(NOT_A_HANDLE)) return;
+    if (viewScale <= 1.001) return;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY,
+             px: panX, py: panY, live: false };
+  }
+  function onPanMove(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.live) {
+      if (Math.hypot(dx, dy) < 6) return;
+      drag.live = true;
+      document.body.classList.add('view-panning');
+    }
+    panX = drag.px + dx; panY = drag.py + dy;
+    clampPan();
+    paintView();
+  }
+  function onPanUp(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (drag.live) eatClick = true;
+    drag = null;
+    document.body.classList.remove('view-panning');
   }
 
   function flip() {
@@ -2313,7 +2438,41 @@
       soundBtn.classList.toggle('off', !D.audio.isOn());
     }
     paintSound();
-    soundBtn.addEventListener('click', function () { D.audio.toggle(); paintSound(); });
+    soundBtn.addEventListener('click', function () {
+      D.audio.toggle(); paintSound(); paintLevels();
+    });
+
+    /* The level sliders. The fill behind the thumb is a custom property, not
+       a second element, so it tracks the thumb exactly. A dragged slider
+       plays a sample of what it controls, at most every 90ms, so the player
+       hears the level they are choosing instead of guessing it. */
+    var sliders = Array.prototype.slice.call(document.querySelectorAll('.slider[data-level]'));
+    var lastSample = 0;
+    function paintLevels() {
+      sliders.forEach(function (el) {
+        var v = Math.round(D.audio.level(el.dataset.level) * 100);
+        el.value = v;
+        el.style.setProperty('--fill', v + '%');
+        el.classList.toggle('muted', !D.audio.isOn());
+        var out = q('val-' + el.dataset.level);
+        if (out) out.textContent = String(v);
+      });
+    }
+    sliders.forEach(function (el) {
+      el.addEventListener('input', function () {
+        var which = el.dataset.level;
+        D.audio.setLevel(which, Number(el.value) / 100);
+        paintLevels();
+        var t = Date.now();
+        if (t - lastSample > 90) {
+          lastSample = t;
+          D.audio.unlock();
+          if (which === 'music') D.audio.sampleMusic();
+          else D.audio.press();
+        }
+      });
+    });
+    paintLevels();
 
     ['pointerdown', 'keydown'].forEach(function (evt) {
       document.addEventListener(evt, function () { D.audio.unlock(); });
@@ -2381,6 +2540,23 @@
       vv.addEventListener('scroll', onViewport);
     }
     dom['screen-game'].addEventListener('mousemove', trackCursor);
+
+    if (D.zoomGesture) {
+      D.zoomGesture.attach(dom['screen-game'], {
+        plainWheel: true,
+        zoom: zoomAt,
+        enabled: function () { return !!state && !dom['screen-game'].hidden; }
+      });
+    }
+    dom['screen-game'].addEventListener('pointerdown', onPanDown);
+    window.addEventListener('pointermove', onPanMove);
+    window.addEventListener('pointerup', onPanUp);
+    window.addEventListener('pointercancel', onPanUp);
+    dom['screen-game'].addEventListener('click', function (e) {
+      if (!eatClick) return;
+      eatClick = false;
+      e.stopPropagation(); e.preventDefault();
+    }, true);
     dom['screen-game'].addEventListener('mouseleave', function () {
       tiltX = 0; tiltY = 0; applyBombTransform();
     });
@@ -2422,9 +2598,17 @@
       if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && state && !typing) {
         flip();
       }
+      /* the zoom, from the keyboard: + and - about the middle, 0 to reset */
+      if (state && !typing && !e.ctrlKey && !e.metaKey && !dom['screen-game'].hidden) {
+        var mid = paneCentre();
+        if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomAt(1.2, mid.x, mid.y); }
+        else if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomAt(1 / 1.2, mid.x, mid.y); }
+        else if (e.key === '0') { e.preventDefault(); clearFocus(true); setView(1); }
+      }
       if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey && !typing) {
         D.audio.toggle();
         paintSound();
+        paintLevels();
       }
     });
 

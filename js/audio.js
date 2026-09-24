@@ -15,16 +15,77 @@
   var AC = (typeof window !== 'undefined') &&
            (window.AudioContext || window.webkitAudioContext);
 
-  var ctx = null, master = null, noiseBuf = null;
+  var ctx = null, master = null, sfx = null, bed = null, noiseBuf = null;
   var pending = [];        /* beeps queued on the audio clock */
   var enabled = true;
 
+  /* Three levels the player sets, each 0..1, stored as they are shown. The
+     old mix had one fixed master and no way to turn anything up, and it
+     measured quiet: a key press peaked at -32 dBFS and the countdown beep at
+     -14, while the music bed sat at -4 and covered them. The kit is now two
+     buses — effects and the music bed — under one master the player owns. */
+  var level = { volume: 1, music: 0.7, effects: 1 };
+
+  function stored(key, fallback) {
+    try {
+      var v = window.localStorage.getItem('defusal.' + key);
+      if (v === null || v === '' || isNaN(Number(v))) return fallback;
+      return Math.max(0, Math.min(1, Number(v)));
+    } catch (e) { return fallback; }
+  }
+
   try { enabled = window.localStorage.getItem('defusal.sound') !== 'off'; }
   catch (e) { /* file:// may refuse storage; default to on */ }
+  level.volume = stored('volume', level.volume);
+  level.music = stored('music', level.music);
+  level.effects = stored('effects', level.effects);
 
   function remember() {
-    try { window.localStorage.setItem('defusal.sound', enabled ? 'on' : 'off'); }
-    catch (e) {}
+    try {
+      window.localStorage.setItem('defusal.sound', enabled ? 'on' : 'off');
+      window.localStorage.setItem('defusal.volume', String(level.volume));
+      window.localStorage.setItem('defusal.music', String(level.music));
+      window.localStorage.setItem('defusal.effects', String(level.effects));
+    } catch (e) {}
+  }
+
+  /* A slider position is not a gain. Ears hear in ratios, so a straight
+     line from 0 to 1 spends most of its travel sounding "loud" and all the
+     quiet settings are crammed into the last few pixels. Squaring it is the
+     usual cheap fix, and 0 is still silence. */
+  function curve(v) { return v * v; }
+
+  /* Where each bus sits at 100%. Measured with tools/measure-audio.js, the
+     loudest 100ms of each sound: key press about -21 dBFS, countdown beep
+     -9, solve -8, a strike and the blast pinned by the limiter just under
+     full scale, and the bed about -14 so it sits under the effects instead
+     of over them. */
+  var SFX_GAIN = 4.5;
+  var BED_GAIN = 2.0;
+
+  /* The small sounds — a key, a click, a relay, the case turning — were
+     mixed 30 dB under the big ones, which is why a press felt like nothing.
+     They are lifted as a group rather than one number at a time, so their
+     balance against each other is exactly what it was. */
+  var UI = 7;
+
+  function target(which) {
+    if (which === 'master') return enabled ? curve(level.volume) : 0;
+    if (which === 'sfx') return SFX_GAIN * curve(level.effects);
+    return BED_GAIN * curve(level.music);
+  }
+
+  /* Glide, never jump: a gain stepped mid-note is an audible click. */
+  function apply() {
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    [[master, 'master'], [sfx, 'sfx'], [bed, 'bed']].forEach(function (b) {
+      try {
+        b[0].gain.cancelScheduledValues(t);
+        b[0].gain.setValueAtTime(b[0].gain.value, t);
+        b[0].gain.linearRampToValueAtTime(target(b[1]), t + 0.06);
+      } catch (e) { b[0].gain.value = target(b[1]); }
+    });
   }
 
   function unlock() {
@@ -32,18 +93,24 @@
     if (!ctx) {
       ctx = new AC();
       master = ctx.createGain();
-      master.gain.value = 1.6;
+      master.gain.value = target('master');
+      sfx = ctx.createGain();
+      sfx.gain.value = target('sfx');
+      bed = ctx.createGain();
+      bed.gain.value = target('bed');
+      sfx.connect(master);
+      bed.connect(master);
 
       /* A limiter after the master, so the level can be pushed this hard
          without overlapping sounds summing past 1.0 and clipping — several
-         of these fire at once (a beep under a solve under a relay). It sits
-         mostly idle and only catches peaks. */
+         of these fire at once (a beep under a solve under a relay). Quiet
+         sounds pass untouched; only the peaks of the big ones are caught. */
       var limiter = ctx.createDynamicsCompressor();
-      limiter.threshold.value = -8;
-      limiter.knee.value = 0;
+      limiter.threshold.value = -4;
+      limiter.knee.value = 2;
       limiter.ratio.value = 20;
-      limiter.attack.value = 0.002;
-      limiter.release.value = 0.14;
+      limiter.attack.value = 0.001;
+      limiter.release.value = 0.12;
 
       master.connect(limiter);
       limiter.connect(ctx.destination);
@@ -52,7 +119,10 @@
       var d = noiseBuf.getChannelData(0);
       for (i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
     }
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === 'suspended' && ctx.resume) {
+      var r = ctx.resume();
+      if (r && r.catch) r.catch(function () {});
+    }
     /* the intro can ask for music before a gesture has let audio run */
     if (musWanted && !mus) startMusic();
   }
@@ -155,7 +225,7 @@
     var out = ctx.createGain();
     out.gain.setValueAtTime(0.0001, t);
     out.gain.linearRampToValueAtTime(1.95, t + 2.2);  /* never just arrives */
-    out.connect(master);
+    out.connect(bed);
 
     var lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
@@ -221,7 +291,7 @@
       g.connect(bq); tail = bq;
     }
     osc.connect(g);
-    tail.connect(master);
+    tail.connect(sfx);
     osc.start(t);
     osc.stop(t + o.dur + 0.02);
   }
@@ -242,7 +312,7 @@
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(peak, t + (o.attack || 0.003));
     g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
-    src.connect(bq); bq.connect(g); g.connect(master);
+    src.connect(bq); bq.connect(g); g.connect(sfx);
     src.start(t);
     src.stop(t + o.dur + 0.02);
   }
@@ -263,9 +333,9 @@
     /* the case losing power when the round is abandoned */
     powerdown: function () {
       if (!live()) return;
-      tone({ f: 340, to: 62, dur: 0.52, type: 'sawtooth', gain: 0.09,
+      tone({ f: 340, to: 62, dur: 0.52, type: 'sawtooth', gain: 0.09 * UI,
              glide: 'exp', filter: 'lowpass', cutoff: 1700, cutoffTo: 240 });
-      tone({ f: 170, to: 42, dur: 0.62, type: 'triangle', gain: 0.07,
+      tone({ f: 170, to: 42, dur: 0.62, type: 'triangle', gain: 0.07 * UI,
              glide: 'exp' });
     },
 
@@ -274,28 +344,54 @@
     toggle: function () {
       enabled = !enabled;
       remember();
+      apply();
       if (enabled) { unlock(); A.click(); }
       return enabled;
+    },
+
+    /* The three sliders. `which` is 'volume', 'music' or 'effects'; the
+       value is the slider's 0..1, stored as shown. */
+    level: function (which) { return level[which]; },
+    setLevel: function (which, v) {
+      if (!(which in level)) return;
+      level[which] = Math.max(0, Math.min(1, Number(v) || 0));
+      remember();
+      apply();
+    },
+
+    /* One note of the bed, for the MUSIC slider to be heard by. When the bed
+       is already playing it is its own sample. */
+    sampleMusic: function () {
+      if (!live() || mus) return;
+      var t = now();
+      var out = ctx.createGain();
+      out.gain.value = 1.95;
+      out.connect(bed);
+      var hold = { out: out };
+      var prev = mus; mus = hold;
+      pluck(t, ARP[(Math.random() * ARP.length) | 0] * 2, 0.06);
+      thump(t, 0.085);
+      mus = prev;
     },
 
     /* soft UI click */
     click: function () {
       if (!live()) return;
-      hiss({ dur: 0.035, gain: 0.09, filter: 'bandpass', cutoff: 2400, q: 1.4 });
-      tone({ f: 760, to: 520, dur: 0.05, type: 'triangle', gain: 0.06 });
+      hiss({ dur: 0.035, gain: 0.09 * UI, filter: 'bandpass', cutoff: 2400, q: 1.4 });
+      tone({ f: 760, to: 520, dur: 0.05, type: 'triangle', gain: 0.06 * UI });
     },
 
     /* a key on a module: a small plastic snap */
     press: function () {
       if (!live()) return;
-      hiss({ dur: 0.028, gain: 0.07, filter: 'bandpass', cutoff: 3200, q: 2 });
-      tone({ f: 480, to: 320, dur: 0.06, type: 'square', gain: 0.045 });
+      hiss({ dur: 0.028, gain: 0.07 * UI, filter: 'bandpass', cutoff: 3200, q: 2 });
+      tone({ f: 480, to: 320, dur: 0.06, type: 'square', gain: 0.045 * UI });
     },
 
     /* the relay behind a panel changing state */
     relay: function () {
       if (!live()) return;
-      hiss({ dur: 0.02, gain: 0.035, filter: 'highpass', cutoff: 2600 });
+      hiss({ dur: 0.02, gain: 0.035 * UI, filter: 'highpass', cutoff: 2600 });
     },
 
     /* A beep, not a tick. It climbs in pitch and shortens as the clock runs
@@ -316,7 +412,7 @@
 
       var f = 1000 + u * 760;
       var dur = 0.075 - u * 0.028;
-      var peak = 0.07 + u * 0.05;
+      var peak = (0.07 + u * 0.05) * 2.4;   /* the clock has to cut through */
 
       var g = ctx.createGain();
       g.gain.setValueAtTime(0.0001, t);
@@ -342,7 +438,7 @@
 
       a.connect(g);
       b.connect(bg); bg.connect(g);
-      g.connect(bq); bq.connect(master);
+      g.connect(bq); bq.connect(sfx);
       a.start(t); b.start(t);
       a.stop(t + dur + 0.01); b.stop(t + dur + 0.01);
 
@@ -378,27 +474,27 @@
     /* a line of the opening finishing */
     line: function () {
       if (!live()) return;
-      hiss({ dur: 0.03, gain: 0.03, filter: 'bandpass', cutoff: 1900, q: 3 });
+      hiss({ dur: 0.03, gain: 0.03 * UI, filter: 'bandpass', cutoff: 1900, q: 3 });
     },
 
     /* turning the case over: a swing and a settle */
     flip: function (toBack) {
       if (!live()) return;
       var t = now();
-      hiss({ dur: 0.34, gain: 0.06, filter: 'bandpass',
+      hiss({ dur: 0.34, gain: 0.06 * UI / 2, filter: 'bandpass',
              cutoff: toBack ? 900 : 400, cutoffTo: toBack ? 400 : 900, q: 0.9, at: t });
       tone({ f: toBack ? 200 : 150, to: toBack ? 130 : 190, dur: 0.3,
-             type: 'sine', gain: 0.07, at: t });
-      hiss({ dur: 0.05, gain: 0.09, filter: 'lowpass', cutoff: 700, at: t + 0.42 });
+             type: 'sine', gain: 0.07 * UI / 2, at: t });
+      hiss({ dur: 0.05, gain: 0.09 * UI / 2, filter: 'lowpass', cutoff: 700, at: t + 0.42 });
     },
 
     /* leaning in on a module, or pulling back out */
     zoom: function (inward) {
       if (!live()) return;
-      hiss({ dur: 0.20, gain: 0.05, filter: 'bandpass',
+      hiss({ dur: 0.20, gain: 0.05 * UI, filter: 'bandpass',
              cutoff: inward ? 500 : 1700, cutoffTo: inward ? 1700 : 500, q: 1.1 });
       tone({ f: inward ? 320 : 520, to: inward ? 520 : 320, dur: 0.16,
-             type: 'sine', gain: 0.05 });
+             type: 'sine', gain: 0.05 * UI });
     },
 
     /* the camera closing on the case */
@@ -448,9 +544,9 @@
       if (!live()) return;
       var t = now();
       [784, 1047, 1319].forEach(function (f, i) {
-        tone({ f: f, dur: 0.30, type: 'triangle', gain: 0.10, at: t + i * 0.07 });
+        tone({ f: f, dur: 0.30, type: 'triangle', gain: 0.10 * 1.4, at: t + i * 0.07 });
       });
-      hiss({ dur: 0.10, gain: 0.04, filter: 'highpass', cutoff: 4000, at: t });
+      hiss({ dur: 0.10, gain: 0.04 * 1.4, filter: 'highpass', cutoff: 4000, at: t });
     },
 
     /* A mistake. This one is meant to hurt: the old buzzer was softer than

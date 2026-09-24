@@ -79,7 +79,109 @@
     /* a long document arrives as it is scrolled to, not all at once */
     if (D.fx) D.fx.reveal(sections);
 
+    zoomable(bar, paper, sheet);
+
     return { node: view, bar: bar };
+  }
+
+  /* ---- reading size --------------------------------------------------
+     The manual zooms the way a document does: the text gets bigger and the
+     lines re-wrap to the pane, so there is never a sideways scroll. CSS
+     `zoom` rather than a transform, because a transform scales the page as
+     a picture and leaves the line lengths where they were.
+
+     A plain wheel still scrolls — this is something read top to bottom.
+     Ctrl/Cmd + wheel, a trackpad pinch, two fingers, or the - and + in the
+     bar change the size. One size for every manual pane, remembered. */
+  var ZMIN = 0.7, ZMAX = 2.2, zoomNow = 1;
+  var panes = [];
+  try {
+    var saved = Number(window.localStorage.getItem('defusal.manualZoom'));
+    if (saved >= ZMIN && saved <= ZMAX) zoomNow = saved;
+  } catch (e) {}
+
+  function paint(p) {
+    p.sheet.style.zoom = String(zoomNow);
+    p.readout.textContent = Math.round(zoomNow * 100) + '%';
+    p.minus.disabled = zoomNow <= ZMIN + 1e-3;
+    p.plus.disabled = zoomNow >= ZMAX - 1e-3;
+  }
+
+  /* Scale about a point in the pane, so the line under the cursor or the
+     fingers stays under them instead of the page jumping somewhere else.
+     The text re-wraps as it grows, so positions do not simply scale; the
+     block under the point is found first and put back under it after. */
+  function blockAt(p, x, y) {
+    var n = document.elementFromPoint ? document.elementFromPoint(x, y) : null;
+    while (n && n !== p.sheet && n.parentNode) {
+      if (/^(P|LI|H1|H2|H3|TR|NAV)$/.test(n.tagName)) return n;
+      n = n.parentNode;
+    }
+    return null;
+  }
+
+  function setZoom(p, next, clientX, clientY) {
+    next = Math.max(ZMIN, Math.min(ZMAX, next));
+    if (Math.abs(next - zoomNow) < 1e-4) return;
+    var r = p.paper.getBoundingClientRect();
+    if (clientY == null) { clientX = r.left + r.width / 2; clientY = r.top + r.height / 2; }
+    var anchor = blockAt(p, clientX, clientY), frac = 0;
+    if (anchor) {
+      var a = anchor.getBoundingClientRect();
+      frac = a.height ? (clientY - a.top) / a.height : 0;
+    }
+    var docY = (p.paper.scrollTop + clientY - r.top) / zoomNow;
+
+    zoomNow = next;
+    panes.forEach(paint);
+
+    if (anchor && anchor.isConnected !== false) {
+      var b = anchor.getBoundingClientRect();
+      p.paper.scrollTop += (b.top + frac * b.height) - clientY;
+    } else {
+      p.paper.scrollTop = docY * zoomNow - (clientY - r.top);
+    }
+    try { window.localStorage.setItem('defusal.manualZoom', String(zoomNow)); }
+    catch (e) {}
+  }
+
+  function zoomable(bar, paper, sheet) {
+    var box = el('div', 'mv-zoom', bar);
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', 'text size');
+    var minus = el('button', 'mv-zbtn', box, '\u2212');
+    var readout = el('button', 'mv-zval', box, '100%');
+    var plus = el('button', 'mv-zbtn', box, '+');
+    [minus, readout, plus].forEach(function (b) { b.type = 'button'; });
+    minus.setAttribute('aria-label', 'smaller text');
+    plus.setAttribute('aria-label', 'larger text');
+    readout.title = 'back to 100%';
+
+    var p = { paper: paper, sheet: sheet, readout: readout,
+              minus: minus, plus: plus };
+    panes = panes.filter(function (q) { return q.paper.isConnected !== false; });
+    panes.push(p);
+    paint(p);
+
+    minus.addEventListener('click', function () {
+      setZoom(p, Math.round((zoomNow - 0.1) * 10) / 10);
+      if (D.audio) D.audio.click();
+    });
+    plus.addEventListener('click', function () {
+      setZoom(p, Math.round((zoomNow + 0.1) * 10) / 10);
+      if (D.audio) D.audio.click();
+    });
+    readout.addEventListener('click', function () {
+      setZoom(p, 1);
+      if (D.audio) D.audio.click();
+    });
+
+    if (D.zoomGesture) {
+      D.zoomGesture.attach(paper, {
+        plainWheel: false,
+        zoom: function (f, x, y) { setZoom(p, zoomNow * f, x, y); }
+      });
+    }
   }
 
   D.manualView = { mount: mount };

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="MATHEMATICKS">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="style.css?v=20260918b">
+<link rel="stylesheet" href="style.css?v=20260924a">
 </head>
 <body>
 <div id="backdrop" class="backdrop"></div>
@@ -132,6 +132,28 @@
       <div class="set-row">
         <b>SOUND</b>
         <button type="button" id="sound" class="opt-btn">ON</button>
+      </div>
+
+      <!-- Three levels, the ones every game has: all of it, the music bed,
+           and the effects (keys, the clock, strikes). Each shows its value
+           the way the clock does, and moving one plays a sample of it. -->
+      <div class="set-row set-slide">
+        <b id="lbl-volume">VOLUME</b>
+        <input type="range" id="vol-volume" class="slider" min="0" max="100" step="1"
+               data-level="volume" aria-labelledby="lbl-volume">
+        <span class="set-val" id="val-volume">100</span>
+      </div>
+      <div class="set-row set-slide">
+        <b id="lbl-music">MUSIC</b>
+        <input type="range" id="vol-music" class="slider" min="0" max="100" step="1"
+               data-level="music" aria-labelledby="lbl-music">
+        <span class="set-val" id="val-music">70</span>
+      </div>
+      <div class="set-row set-slide">
+        <b id="lbl-effects">EFFECTS</b>
+        <input type="range" id="vol-effects" class="slider" min="0" max="100" step="1"
+               data-level="effects" aria-labelledby="lbl-effects">
+        <span class="set-val" id="val-effects">100</span>
       </div>
 
       <div class="set-row">
@@ -264,29 +286,30 @@
   </div>
 </section>
 
-<script src="js/core.js?v=20260918b"></script>
-<script src="js/fx.js?v=20260918b"></script>
-<script src="js/mode.js?v=20260918b"></script>
-<script src="js/audio.js?v=20260918b"></script>
-<script src="js/svg.js?v=20260918b"></script>
-<script src="js/backdrop.js?v=20260918b"></script>
-<script src="js/modules/cards.js?v=20260918b"></script>
-<script src="js/modules/sequences.js?v=20260918b"></script>
-<script src="js/modules/mutex.js?v=20260918b"></script>
-<script src="js/modules/rationality.js?v=20260918b"></script>
-<script src="js/modules/parallel.js?v=20260918b"></script>
-<script src="js/modules/venn.js?v=20260918b"></script>
-<script src="js/modules/triangles.js?v=20260918b"></script>
-<script src="js/modules/angles.js?v=20260918b"></script>
-<script src="js/modules/units.js?v=20260918b"></script>
-<script src="js/modules/units-render.js?v=20260918b"></script>
-<script src="manual/rules.js?v=20260918b"></script>
-<script src="manual/render.js?v=20260918b"></script>
-<script src="js/manual-view.js?v=20260918b"></script>
-<script src="js/cutscene.js?v=20260918b"></script>
-<script src="js/selftest.js?v=20260918b"></script>
-<script src="js/game.js?v=20260918b"></script>
-<script src="js/main.js?v=20260918b"></script>
+<script src="js/core.js?v=20260924a"></script>
+<script src="js/fx.js?v=20260924a"></script>
+<script src="js/mode.js?v=20260924a"></script>
+<script src="js/audio.js?v=20260924a"></script>
+<script src="js/svg.js?v=20260924a"></script>
+<script src="js/backdrop.js?v=20260924a"></script>
+<script src="js/modules/cards.js?v=20260924a"></script>
+<script src="js/modules/sequences.js?v=20260924a"></script>
+<script src="js/modules/mutex.js?v=20260924a"></script>
+<script src="js/modules/rationality.js?v=20260924a"></script>
+<script src="js/modules/parallel.js?v=20260924a"></script>
+<script src="js/modules/venn.js?v=20260924a"></script>
+<script src="js/modules/triangles.js?v=20260924a"></script>
+<script src="js/modules/angles.js?v=20260924a"></script>
+<script src="js/modules/units.js?v=20260924a"></script>
+<script src="js/modules/units-render.js?v=20260924a"></script>
+<script src="manual/rules.js?v=20260924a"></script>
+<script src="manual/render.js?v=20260924a"></script>
+<script src="js/zoom.js?v=20260924a"></script>
+<script src="js/manual-view.js?v=20260924a"></script>
+<script src="js/cutscene.js?v=20260924a"></script>
+<script src="js/selftest.js?v=20260924a"></script>
+<script src="js/game.js?v=20260924a"></script>
+<script src="js/main.js?v=20260924a"></script>
 
 <script>
 /* Service workers need a real origin, so this simply does not run when the
