@@ -79,13 +79,19 @@
   /* ---- state --------------------------------------------------------- */
 
   var node = {}, g = null, W = 0, H = 0, DPR = 1;
+  var buf = null, bg = null;   /* the outgoing shot, still moving, painted here */
   var active = false, name = '', seq = null, shots = null, idx = 0;
-  var phase = 'shot';          /* 'card' | 'shot' | 'begin' | 'credits' */
+  var phase = 'shot';          /* 'shot' | 'begin' | 'credits' */
   var t = 0, last = 0, raf = 0, paused = false, frozen = false;
   var line = -1, lineEnd = 0, sfxDone = {};
-  var states = {}, prev = null, prevKind = 'black', prevT = 0;
+  var states = {}, prepQueue = [];
+  var out = null;              /* { i, t } the shot being left, while it fades */
+  var lead = 0, kind = 'black', cardOn = false;
   var onDone = null;
-  var hold = null;             /* { at, ring } while a press is held */
+  var hold = null;             /* { at } while a press is held */
+
+  var OUT_S = 0.7;             /* a shot fading to black before a card or a fade */
+  var IN_S = 0.9;              /* a shot rising out of black */
 
   function resize() {
     if (!node.canvas) return;
@@ -96,8 +102,8 @@
     node.canvas.width = Math.round(W * DPR);
     node.canvas.height = Math.round(H * DPR);
     states = {};               /* painted layers were for the old size */
-    if (!prev) prev = document.createElement('canvas');
-    prev.width = node.canvas.width; prev.height = node.canvas.height;
+    if (!buf) { buf = document.createElement('canvas'); bg = buf.getContext('2d'); }
+    buf.width = node.canvas.width; buf.height = node.canvas.height;
   }
 
   function stateFor(i) {
@@ -107,46 +113,88 @@
     return states[i];
   }
 
-  /* the camera: an eased move from `from` to `to` across the shot, plus a
-     breath so a held shot is never quite still. Reduce Motion holds it. */
+  /* Prepare what is still unprepared, one shot per frame, only where it
+     cannot be seen: while the screen is black or a title card is up.
+     Painting the next scene's sheets in the middle of a moving shot is what
+     made the cuts hitch (measured in the desktop app: 80-870 ms frames). */
+  function prepareSome(onlyIfHidden) {
+    if (!prepQueue.length) return;
+    if (onlyIfHidden && !(t < -0.25)) return;
+    var i = prepQueue.shift();
+    if (shots && shots[i]) stateFor(i);
+  }
+
+  /* The camera moves at a constant speed through a shot. Easing every shot
+     in and out made the picture stop dead at every cut and start again from
+     rest; moving steadily, one shot hands its motion to the next. */
   function camera(s, tt) {
     var from = (s.cam && s.cam.from) || [0, 0, 1];
     var to = (s.cam && s.cam.to) || [from[0], from[1], from[2] * 1.05];
     if (reduced()) return { x: from[0], y: from[1], z: from[2] };
-    var k = Math.min(1, Math.max(0, tt / s.dur));
-    k = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    var k = Math.min(1.15, Math.max(0, tt / s.dur));
     return {
-      x: from[0] + (to[0] - from[0]) * k + Math.sin(tt * 0.7) * 0.0025,
-      y: from[1] + (to[1] - from[1]) * k + Math.sin(tt * 0.53 + 1) * 0.0025,
+      x: from[0] + (to[0] - from[0]) * k + Math.sin(tt * 0.7) * 0.0022,
+      y: from[1] + (to[1] - from[1]) * k + Math.sin(tt * 0.53 + 1) * 0.0022,
       z: from[2] + (to[2] - from[2]) * k
     };
   }
 
-  function paint(i, tt) {
+  function paintInto(x, i, tt) {
     var s = shots[i], p = cine.kit.get(s.paint);
-    g.setTransform(DPR, 0, 0, DPR, 0, 0);
-    g.globalCompositeOperation = 'source-over';
+    x.setTransform(DPR, 0, 0, DPR, 0, 0);
+    x.globalCompositeOperation = 'source-over';
+    x.globalAlpha = 1;
+    x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
+    if (!p) return;
+    x.save();
+    try { p.draw(x, Math.max(0, tt), camera(s, Math.max(0, tt)), stateFor(i), W, H, s.params || {}); }
+    catch (e) { if (window.console) console.error('cine paint ' + s.paint, e); }
+    x.restore();
+  }
+  function paint(i, tt) { paintInto(g, i, tt); }
+
+  function smooth(k) { k = Math.max(0, Math.min(1, k)); return k * k * k * (k * (k * 6 - 15) + 10); }
+
+  function black(a) {
+    if (a <= 0.001) return;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalAlpha = Math.min(1, a);
+    g.fillStyle = '#000'; g.fillRect(0, 0, node.canvas.width, node.canvas.height);
     g.globalAlpha = 1;
-    g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
-    if (p) {
-      g.save();
-      try { p.draw(g, tt, camera(s, tt), stateFor(i), W, H, s.params || {}); }
-      catch (e) { if (window.console) console.error('cine paint ' + s.paint, e); }
-      g.restore();
-    }
   }
 
-  /* the outgoing shot, laid over the incoming one and faded away */
-  function overlayTransition() {
-    if (reduced() && prevKind !== 'cut') prevKind = 'quick';
-    var span = prevKind === 'dissolve' ? DISSOLVE_S : prevKind === 'quick' ? 0.35 : BLACK_S;
-    if (prevKind === 'cut' || t > span) return;
-    var k = 1 - t / span;
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.globalAlpha = k * k * (3 - 2 * k);
-    if (prevKind === 'dissolve' || prevKind === 'quick') g.drawImage(prev, 0, 0);
-    else { g.fillStyle = '#000'; g.fillRect(0, 0, node.canvas.width, node.canvas.height); }
-    g.globalAlpha = 1;
+  /* One frame of picture. Before a shot starts (t < 0) the outgoing shot, if
+     any, keeps moving while it fades to black; then black, with a title card
+     over it if the shot has one; then the shot rises out of black. A
+     dissolve paints the outgoing shot live into a second canvas and lays it
+     over the incoming one, so both keep moving through the change. */
+  function render(dt) {
+    var reducedNow = reduced();
+    if (out) out.t += dt;
+    if (t < 0) {
+      var since = t + lead;                  /* seconds since the change began */
+      if (out && since < OUT_S) {
+        paint(out.i, out.t);
+        black(smooth(since / OUT_S));
+      } else {
+        out = null;
+        black(1);
+      }
+      return;
+    }
+    paint(idx, t);
+    if (kind === 'dissolve' && out) {
+      var span = reducedNow ? 0.35 : DISSOLVE_S;
+      if (t < span) {
+        paintInto(bg, out.i, out.t);
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.globalAlpha = 1 - smooth(t / span);
+        g.drawImage(buf, 0, 0);
+        g.globalAlpha = 1;
+      } else out = null;
+    } else if (kind !== 'cut' && t < IN_S) {
+      black(1 - smooth(t / IN_S));
+    }
   }
 
   /* ---- words ----------------------------------------------------------- */
@@ -190,52 +238,51 @@
 
   /* ---- the clock -------------------------------------------------------- */
 
-  function enterShot(i, kind) {
-    /* keep the last frame for the transition into this one */
-    if (g && prev && node.canvas.width) {
-      var pg = prev.getContext('2d');
-      pg.setTransform(1, 0, 0, 1, 0, 0);
-      pg.clearRect(0, 0, prev.width, prev.height);
-      pg.drawImage(node.canvas, 0, 0);
-    }
-    idx = i; t = 0; line = -1; lineEnd = 0; sfxDone = {};
-    var s = shots[i];
-    prevKind = kind || s.trans;
-    if (s.card && phase !== 'card-done') {
-      phase = 'card'; t = 0;
-      unsay(); card(true, s.card);
-      if (cine.voice) cine.voice.cue('sting');
-      return;
-    }
+  function enterShot(i, how) {
+    var sh = shots[i];
+    if (shots[idx] && active && phase === 'shot' && i !== idx) out = { i: idx, t: t };
+    else if (i === 0) out = null;
+    idx = i; line = -1; lineEnd = 0; sfxDone = {};
+    kind = how || sh.trans;
+    /* how long before the shot itself starts */
+    lead = sh.card ? OUT_S + CARD_S : (kind === 'black' ? (out ? OUT_S : 0) + 0.25 : 0);
+    if (!out && sh.card) lead = CARD_S + 0.3;
+    t = -lead;
+    cardOn = false;
+    if (sh.card) unsay();
     phase = 'shot';
-    if (s.score !== undefined && cine.voice) cine.voice.score(s.score);
-    /* paint the next shot's layers while this one plays */
-    if (shots[i + 1]) setTimeout(function () { if (active && shots && shots[i + 1]) stateFor(i + 1); }, 60);
+    if (sh.score !== undefined && cine.voice) cine.voice.score(sh.score);
   }
 
   function step(dt) {
-    if (phase === 'card') {
-      t += dt;
-      if (t >= CARD_S) { card(false); phase = 'card-done'; enterShot(idx, 'black'); phase = 'shot'; }
-      return;
-    }
     if (phase === 'credits') { t += dt; if (t > creditsLength()) finish(); return; }
     var s = shots[idx];
     t += dt;
-    /* sounds at their marks */
+    /* Nothing is painted while a picture is moving. If shots are still
+       unprepared when the lead-in runs out, the screen stays black a few
+       frames longer instead: a black hold is invisible, a painting mid-shot
+       is a visible hitch. */
+    if (t > -0.3 && t - dt <= -0.3 && prepQueue.length) t = -0.3;
+    /* the title card, over black, between the fade out and the fade in */
+    if (s.card) {
+      var showFrom = -lead + (out || lead > CARD_S + 0.5 ? OUT_S : 0.3), hideAt = -0.95;
+      var want = t >= showFrom && t < hideAt;
+      if (want !== cardOn) {
+        cardOn = want; card(want, s.card);
+        if (want && cine.voice) cine.voice.cue('sting');
+      }
+    }
+    if (t < 0) return;
     (s.sfx || []).forEach(function (c, k) {
       if (!sfxDone[k] && t >= c[0]) { sfxDone[k] = true; if (cine.voice) cine.voice.cue(c[1]); }
     });
-    /* the next line, when its time comes */
     var next = line + 1;
     if (next < s.lines.length && t >= s.at[next]) {
       line = next;
       say(s.lines[line], true);
       lineEnd = s.at[line] + lineTime(s.lines[line]) - LINE_GAP;
     }
-    if (line >= 0 && t >= lineEnd && t < s.dur && (next >= s.lines.length || t < s.at[next])) {
-      if (line === s.lines.length - 1 && t > lineEnd + 0.25) unsay();
-    }
+    if (line === s.lines.length - 1 && t > lineEnd + 0.25 && node.sub.classList.contains('on')) unsay();
     if (phase === 'begin') return;      /* the picture keeps living under BEGIN */
     if (t >= s.dur) {
       if (idx + 1 < shots.length) { enterShot(idx + 1); return; }
@@ -258,16 +305,13 @@
   function frame(now) {
     raf = window.requestAnimationFrame(frame);
     if (!active || frozen) return;
-    var dt = Math.min(0.1, (now - (last || now)) / 1000);
+    var dt = Math.min(1 / 20, (now - (last || now)) / 1000);
     last = now;
     if (paused) return;
+    prepareSome(true);
     step(dt);
     if (!active) return;
-    if (phase === 'card') { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, node.canvas.width, node.canvas.height); }
-    else {
-      paint(idx, t);
-      if (phase !== 'credits') overlayTransition();
-    }
+    render(phase === 'credits' ? 0 : dt);
     paintHold(now);
   }
 
@@ -286,7 +330,7 @@
 
   function tap() {
     if (!active || phase === 'begin') return;
-    if (phase === 'card') { t = CARD_S; return; }
+    if (t < 0) { t = -0.001; out = null; if (cardOn) { cardOn = false; card(false); } return; }
     if (phase === 'credits') { finish(); return; }
     var s = shots[idx];
     /* a line still arriving is completed first */
@@ -350,7 +394,14 @@
     node.root.classList.add('open');
     if (D.audio) { D.audio.unlock(); D.audio.music(false); }
     var at = /[?&]scene=(\d+)/.exec(location.search);
-    enterShot(at ? Math.min(Number(at[1]), shots.length - 1) : 0, 'black');
+    var first = at ? Math.min(Number(at[1]), shots.length - 1) : 0;
+    states = {}; out = null; idx = first;
+    prepQueue = shots.map(function (x, k) { return k; });
+    prepQueue.splice(prepQueue.indexOf(first), 1);
+    prepQueue.unshift(first);
+    enterShot(first, 'black');
+    if (!shots[first].card) { lead = 0.6; t = -lead; }
+    /* the rest are painted one per frame during the black lead-in */
     if (!raf) raf = window.requestAnimationFrame(frame);
   }
 

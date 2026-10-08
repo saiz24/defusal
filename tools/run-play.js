@@ -18,8 +18,8 @@ var FILES = [
   'js/modules/cards.js', 'js/modules/sequences.js', 'js/modules/mutex.js',
   'js/modules/rationality.js', 'js/modules/parallel.js', 'js/modules/venn.js',
   'js/modules/triangles.js', 'js/modules/angles.js', 'js/modules/units.js',
-  'js/modules/units-render.js', 'js/fx.js', 'js/zoom.js', 'js/cine/voice.js', 'js/cine/kit.js', 'js/cine/kit-space.js',
-  'js/cine/kit-places.js', 'js/cine/kit-props.js', 'js/cine/script.js', 'js/cine/player.js', 'js/selftest.js',
+  'js/modules/units-render.js', 'js/fx.js', 'js/zoom.js', 'js/cine/voice.js', 'js/cine/kit.js',
+  'js/cine/kit-flat.js', 'js/cine/script.js', 'js/cine/player.js', 'js/selftest.js',
   'js/game.js'
 ];
 

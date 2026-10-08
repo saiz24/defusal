@@ -29,18 +29,53 @@ to read as a Bicol city (a volcano on the skyline, a river, a church tower,
 jeepneys, a public high school in cream and green), so any player can take it
 for their own.
 
-**The cutscenes are illustrated, in code** (`js/cine/`). They used to be
-outline drawings in SVG with typed captions; they are now layered paintings
-on a canvas — gradients, rim light, glow, haze — with a moving camera and
-parallax, letterbox bars, film grain, title cards and a synthesised narrator
-speaking every line. There is still not one image or audio file.
+**The cutscenes are illustrated in one flat, layered style** (`js/cine/`),
+the look of *Firewatch*'s posters and *Alto's Adventure*. An earlier pass
+painted each scene its own way — gradients here, outlines there, detail in
+one place and none in the next — and it read as drawn rather than designed.
+Every picture now follows the same rules, written at the top of
+`js/cine/kit-flat.js`:
+
+1. **Sky** — one gradient.
+2. **Layers** — three to five flat silhouette layers. A layer's colour is
+   never chosen by hand: `tint(palette, ownColour, depth)` darkens a thing's
+   own colour for the time of day and fades it toward the scene's fog with
+   distance (atmospheric perspective). That one function is what keeps every
+   scene consistent with every other.
+3. **Detail** — none inside a shape: no outlines, no textures. Only points of
+   light — windows, lamps, stars, a clock.
+4. **Accents** — two in the whole game: amber is the device, cyan is the
+   visitors.
+5. **Glow** — only on things that give off light.
+6. **Close-ups** — exactly two flat tones, lit and shadow (the craft, the
+   device, the desk).
+
+The craft is deliberately simple: a two-tone hull, a flat glass dome with one
+highlight, a row of cyan lights. Its **beam** gathers first (the emitter
+brightens), then unrolls downward with an ease-out — two soft translucent
+cones, a dim pool where it lands, one slow ring of light drifting down. The
+craft moves like something with weight: it decelerates into place, leans into
+its own speed and bobs once it has stopped.
+
+There is still not one image or audio file. Free silhouettes exist (palm
+trees and saucers under CC0), but in a style where every shape is a single
+flat fill, a sourced outline gains nothing over one drawn to the rules.
+
+**It plays without a hitch.** Measured in the desktop app, every scene runs
+at 60 fps with no frame over 17.8 ms. The first version stalled 80–870 ms at
+scene changes: it painted the next scene's layers in the middle of playback.
+Now every layer is painted while the screen is black or a title card is up
+(the black holds a few frames longer if it must), sheets shared between
+scenes are painted once and kept, the outgoing shot keeps moving while it
+dissolves, and the camera runs at a constant speed so motion carries across a
+cut instead of stopping dead at it.
 
 | file | job |
 |---|---|
 | `js/cine/script.js` | the whole story as data: each shot names a painter, a camera move, its lines, its sounds and the score's mood |
-| `js/cine/player.js` | plays it: timing, camera, dissolves, subtitles revealed with the voice, cards, BEGIN, credits, input |
-| `js/cine/kit.js` | shared painting: the design-space camera, baking, glow, the saucer, the beam, the students, rain |
-| `js/cine/kit-space.js` · `kit-places.js` · `kit-props.js` | the sky and the world; the city's places; the device, the desk, the two apart |
+| `js/cine/player.js` | plays it: timing, lead-ins, live dissolves, subtitles revealed with the voice, cards, BEGIN, credits, input |
+| `js/cine/kit-flat.js` | every scene, and the art style they all follow |
+| `js/cine/kit.js` | shared machinery: the design-space camera, baking and the sheet cache, glow, the students, rain |
 | `js/cine/voice.js` | the narrator (formant syllables, ring-modulated, seeded per line so a line always sounds the same) and the score |
 
 **What plays, and when** (about 3½ minutes in all):
@@ -69,11 +104,6 @@ then each line for as long as it takes to say *and* to read (about fifteen
 characters a second), then a hold. The voice is synthesised to about the same
 length, so the pictures never wait on audio, and with the sound off the scenes
 run exactly the same.
-
-**It stays cheap.** What does not move — a thousand stars, the city's
-windows, the saucer's hull, a classroom wall — is painted once per scene into
-an offscreen canvas and stamped; only what moves is drawn every frame. Phones
-get a lower pixel ratio and fewer particles.
 
 `tools/check-cine.js` draws every shot of every sequence at its start, middle
 and end and fails on a blank frame; checks every line, a tap, a held skip and
