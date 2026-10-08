@@ -320,6 +320,38 @@ classic `<script>` tags, no build step, no modules, no network, no image files.
 All artwork is drawn procedurally as inline SVG. Desktop, 1280×720 or larger,
 mouse only.
 
+## The room
+
+The case is an object on a desk now: a wooden desk under a green lamp, a
+wall behind, a mug and the rules in a red binder beside it, and the case's
+own solid body throwing a real shadow (`js/room3d.js`, Three.js bundled in
+`js/vendor/`, MIT licence beside it — still nothing fetched from the
+network).
+
+**It does not replace the case.** The case has always been a true CSS 3D
+object, and every module, press, turn, zoom and the arming are built on it
+and tested. The room is drawn *around* it in WebGL, through a camera built to
+match the CSS perspective exactly (2200px from 50%/46% of the deck, one unit
+one CSS pixel), and every frame it reads the case's live transform from the
+page. Measured: the WebGL body's projected corners land on the CSS face to
+the pixel, at rest, tilted, and halfway through a turn. With the room on, the
+case is pulled back to 80% so the desk and the lamp have somewhere to be; the
+painted rims and drop shadow give way to the real ones, and a face turned
+away from the lamp darkens in one flat step.
+
+It follows the cutscenes' rules — flat toon tones, haze with distance, glow
+only on the lamp — and redraws only when the case or the window actually
+moves, so a still case on a still desk costs nothing.
+
+**Settings → DISPLAY → 3D ROOM:** HIGH (shadows, bloom), LITE (lower
+resolution, plain shadows, no bloom; the default on touch devices), OFF.
+Without WebGL it is OFF and the game looks as it always did. Measured in the
+desktop app while tilting, turning and zooming: 60 fps, no frame over 17.7 ms,
+in all three.
+
+The modules on the case are still the 2D panels; they will be rebuilt as 3D
+objects one at a time and swapped in as each is done.
+
 ## The bomb
 
 **The case has two live sides and real thickness.** It is 150 units deep, so
@@ -688,6 +720,8 @@ node tools/check-zoom.js          # real wheel/drag/key/Ctrl+wheel input
                                   # through headless Chrome against the
                                   # case and manual zoom
 node tools/measure-audio.js [vol] # peak and loudness of every sound
+CDP_GL=1 node tools/check-zoom.js # any of the headless checks with WebGL
+                                  # (software), so the 3D room is on
 node tools/check-cine.js          # every cutscene shot drawn, the lines,
                                   # tap/hold, the first-run flow, and a
                                   # contact sheet in tools/shots/cine/

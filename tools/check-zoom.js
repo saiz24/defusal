@@ -15,7 +15,9 @@ let fails=0; function check(name, ok, info){ console.log((ok?'ok   ':'FAIL ')+na
   const t0 = await T(); const s0 = scaleOf(t0);
   // point under cursor: find bay module element rect before
   const probe = async (x,y) => p.eval(`(function(){var bs=document.querySelectorAll('.face.front .bay');for(var i=0;i<bs.length;i++){var r=bs[i].getBoundingClientRect();if(${x}>=r.left&&${x}<=r.right&&${y}>=r.top&&${y}<=r.bottom)return i+'@'+((${x}-r.left)/r.width).toFixed(2)+','+((${y}-r.top)/r.height).toFixed(2);}return 'none'})()`);
-  const px = cx + 60, py = cy + 40;
+  /* a point on a module, not in the gap between two: the case's fitted size
+     depends on settings (the 3D room pulls it back) */
+  const [px, py] = JSON.parse(await p.eval(`(function(){var b=document.querySelectorAll('.face.front .bay')[1].getBoundingClientRect();return JSON.stringify([b.left+b.width*0.6,b.top+b.height*0.55]);})()`));
   const before = await probe(px,py);
   for (let i=0;i<4;i++){ await wheel(px,py,-100); await cdp.sleep(60); }
   await cdp.sleep(300);

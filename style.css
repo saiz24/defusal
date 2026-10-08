@@ -2641,3 +2641,26 @@ body.cb .swatch-word {
   .set-lbl small { display: none; }
   .set-seg { min-width: 150px; }
 }
+
+/* ==========================================================================
+   THE ROOM (js/room3d.js)
+   A WebGL layer behind the case: the desk it stands on, the wall, the lamp,
+   the case's solid body and its shadow. The CSS case still draws the faces
+   and takes every press; the room only matches it. With the room on, the
+   CSS rims and the painted drop shadow give way to the real ones.
+   ========================================================================== */
+canvas.room3d { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; }
+body.room3d .edge { display: none; }
+body.room3d .casing {
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.22),
+    inset 2px 0 0 rgba(255,255,255,.07),
+    inset -2px 0 0 rgba(0,0,0,.4),
+    inset 0 -4px 0 rgba(0,0,0,.5),
+    inset 0 0 0 1px rgba(111,215,232,.12);
+}
+/* the lamp's light on a CSS face: darker as it turns away, in one flat step */
+.room-shade {
+  position: absolute; inset: 0; z-index: 70; pointer-events: none;
+  border-radius: inherit; background: #05080b; opacity: 0;
+}

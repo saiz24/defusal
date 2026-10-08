@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="MATHEMATICKS">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="style.css?v=20261008b">
+<link rel="stylesheet" href="style.css?v=20261008c">
 </head>
 <body>
 <div id="backdrop" class="backdrop"></div>
@@ -202,6 +202,10 @@
         <span class="set-val" id="val-scale">100</span>
       </div>
       <div class="set-row">
+        <div class="set-lbl"><b>3D ROOM</b><small>the desk, the lamp, the light on the case</small></div>
+        <div class="seg set-seg" id="pref-room" style="--n:3"><i class="seg-pill"></i></div>
+      </div>
+      <div class="set-row">
         <div class="set-lbl"><b>TEXT SIZE</b><small>menus, captions and the manual</small></div>
         <div class="seg set-seg" id="pref-text" style="--n:4"><i class="seg-pill"></i></div>
       </div>
@@ -365,35 +369,37 @@
   </div>
 </section>
 
-<script src="js/core.js?v=20261008b"></script>
-<script src="js/settings.js?v=20261008b"></script>
-<script src="js/fx.js?v=20261008b"></script>
-<script src="js/mode.js?v=20261008b"></script>
-<script src="js/audio.js?v=20261008b"></script>
-<script src="js/cine/voice.js?v=20261008b"></script>
-<script src="js/svg.js?v=20261008b"></script>
-<script src="js/backdrop.js?v=20261008b"></script>
-<script src="js/modules/cards.js?v=20261008b"></script>
-<script src="js/modules/sequences.js?v=20261008b"></script>
-<script src="js/modules/mutex.js?v=20261008b"></script>
-<script src="js/modules/rationality.js?v=20261008b"></script>
-<script src="js/modules/parallel.js?v=20261008b"></script>
-<script src="js/modules/venn.js?v=20261008b"></script>
-<script src="js/modules/triangles.js?v=20261008b"></script>
-<script src="js/modules/angles.js?v=20261008b"></script>
-<script src="js/modules/units.js?v=20261008b"></script>
-<script src="js/modules/units-render.js?v=20261008b"></script>
-<script src="manual/rules.js?v=20261008b"></script>
-<script src="manual/render.js?v=20261008b"></script>
-<script src="js/zoom.js?v=20261008b"></script>
-<script src="js/manual-view.js?v=20261008b"></script>
-<script src="js/cine/kit.js?v=20261008b"></script>
-<script src="js/cine/kit-flat.js?v=20261008b"></script>
-<script src="js/cine/script.js?v=20261008b"></script>
-<script src="js/cine/player.js?v=20261008b"></script>
-<script src="js/selftest.js?v=20261008b"></script>
-<script src="js/game.js?v=20261008b"></script>
-<script src="js/main.js?v=20261008b"></script>
+<script src="js/core.js?v=20261008c"></script>
+<script src="js/settings.js?v=20261008c"></script>
+<script src="js/fx.js?v=20261008c"></script>
+<script src="js/mode.js?v=20261008c"></script>
+<script src="js/audio.js?v=20261008c"></script>
+<script src="js/cine/voice.js?v=20261008c"></script>
+<script src="js/svg.js?v=20261008c"></script>
+<script src="js/backdrop.js?v=20261008c"></script>
+<script src="js/modules/cards.js?v=20261008c"></script>
+<script src="js/modules/sequences.js?v=20261008c"></script>
+<script src="js/modules/mutex.js?v=20261008c"></script>
+<script src="js/modules/rationality.js?v=20261008c"></script>
+<script src="js/modules/parallel.js?v=20261008c"></script>
+<script src="js/modules/venn.js?v=20261008c"></script>
+<script src="js/modules/triangles.js?v=20261008c"></script>
+<script src="js/modules/angles.js?v=20261008c"></script>
+<script src="js/modules/units.js?v=20261008c"></script>
+<script src="js/modules/units-render.js?v=20261008c"></script>
+<script src="manual/rules.js?v=20261008c"></script>
+<script src="manual/render.js?v=20261008c"></script>
+<script src="js/zoom.js?v=20261008c"></script>
+<script src="js/manual-view.js?v=20261008c"></script>
+<script src="js/cine/kit.js?v=20261008c"></script>
+<script src="js/cine/kit-flat.js?v=20261008c"></script>
+<script src="js/cine/script.js?v=20261008c"></script>
+<script src="js/cine/player.js?v=20261008c"></script>
+<script src="js/selftest.js?v=20261008c"></script>
+<script src="js/vendor/three.bundle.js?v=20261008c"></script>
+<script src="js/room3d.js?v=20261008c"></script>
+<script src="js/game.js?v=20261008c"></script>
+<script src="js/main.js?v=20261008c"></script>
 
 <script>
 /* Service workers need a real origin, so this simply does not run when the

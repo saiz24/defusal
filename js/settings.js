@@ -22,8 +22,10 @@
 
   var DEFAULTS = {
     motion: 'auto', shake: true, flash: 1, text: 1,
-    colorblind: false, scale: 1
+    colorblind: false, scale: 1, room: 'high'
   };
+  /* a finger usually means a phone or a tablet: start the room at LITE */
+  try { if (window.matchMedia('(pointer: coarse)').matches) DEFAULTS.room = 'lite'; } catch (e) {}
   var TEXT_STEPS = [0.9, 1, 1.15, 1.3];
 
   var prefs = {}, listeners = [];
@@ -44,6 +46,7 @@
       case 'flash': return typeof v === 'number' && v >= 0 && v <= 1;
       case 'text': return TEXT_STEPS.indexOf(v) >= 0;
       case 'scale': return typeof v === 'number' && v >= 0.8 && v <= 1.2;
+      case 'room': return v === 'high' || v === 'lite' || v === 'off';
     }
     return false;
   }
@@ -207,6 +210,9 @@
       seg('pref-text', 'text', [
         { value: 0.9, label: 'S' }, { value: 1, label: 'M' },
         { value: 1.15, label: 'L' }, { value: 1.3, label: 'XL' }
+      ]),
+      seg('pref-room', 'room', [
+        { value: 'high', label: 'HIGH' }, { value: 'lite', label: 'LITE' }, { value: 'off', label: 'OFF' }
       ]),
       seg('pref-motion', 'motion', [
         { value: 'auto', label: 'AUTO' }, { value: 'on', label: 'ON' },

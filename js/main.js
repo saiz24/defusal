@@ -3,6 +3,7 @@ function defusalStart() {
   DEFUSAL.fx.init();
   DEFUSAL.backdrop.init();
   DEFUSAL.boot();
+  if (DEFUSAL.room3d) DEFUSAL.room3d.init();
   DEFUSAL.cutscene.init();
   DEFUSAL.cutscene.maybePlay();
 }

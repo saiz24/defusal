@@ -23,7 +23,10 @@ async function open(url, opts) {
   const port = 9300 + Math.floor(Math.random() * 500);
   const dir = fs.mkdtempSync(path.join(process.env.CDP_TMP || os.tmpdir(), 'cdp-'));
   const proc = spawn(CHROME, [
-    '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run',
+    '--headless=new', '--hide-scrollbars', '--no-first-run',
+    /* CDP_GL=1 gives the page WebGL (software), so the 3D room is tested
+       too; without it the GPU is off and the room stays off */
+    ...(process.env.CDP_GL ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : ['--disable-gpu']),
     '--allow-file-access-from-files', '--autoplay-policy=no-user-gesture-required',
     '--remote-debugging-port=' + port, '--user-data-dir=' + dir,
     '--window-size=' + (opts.w || 1440) + ',' + (opts.h || 900), 'about:blank'

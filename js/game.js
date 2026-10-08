@@ -27,6 +27,7 @@
 
   var CELL = 300, GAP = 12, STEP = CELL + GAP;
   var DEPTH = 150;                 /* how thick the case is, for the turn */
+  D.caseDepth = DEPTH;             /* the room (js/room3d.js) builds its body to match */
   var RAIL_X = 88, RAIL_TOP = 208, RAIL_BOT = 118;
 
   /* slot grids we build, smallest first */
@@ -140,6 +141,9 @@
     /* DISPLAY SCALE: the player's own size for the case at rest. Above 100%
        it may overhang the pane a little, which the zoom's drag then reaches. */
     var own = D.prefs ? D.prefs.get('scale') : 1;
+    /* With the room on, the case is an object in it: pulled back so the desk,
+       the lamp and the wall have somewhere to be. */
+    if (document.body && document.body.classList.contains('room3d') && box.w >= 700) own *= 0.8;
     scaleNow = own * Math.min((box.w - pad) / (BOMB_W || 1724),
                               (box.h - pad) / (BOMB_H || 938));
     /* a new size can put the view past its limits, or give a case at rest
@@ -2556,6 +2560,7 @@
       b.addEventListener('click', toggleWide);
     });
 
+    D.refit = fit;
     window.addEventListener('resize', fit);
     window.addEventListener('orientationchange', function () {
       setTimeout(fit, 120);
