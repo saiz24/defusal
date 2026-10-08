@@ -12,20 +12,23 @@ window.onerror = function (m) { document.getElementById('out').textContent += '\
 function log(m) { document.getElementById('out').textContent += '\n' + m; }
 var SOUNDS = ['click', 'press', 'relay', 'beep0', 'beep1', 'flip', 'zoom',
               'push', 'boot', 'whoosh', 'solve', 'strike', 'defused', 'exploded',
-              'intro', 'powerdown', 'music'];
+              'intro', 'powerdown', 'music', 'voice', 'score'];
 var VOL = Number((location.search.match(/vol=([\d.]+)/) || [])[1] || 1);
 var SR = 48000, SECS = 4;
 
 /* A <script> per sound, not fetch(): file:// refuses to fetch a local file. */
-function fresh(D, win) {
+function script(src) {
   return new Promise(function (ok, bad) {
-    window.DEFUSAL = D;
-    window.__win = win;
     var el = document.createElement('script');
-    el.src = '../js/audio.js?' + Math.random();
+    el.src = src + '?' + Math.random();
     el.onload = ok; el.onerror = bad;
     document.head.appendChild(el);
   });
+}
+function fresh(D, win) {
+  window.DEFUSAL = D;
+  window.__win = win;
+  return script('../js/audio.js').then(function () { return script('../js/cine/voice.js'); });
 }
 
 function render(name) {
@@ -42,6 +45,8 @@ function render(name) {
   else if (name === 'beep0') A.beep(0);
   else if (name === 'beep1') A.beep(1);
   else if (name === 'boot') A.boot([0, 90, 180], 950);
+  else if (name === 'voice') D.cine.voice.speak('We are measuring whether you can reach each other in time.');
+  else if (name === 'score') D.cine.voice.score('city');
   else A[name]();
   log('rendering ' + name);
   return off.startRendering().then(function (buf) {

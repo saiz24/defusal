@@ -2487,6 +2487,7 @@
           lastSample = t;
           D.audio.unlock();
           if (which === 'music') D.audio.sampleMusic();
+          else if (which === 'voice' && D.cine && D.cine.voice) D.cine.voice.speak('we are listening');
           else D.audio.press();
         }
       });

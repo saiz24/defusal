@@ -91,6 +91,13 @@ function check(name, ok, info) {
     (await ev("document.getElementById('pref-shake').textContent")) === 'OFF' &&
     (await ev("document.getElementById('val-scale').textContent")) === '120');
 
+  /* VOICE level: a slider like the others, stored as shown */
+  await slide('vol-voice', 40);
+  check('voice slider sets the level', (await ev("DEFUSAL.audio.level('voice')")) === 0.4 &&
+    (await ev("localStorage.getItem('defusal.voice')")) === '0.4');
+  check('voice speaks with no audio and still times the line',
+    (await ev("DEFUSAL.cine.voice.speak('One device answered.')")) > 0.5);
+
   /* RESET SETTINGS */
   await ev("DEFUSAL.audio.setLevel('music', 0.2)");
   await ev("localStorage.setItem('defusal.manualZoom','1.6')");
@@ -99,6 +106,7 @@ function check(name, ok, info) {
   const d = await ev("JSON.stringify(['motion','shake','flash','text','colorblind','scale'].map(function(k){return DEFUSAL.prefs.get(k)}))");
   check('reset: every setting default', d === JSON.stringify(['auto', true, 1, 1, false, 1]), d);
   check('reset: body classes cleared', !(await has('no-shake')) && !(await has('no-flash')) && !(await has('cb')));
+  check('reset: voice level default', (await ev("DEFUSAL.audio.level('voice')")) === 0.9);
   check('reset: sound levels default', (await ev("DEFUSAL.audio.level('music')")) === 0.7 &&
     (await ev("document.getElementById('val-music').textContent")) === '70');
   check('reset: manual size forgotten', (await ev("localStorage.getItem('defusal.manualZoom')")) === null);

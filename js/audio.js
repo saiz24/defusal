@@ -15,7 +15,7 @@
   var AC = (typeof window !== 'undefined') &&
            (window.AudioContext || window.webkitAudioContext);
 
-  var ctx = null, master = null, sfx = null, bed = null, noiseBuf = null;
+  var ctx = null, master = null, sfx = null, bed = null, voice = null, verb = null, noiseBuf = null;
   var pending = [];        /* beeps queued on the audio clock */
   var enabled = true;
 
@@ -24,7 +24,7 @@
      measured quiet: a key press peaked at -32 dBFS and the countdown beep at
      -14, while the music bed sat at -4 and covered them. The kit is now two
      buses — effects and the music bed — under one master the player owns. */
-  var level = { volume: 1, music: 0.7, effects: 1 };
+  var level = { volume: 1, music: 0.7, effects: 1, voice: 0.9 };
 
   function stored(key, fallback) {
     try {
@@ -39,6 +39,7 @@
   level.volume = stored('volume', level.volume);
   level.music = stored('music', level.music);
   level.effects = stored('effects', level.effects);
+  level.voice = stored('voice', level.voice);
 
   function remember() {
     try {
@@ -46,6 +47,7 @@
       window.localStorage.setItem('defusal.volume', String(level.volume));
       window.localStorage.setItem('defusal.music', String(level.music));
       window.localStorage.setItem('defusal.effects', String(level.effects));
+      window.localStorage.setItem('defusal.voice', String(level.voice));
     } catch (e) {}
   }
 
@@ -62,6 +64,9 @@
      of over them. */
   var SFX_GAIN = 4.5;
   var BED_GAIN = 2.0;
+  /* The narrator in the cutscenes has its own level, the way most games
+     split dialogue from music and effects. */
+  var VOICE_GAIN = 3.5;
 
   /* The small sounds — a key, a click, a relay, the case turning — were
      mixed 30 dB under the big ones, which is why a press felt like nothing.
@@ -72,6 +77,7 @@
   function target(which) {
     if (which === 'master') return enabled ? curve(level.volume) : 0;
     if (which === 'sfx') return SFX_GAIN * curve(level.effects);
+    if (which === 'voice') return VOICE_GAIN * curve(level.voice);
     return BED_GAIN * curve(level.music);
   }
 
@@ -79,7 +85,7 @@
   function apply() {
     if (!ctx) return;
     var t = ctx.currentTime;
-    [[master, 'master'], [sfx, 'sfx'], [bed, 'bed']].forEach(function (b) {
+    [[master, 'master'], [sfx, 'sfx'], [bed, 'bed'], [voice, 'voice']].forEach(function (b) {
       try {
         b[0].gain.cancelScheduledValues(t);
         b[0].gain.setValueAtTime(b[0].gain.value, t);
@@ -98,8 +104,25 @@
       sfx.gain.value = target('sfx');
       bed = ctx.createGain();
       bed.gain.value = target('bed');
+      voice = ctx.createGain();
+      voice.gain.value = target('voice');
       sfx.connect(master);
       bed.connect(master);
+      voice.connect(master);
+
+      /* One long dark room for everything cinematic to share: a generated
+         impulse, no file. Sends go into `verb`; its return sits on the
+         master, so it follows the overall volume and nothing else. */
+      verb = ctx.createGain();
+      verb.gain.value = 0.5;
+      var conv = ctx.createConvolver();
+      var irLen = Math.floor(ctx.sampleRate * 3), ir = ctx.createBuffer(2, irLen, ctx.sampleRate);
+      for (var ch = 0; ch < 2; ch++) {
+        var id = ir.getChannelData(ch);
+        for (var k = 0; k < irLen; k++) id[k] = (Math.random() * 2 - 1) * Math.pow(1 - k / irLen, 2.6);
+      }
+      conv.buffer = ir;
+      verb.connect(conv); conv.connect(master);
 
       /* A limiter after the master, so the level can be pushed this hard
          without overlapping sounds summing past 1.0 and clipping — several
@@ -353,10 +376,17 @@
        value is the slider's 0..1, stored as shown. */
     level: function (which) { return level[which]; },
 
+    /* The nodes the cutscene sound is built on. Null until the first
+       gesture has unlocked audio, and while sound is switched off. */
+    graph: function () {
+      if (!live()) return null;
+      return { ctx: ctx, voice: voice, music: bed, sfx: sfx, verb: verb, noise: noiseBuf };
+    },
+
     /* RESET SETTINGS: sound on, every level back where it shipped */
     resetLevels: function () {
       enabled = true;
-      level.volume = 1; level.music = 0.7; level.effects = 1;
+      level.volume = 1; level.music = 0.7; level.effects = 1; level.voice = 0.9;
       remember();
       apply();
     },
