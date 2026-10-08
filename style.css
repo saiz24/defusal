@@ -900,170 +900,121 @@ body.rm, body.rm *, body.rm *::before, body.rm *::after {
 }
 
 /* ==========================================================================
-   THE OPENING
+   THE CUTSCENES
+   The picture is one canvas (js/cine/); everything here is the frame round
+   it — letterbox bars, grain, a vignette — and the few things that must be
+   text: the line being spoken, title cards, the hold-to-skip ring, BEGIN,
+   the credits.
    ========================================================================== */
 
-/* The opening is the only time the game has the whole screen, so it takes it.
-   The scenery is drawn in a 1000x560 viewBox — within a per-cent of 16:9 — so
-   letting the stage fill the viewport costs almost no letterboxing on a
-   typical display, and the scenes read as shots rather than as a panel with
-   the page showing around it. The line sits over the picture on its own
-   scrim, the way a subtitle does, instead of in a box underneath it. */
-/* The opening fills the screen, as it always did. What went wrong before was
-   the DRAWING running edge to edge inside it: the scenery was right against
-   the glass with nowhere for the eye to rest. The picture is now held inward
-   by padding on the SVG itself — it is a replaced element, so its viewBox
-   fits the content box and the drawing simply sits further in while the layer
-   still covers the whole screen. No frame, no box, no letterbox. */
-.cutscene {
+.cine {
   position: fixed; inset: 0; z-index: 100;
-  background: radial-gradient(125% 95% at 50% 38%,
-              rgba(5, 8, 10, .58) 0%, rgba(5, 8, 10, .84) 55%,
-              rgba(4, 7, 9, .96) 100%);
-  display: block;
-  overflow: hidden;
-  cursor: pointer;
-  user-select: none;
+  background: #000; overflow: hidden;
+  cursor: pointer; user-select: none; -webkit-user-select: none;
+  opacity: 0; transition: opacity .6s ease;
+  touch-action: none;
 }
-/* a vignette over the picture, not under it: the corners fall away and the
-   eye is held in the middle of the screen */
-.cutscene::after {
-  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background: radial-gradient(120% 90% at 50% 42%,
-              rgba(0, 0, 0, 0) 44%, rgba(0, 0, 0, .34) 80%,
-              rgba(0, 0, 0, .64) 100%);
-}
-.cs-stage {
-  position: absolute; inset: 0;
-  display: grid; place-items: center;
-}
-/* the outgoing beat, dissolving under the incoming one */
-.cs-ghost { z-index: 0; pointer-events: none; opacity: 0; }
-.cs-ghost.out { animation: csDissolve 1.15s ease both; }
-@keyframes csDissolve { from { opacity: 1; } to { opacity: 0; } }
+.cine.open { opacity: 1; }
+.cine-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
-.cs-stage.in { animation: csFade 1.25s ease both; }
-@keyframes csFade { from { opacity: 0; } to { opacity: 1; } }
-
-/* The inset that fixes "too close". The bottom is deeper than the top so the
-   drawing never runs under the line being read. */
-.cs-art {
-  width: 100%; height: 100%; display: block; box-sizing: border-box;
-  padding: clamp(26px, 7vh, 80px) clamp(28px, 6vw, 130px)
-           clamp(108px, 20vh, 200px);
+/* film grain and a vignette: what makes a painted frame read as a shot */
+.cine-grain {
+  position: absolute; inset: -50%; z-index: 2; pointer-events: none;
+  opacity: .07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: cineGrain .5s steps(4) infinite;
+}
+@keyframes cineGrain { 0% { transform: translate(0, 0); } 25% { transform: translate(-3%, 2%); }
+                       50% { transform: translate(2%, -3%); } 75% { transform: translate(-2%, -1%); } }
+.cine-vig {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,.62) 100%);
 }
 
-/* the line, read across the bottom of the picture the way a subtitle is */
-.cs-box {
-  position: absolute; z-index: 4;
-  left: 50%; transform: translateX(-50%);
-  bottom: clamp(28px, 6.5vh, 92px);
-  width: min(1180px, 88vw);
-  min-height: 92px;
-  padding: 20px 30px;
-  display: flex; align-items: center; justify-content: center; gap: 14px;
-  text-align: center;
-  border-top: 1px solid rgba(96, 126, 140, .38);
-  background: linear-gradient(to top,
-              rgba(4, 7, 9, .92) 0%, rgba(4, 7, 9, .70) 58%,
-              rgba(4, 7, 9, 0) 100%);
+/* letterbox: the bars slide in once the scene is open */
+.cine-bar {
+  position: absolute; left: 0; right: 0; height: 0; z-index: 3;
+  background: #000; transition: height 1.4s cubic-bezier(.6, 0, .2, 1);
 }
-.cs-line { margin: 0; font-size: clamp(18px, 2vw, 30px); line-height: 1.45;
-           text-shadow: 0 2px 16px rgba(0, 0, 0, .9); }
+.cine-bar.top { top: 0; } .cine-bar.bot { bottom: 0; }
+.cine.open .cine-bar { height: 11.5vh; }
 
-/* the "go on" caret, once a line has finished typing */
-.cs-prompt {
-  width: 0; height: 0; flex: none; opacity: 0;
-  border-left: 11px solid #8fb6c4;
-  border-top: 7px solid transparent;
-  border-bottom: 7px solid transparent;
+/* the line being spoken, revealed word by word as the voice says it */
+.cine-sub {
+  position: absolute; z-index: 4; left: 50%; transform: translateX(-50%);
+  bottom: calc(11.5vh + 2.6vh); margin: 0;
+  width: min(1100px, 86vw); text-align: center;
+  font-family: var(--prose); font-weight: 400;
+  font-size: calc(clamp(17px, 2.1vw, 30px) * var(--ui-text, 1));
+  line-height: 1.38; letter-spacing: .01em; color: #f2f6f8;
+  text-shadow: 0 2px 3px rgba(0,0,0,.95), 0 0 18px rgba(0,0,0,.8);
+  opacity: 0; transition: opacity .45s ease;
 }
-.cs-prompt.ready { opacity: 1; animation: csCaret 1.1s steps(2, end) infinite; }
-@keyframes csCaret { 50% { opacity: .15; } }
+.cine-sub.on { opacity: 1; }
+.cine-sub .w { opacity: 0; transition: opacity .18s ease; }
+.cine-sub .w.on { opacity: 1; }
 
-.cs-skip {
-  position: absolute; z-index: 5; top: 22px; right: 24px;
-  font-family: var(--round); font-size: 12px; letter-spacing: .16em;
-  color: #93a8b2; background: rgba(6, 10, 13, .5);
-  border: 2px solid #33474f; border-radius: 10px;
-  padding: 8px 16px; cursor: pointer;
+/* a title card between acts, on black */
+.cine-card {
+  position: absolute; inset: 0; z-index: 5; display: grid; place-items: center;
+  pointer-events: none; opacity: 0; transition: opacity 1s ease;
 }
-.cs-skip:hover { color: #dff0f6; border-color: #5b757f; }
+.cine-card.on { opacity: 1; }
+.cine-card div { text-align: center; }
+.cine-card small {
+  display: block; margin-bottom: 14px;
+  font-family: var(--round); font-weight: 600; letter-spacing: .5em; text-indent: .5em;
+  font-size: calc(13px * var(--ui-text, 1)); color: var(--rim);
+}
+.cine-card b {
+  font-family: var(--seg); font-weight: 400; letter-spacing: .18em; text-indent: .18em;
+  font-size: calc(clamp(30px, 4.4vw, 60px) * var(--ui-text, 1)); color: #eaf7fb;
+  text-shadow: 0 0 6px rgba(255,255,255,.55), 0 0 30px rgba(111,215,232,.55);
+}
 
-/* --- scenery motion -------------------------------------------------------- */
-/* nothing rises into place: scenes appear, and the frame drifts in slowly */
+/* hold to skip: the ring fills while a press is held; it only appears once
+   a press has begun */
+.cine-skip {
+  position: absolute; z-index: 6; right: 26px; bottom: calc(11.5vh + 18px);
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--round); font-weight: 600; font-size: 11px; letter-spacing: .26em;
+  color: rgba(230,245,250,.8); opacity: 0; transition: opacity .2s ease;
+  pointer-events: none;
+}
+.cine-skip.on { opacity: 1; }
+.cine-skip svg { width: 30px; height: 30px; transform: rotate(-90deg); }
+.cine-skip circle { fill: none; stroke-width: 3.2; }
+.cine-skip .track { stroke: rgba(255,255,255,.18); }
+.cine-skip .ring { stroke: var(--rim); stroke-dasharray: 100; stroke-dashoffset: 100;
+                   stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(111,215,232,.8)); }
 
-@keyframes csAppear { from { opacity: 0; transform: scale(.985); }
-                      to   { opacity: 1; transform: none; } }
-.cs-appear { transform-box: fill-box; transform-origin: 50% 50%;
-             animation: csAppear 1.1s ease both; }
-
-/* A slow drift across the frame rather than a push into it. The old version
-   only scaled, which is why every beat felt like it was closing in on the
-   player; this starts a hair wide and settles, so the picture opens out. */
-@keyframes csZoom { from { transform: scale(1.028) translate(0.5%, 0.4%); }
-                    to   { transform: scale(1) translate(-0.4%, -0.3%); } }
-.cs-stage.in .cs-art { animation: csZoom 22s ease-out both; }
-
-@keyframes csGlow { 0%, 100% { opacity: .35; } 50% { opacity: .75; } }
-.cs-glow { animation: csGlow 7s ease-in-out infinite; }
-@keyframes csBreathe { 0%, 100% { opacity: .18; } 50% { opacity: .5; } }
-.cs-breathe { animation: csBreathe 6s ease-in-out infinite; }
-
-@keyframes csTwinkle { 0%, 100% { opacity: .16; } 50% { opacity: .8; } }
-.cs-star { animation: csTwinkle 5s ease-in-out infinite; }
-
-@keyframes csBlink { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
-.cs-blink { animation: csBlink 2.4s ease-in-out infinite; }
-
-@keyframes csSlideIn  { from { transform: translateX(-760px); opacity: 0; }
-                        18%  { opacity: 1; }
-                        to   { transform: translateX(120px); opacity: 1; } }
-@keyframes csSlideOut { from { transform: translateX(60px); opacity: 1; }
-                        to   { transform: translateX(820px); opacity: 0; } }
-.cs-slide-in  { animation: csSlideIn 9s cubic-bezier(.25,.6,.3,1) both; }
-.cs-slide-out { animation: csSlideOut 11s cubic-bezier(.4,.1,.6,1) both; }
-
-/* straight down the shaft, shrinking with distance */
-@keyframes csDrop { 0%   { opacity: 0; transform: translateY(-14px) scale(1); }
-                    12%  { opacity: 1; }
-                    82%  { opacity: 1; }
-                    100% { opacity: 0; transform: translateY(206px) scale(.6); } }
-.cs-drop { transform-box: fill-box; transform-origin: 50% 0%;
-           animation: csDrop 5.4s cubic-bezier(.36,0,.7,1) infinite; }
-
-/* the shaft itself breathes rather than blinks */
-@keyframes csBeam { 0%, 100% { opacity: .8; } 50% { opacity: 1; } }
-.cs-beam { animation: csBeam 5.4s ease-in-out infinite; }
-
-@keyframes csLightUp { from { opacity: 0; }
-                       to   { opacity: 1; } }
-.cs-lightup { animation: csLightUp .5s ease both; }
-
-@keyframes csDim { from { opacity: .8; } to { opacity: .22; } }
-.cs-dim { animation: csDim 4s ease-out both; }
-
-@keyframes csDriftL { from { transform: translateX(-60px); } to { transform: translateX(78px); } }
-@keyframes csDriftR { from { transform: translateX(60px); } to { transform: translateX(-78px); } }
-.cs-drift-l { animation: csDriftL 14s ease-in-out both; }
-.cs-drift-r { animation: csDriftR 14s ease-in-out both; }
-
-@keyframes csSpark { 0% { opacity: 0; r: 2; } 30% { opacity: 1; }
-                     100% { opacity: 0; r: 60; } }
-.cs-spark { animation: csSpark 2.6s ease-out both; }
-@keyframes csDigits { 0% { opacity: 0; } 55% { opacity: 0; } 100% { opacity: 1; } }
-.cs-digits { animation: csDigits 3s ease-out both; }
-
+/* the credits, rolling up over the last frame */
+.cine-credits {
+  position: absolute; inset: 11.5vh 0; z-index: 4; overflow: hidden;
+  pointer-events: none; text-align: center;
+}
+.cine-credits .roll { position: absolute; left: 0; right: 0; top: 100%; }
+.cine-credits.roll .roll { animation: cineRoll 16s linear both; }
+@keyframes cineRoll { from { transform: translateY(0); } to { transform: translateY(-190%); } }
+.cine-credits h2 { font-family: var(--seg); font-weight: 400; font-size: 54px;
+                   letter-spacing: .2em; margin: 0 0 6px; color: #eaf7fb;
+                   text-shadow: 0 0 26px rgba(111,215,232,.6); }
+.cine-credits h3 { font-family: var(--round); font-weight: 600; font-size: 12px;
+                   letter-spacing: .4em; color: var(--rim); margin: 44px 0 8px;
+                   text-transform: uppercase; }
+.cine-credits p { font-family: var(--prose); font-size: 18px; color: #d9e8ee; margin: 0; }
+.cine-credits .role { color: var(--ink-2); font-size: 15px; }
+.cine-credits .last { margin-top: 70px; font-family: var(--doc); font-style: italic; font-size: 22px; }
 
 /* ==========================================================================
    Press feedback: every control answers the click.
    ========================================================================== */
 .key, .go-btn, .press-btn, .null-btn, .sound, .abort,
-.zoom, .flip-btn, .cs-skip, .hit {
+.zoom, .flip-btn, .hit {
   transition: transform .09s cubic-bezier(.3,.9,.4,1), filter .12s ease,
               border-color .18s ease, background .18s ease, box-shadow .12s ease;
 }
-.key:active, .sound:active, .cs-skip:active,
+.key:active, .sound:active,
 .zoom:active, .flip-btn:active { transform: scale(.94); }
 .go-btn:active, .press-btn:active, .null-btn:active { transform: scale(.94); }
 .key:active { filter: brightness(1.35); }
@@ -1404,7 +1355,7 @@ button, .key, .bay, .bay *, .zoom, .answer input, .field input,
   -webkit-tap-highlight-color: transparent;
 }
 
-.bomb, .casing, .cutscene { touch-action: manipulation; }
+.bomb, .casing { touch-action: manipulation; }
 
 /* A finger has no hover state. Anything that only appears on hover has to be
    permanently visible where hovering is impossible, or it cannot be found. */
@@ -1419,7 +1370,7 @@ button, .key, .bay, .bay *, .zoom, .answer input, .field input,
 @media (pointer: coarse) {
   .key { min-height: 52px; }
   .zoom { min-width: 44px; min-height: 44px; }
-  .sound, .cs-skip, .cs-begin { min-height: 44px; padding-left: 18px; padding-right: 18px; }
+  .sound, .cs-begin { min-height: 44px; padding-left: 18px; padding-right: 18px; }
   .answer input, .field input { min-height: 44px; }
 }
 
@@ -1431,8 +1382,6 @@ button, .key, .bay, .bay *, .zoom, .answer input, .field input,
   .choices { gap: 10px; }
   .key i { font-size: 11px; }
   .stats { max-width: none; }
-  .cs-box { padding: 14px 16px; width: 94vw; min-height: 72px; }
-  .cs-line { font-size: 16px; line-height: 1.5; }
 }
 
 @media (max-width: 560px) {
@@ -1457,7 +1406,7 @@ button, .key, .bay, .bay *, .zoom, .answer input, .field input,
     padding: 32px;
     background: var(--bg, #0b1115);
   }
-  body.playing .deck, body.cutscene-open .cutscene { filter: blur(2px); }
+  body.playing .deck, body.cutscene-open .cine { filter: blur(2px); }
   #rotate-hint p { font-size: 16px; color: var(--ink-2, #9fb0b8); margin: 0; max-width: 320px; }
   #rotate-hint .rot-glyph {
     width: 76px; height: 48px; border: 3px solid currentColor;
@@ -1900,11 +1849,6 @@ body.kb-open .flip-btn { opacity: .35; }
    ========================================================================== */
 
 @media (max-height: 540px) {
-  .cutscene { padding: 50px clamp(14px, 4vw, 40px) 10px; gap: 8px; }
-  .cs-art { padding: 26px 34px 96px; }
-  .cs-box { min-height: 56px; padding: 10px 18px; bottom: 12px; width: 94vw; }
-  .cs-line { font-size: 15px; line-height: 1.4; }
-  .cs-skip { top: 6px; right: 10px; padding: 6px 12px; min-height: 34px; }
   .cs-begin { padding: 10px 26px; min-height: 40px; font-size: 12px;
               bottom: 84px; }
 
@@ -2659,7 +2603,7 @@ body.no-flash .lcd.urgent { animation: none; color: #ff8a70; }
    `zoom` re-lays the text out at the new size instead of stretching a
    picture of it. The case is a scaled drawing with its own zoom; the manual
    multiplies this into its own size in js/manual-view.js. */
-.menu .sheet, .cs-box, .cs-skip, .cs-begin, .layout-bar, .reader-back,
+.menu .sheet, .cs-begin, .layout-bar, .reader-back,
 .mv-bar, .arming-line, .focus-clock { zoom: var(--ui-text, 1); }
 
 /* COLOUR LABELS: a letter on every key whose colour is the rule. */

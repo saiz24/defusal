@@ -905,8 +905,8 @@
         /* the device's own colour, taken right down: a full screen of raw
            accent is a flashbulb, a deep wash of it is the device arriving */
         cutTo(e, D.shade(ACCENT[i], -0.76), function () {
-          start({ difficulty: st.rule, count: st.count, seconds: st.seconds,
-                  stage: i + 1 });
+          startStage({ difficulty: st.rule, count: st.count, seconds: st.seconds,
+                       stage: i + 1 });
         });
       });
       c.style.setProperty('--accent', ACCENT[i]);
@@ -1597,6 +1597,18 @@
 
   /* ---------- game lifecycle -------------------------------------------------- */
 
+  /* A campaign device the player has not yet answered is introduced by its
+     scene first — the place it was left, the narrator's two lines — once.
+     A retry, a typed code, practice and free play go straight to the case. */
+  function startStage(config) {
+    var n = config.stage;
+    if (n && !config.noRecord && n > cleared() && D.cutscene && D.cutscene.playOnce) {
+      D.cutscene.playOnce('pre' + n, function () { start(config); });
+      return;
+    }
+    start(config);
+  }
+
   function start(config) {
     teardown();
 
@@ -2267,7 +2279,7 @@
       paintMenu();
       if (cleared() > 0) { D.showMenu(); return; }
       var st = STAGES[0];
-      start({ difficulty: st.rule, count: st.count, seconds: st.seconds, stage: 1 });
+      startStage({ difficulty: st.rule, count: st.count, seconds: st.seconds, stage: 1 });
     };
 
     dom.prev.addEventListener('click', function () {

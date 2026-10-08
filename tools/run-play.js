@@ -18,7 +18,8 @@ var FILES = [
   'js/modules/cards.js', 'js/modules/sequences.js', 'js/modules/mutex.js',
   'js/modules/rationality.js', 'js/modules/parallel.js', 'js/modules/venn.js',
   'js/modules/triangles.js', 'js/modules/angles.js', 'js/modules/units.js',
-  'js/modules/units-render.js', 'js/fx.js', 'js/zoom.js', 'js/cutscene.js', 'js/selftest.js',
+  'js/modules/units-render.js', 'js/fx.js', 'js/zoom.js', 'js/cine/voice.js', 'js/cine/kit.js', 'js/cine/kit-space.js',
+  'js/cine/kit-places.js', 'js/cine/kit-props.js', 'js/cine/script.js', 'js/cine/player.js', 'js/selftest.js',
   'js/game.js'
 ];
 
@@ -206,7 +207,7 @@ var D = h.D;
 /* ---------------- part 0: no dangling calls into the sound kit ------------ */
 (function () {
   var src = fs.readFileSync(path.join(root, 'js/game.js'), 'utf8') +
-            fs.readFileSync(path.join(root, 'js/cutscene.js'), 'utf8');
+            fs.readFileSync(path.join(root, 'js/cine/player.js'), 'utf8');
   var wanted = {}, m, re = /D\.audio\.([A-Za-z]+)/g;
   while ((m = re.exec(src)) !== null) wanted[m[1]] = true;
   var kit = h.D.audio;

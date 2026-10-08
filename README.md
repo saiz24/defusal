@@ -21,70 +21,65 @@ our playing cards. The rules were transmitted apart from the devices on
 purpose: one person may hold the device, one may hold the rules, neither may
 hold both. It is a tally, not a trigger.
 
-* **Opening cutscene** (`js/cutscene.js`) — twenty-two lines over ten scenes
-  of procedural scenery. **It carries itself:** each scene plays for a beat
-  before anyone speaks (2.6s while the craft slides in, 1.9s while the pods
-  fall), lines type themselves out and then hand on after a read-hold scaled
-  to their length. Click, `Space` or `Enter` only ever hurries it — during the
-  opening beat it starts the line, mid-type it completes the line, on a
-  finished line it moves on. `Esc` or the SKIP control leaves at any point,
-  including the first frame. It plays once on a first visit and then never
-  again, remembered in `localStorage` behind a `try`/`catch` — if storage is
-  unavailable it simply plays every time, which SKIP makes harmless.
-  **REPLAY INTRO** on the menu replays it.
-* **It fills the screen; the DRAWING is what is held off the edges.** The
-  scenery used to run right to the glass with nowhere for the eye to rest, and
-  a pass that only pulled the camera back left it sitting in a frame, which was
-  worse. The stage covers the whole screen and the picture is inset by padding
-  on the SVG itself — it is a replaced element, so its viewBox fits the content
-  box — with a deeper inset at the bottom so nothing runs under the line being
-  read. Beats dissolve into each other through a ghost layer.
-* **It ends by handing over the mode screen**, which then hands over a device.
-  The last beat resolves the point of light into a clock and offers BEGIN;
-  BEGIN asks how the two halves will be held, and CONTINUE arms the first
-  device. If they have already cleared something it goes to the selector.
-* **The voice** — one treatment (`.voice`) for everything the devices say:
-  the cutscene, the line that appears while a case arms, and the premise under
-  the title. **The result screen says nothing.** It used to carry a line of
-  narration above the statistics; after a round the player wants the verdict
-  and the numbers, and a sentence between the two put the story in the way of
-  the scoreboard.
-* **A page per device.** The menu is a carousel rather than a row of buttons:
-  each device gets its own card with its number, its mathematical name, a
-  glyph that gains a side and a satellite every stage, and its record — module
-  count, time limit, best time left, attempts. Move between them with the
-  arrows, the arrow keys or the page dots. Two more pages sit at the end:
-  SANDBOX, locked until the first device is answered, and SEED, never locked.
-* **Five devices, in order.** Each stage is harder than the last and only the
-  next one is unlocked. Practice opens after the first device so players can
-  rehearse for what is coming. Progress is stored with the same guarded
-  `localStorage`, with a reset control on the menu.
-* **A code, not a seed.** Every result screen prints one short code and offers
-  to copy it; the SEED page takes it back and arms the identical device. A
-  seed alone reproduces nothing — the same seed poured into a three-module
-  device and an eight-module one deals two different bombs — so the code
-  carries the shape of the device with it: `S3-K7A2XQ` is device 3 at that
-  seed, `F4M8-K7A2XQ` is a sandbox device of 4 modules and 8 minutes, and
-  `DH-K7A2XQ` is a free device at PATHOLOGICAL. A round armed from a code
-  records nothing, so the last device cannot be cleared by typing somebody
-  else's code for it. This replaced OPEN PLAY, which dealt a new random device
-  every time and gave the player no way back to one.
-* **A beat after every stage**, and a full conclusion sequence after the fifth
-  — the end of the story, not just the end of the last puzzle.
-
-**Two things made it look broken, and both were mechanical.** The scenery
-declares ids — a clipPath for the globe, a gradient for the shaft of light —
-and while one beat dissolves into the next there are *two* copies of the
-artwork in the document, so a duplicated id made both resolve to whichever was
-parsed first. They are uniquely stamped now. And the slow drift is an animation
-on `.cs-stage.in .cs-art`: the instant the outgoing scene was handed to the
-ghost layer that rule stopped applying and it snapped back to the start of the
-drift, which is the jump every scene change had. It is frozen at its computed
-transform before it is moved.
-
 The species is never named, described or explained, nothing states what
-failure would mean, and there is no depiction of harm. `prefers-reduced-motion`
-disables the animation, skips the dissolve and prints each line immediately.
+failure would mean, and there is no depiction of harm. The narrator is the
+only voice. The two students are silhouettes with no names who never speak;
+the pictures say what they do. The city is never named either — it is drawn
+to read as a Bicol city (a volcano on the skyline, a river, a church tower,
+jeepneys, a public high school in cream and green), so any player can take it
+for their own.
+
+**The cutscenes are illustrated, in code** (`js/cine/`). They used to be
+outline drawings in SVG with typed captions; they are now layered paintings
+on a canvas — gradients, rim light, glow, haze — with a moving camera and
+parallax, letterbox bars, film grain, title cards and a synthesised narrator
+speaking every line. There is still not one image or audio file.
+
+| file | job |
+|---|---|
+| `js/cine/script.js` | the whole story as data: each shot names a painter, a camera move, its lines, its sounds and the score's mood |
+| `js/cine/player.js` | plays it: timing, camera, dissolves, subtitles revealed with the voice, cards, BEGIN, credits, input |
+| `js/cine/kit.js` | shared painting: the design-space camera, baking, glow, the saucer, the beam, the students, rain |
+| `js/cine/kit-space.js` · `kit-places.js` · `kit-props.js` | the sky and the world; the city's places; the device, the desk, the two apart |
+| `js/cine/voice.js` | the narrator (formant syllables, ring-modulated, seeded per line so a line always sounds the same) and the score |
+
+**What plays, and when** (about 3½ minutes in all):
+
+* **PROLOGUE — CONTACT**, on the first visit: twelve shots from the world
+  seen from space to a classroom where two students find a device and a
+  binder, ending on BEGIN, which hands over the mode screen.
+* **Before each campaign device**, the first time it is armed: the place it
+  was left — a classroom in the rain, the market at dawn, the jeepney
+  terminal at noon, a basketball court in a blackout storm, the bridge at
+  night under the craft.
+* **After each of the first four**, a beat in the same place.
+* **FINALE — RECORD** after the fifth: the world's devices going dark, the
+  two on the bridge at sunrise, the craft leaving, credits.
+
+**Playing them.** A tap (click, `Space`, `Enter`) completes the line being
+spoken; a second tap moves on. **Hold for a second to skip** — the ring and
+"HOLD TO SKIP" appear only once a press has started. Scenes pause when the
+window loses focus. Every setting applies: VOICE, MUSIC and EFFECTS levels,
+TEXT SIZE for subtitles and cards, FLASHES for lightning and impacts, REDUCE
+MOTION for camera moves and particles. Each scene remembers it has been seen;
+Settings → GAME → OPENING replays the prologue.
+
+**Timing is decided before anything plays.** A shot lasts its opening beat,
+then each line for as long as it takes to say *and* to read (about fifteen
+characters a second), then a hold. The voice is synthesised to about the same
+length, so the pictures never wait on audio, and with the sound off the scenes
+run exactly the same.
+
+**It stays cheap.** What does not move — a thousand stars, the city's
+windows, the saucer's hull, a classroom wall — is painted once per scene into
+an offscreen canvas and stamped; only what moves is drawn every frame. Phones
+get a lower pixel ratio and fewer particles.
+
+`tools/check-cine.js` draws every shot of every sequence at its start, middle
+and end and fails on a blank frame; checks every line, a tap, a held skip and
+that the caller is told exactly once; walks the whole first-run flow
+(prologue, mode screen, the first device's scene, the device); and writes a
+contact sheet of every shot to `tools/shots/cine/`.
 
 ## Three ways to hold the two halves
 
@@ -663,6 +658,9 @@ node tools/check-zoom.js          # real wheel/drag/key/Ctrl+wheel input
                                   # through headless Chrome against the
                                   # case and manual zoom
 node tools/measure-audio.js [vol] # peak and loudness of every sound
+node tools/check-cine.js          # every cutscene shot drawn, the lines,
+                                  # tap/hold, the first-run flow, and a
+                                  # contact sheet in tools/shots/cine/
 node tools/check-settings.js      # every setting through the real screen:
                                   # its effect, a reload, and RESET
 tools/sheet.html                  # contact sheet: one live bay per module at
@@ -686,7 +684,7 @@ style.css
 js/core.js              namespace, seeded RNG, module registry, serial helpers
 js/svg.js               SVG construction helpers
 js/audio.js             the synthesised sound kit
-js/cutscene.js          the opening: script, typewriter, procedural scenery
+js/cine/                the cutscenes: script, player, illustration kit, voice
 js/fx.js                the motion layer: ripples, the iris, count-ups,
                         reveal-on-scroll, parallax. Presentation only
 js/mode.js              the mode, the two-device role, the Solo split

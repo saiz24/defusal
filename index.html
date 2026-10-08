@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="MATHEMATICKS">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="style.css?v=20260924b">
+<link rel="stylesheet" href="style.css?v=20261008a">
 </head>
 <body>
 <div id="backdrop" class="backdrop"></div>
@@ -28,20 +28,35 @@
   <p>Turn your device sideways.</p>
 </div>
 
-<!-- ======================= OPENING ======================= -->
-<!-- The opening fills the glass. It is the drawing INSIDE it that is held off
-     the edges — by padding on the picture, not by a box around it — so the
-     scene has air without the screen growing a frame. The ghost layer holds
-     the outgoing scene so one beat dissolves into the next. -->
-<section id="cutscene" class="cutscene" hidden>
-  <div id="cs-ghost" class="cs-stage cs-ghost" aria-hidden="true"></div>
-  <div id="cs-art" class="cs-stage"></div>
-  <div class="cs-box">
-    <p id="cs-text" class="voice cs-line"></p>
-    <span id="cs-prompt" class="cs-prompt"></span>
+<!-- ======================= CUTSCENES =======================
+     One canvas for the picture (js/cine/), and over it only what has to be
+     text: the line being spoken, a title card, the hold-to-skip ring, BEGIN
+     at the end of the prologue and the credits at the end of the story. -->
+<section id="cutscene" class="cine" hidden>
+  <canvas id="cine-canvas" class="cine-canvas"></canvas>
+  <div class="cine-grain" aria-hidden="true"></div>
+  <div class="cine-vig" aria-hidden="true"></div>
+  <div class="cine-bar top" aria-hidden="true"></div>
+  <div class="cine-bar bot" aria-hidden="true"></div>
+  <p id="cine-sub" class="cine-sub" aria-live="polite"></p>
+  <div id="cine-card" class="cine-card"><div><small></small><b></b></div></div>
+  <div id="cine-skip" class="cine-skip" aria-hidden="true">
+    <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" class="track"></circle>
+      <circle id="cine-ring" cx="18" cy="18" r="15.9" class="ring" pathLength="100"></circle></svg>
+    <span>HOLD TO SKIP</span>
   </div>
   <button type="button" id="cs-begin" class="cs-begin" hidden>BEGIN</button>
-  <button type="button" id="cs-skip" class="cs-skip">SKIP &#9656;</button>
+  <div id="cine-credits" class="cine-credits" aria-hidden="true">
+    <div class="roll">
+      <h2>MATHEMATICKS</h2>
+      <p class="role">A two-player co-operative mathematics game</p>
+      <h3>Devices and rules</h3><p>Nine modules, five devices, one manual</p>
+      <h3>Pictures and sound</h3><p>Drawn and synthesised in code. No image or audio files.</p>
+      <h3>Type</h3><p>IBM Plex, Seven Segment</p>
+      <h3>Played by</h3><p>The two of you</p>
+      <p class="last">Thank you for listening to each other.</p>
+    </div>
+  </div>
 </section>
 
 <!-- ======================= MODE SELECT =======================
@@ -350,32 +365,37 @@
   </div>
 </section>
 
-<script src="js/core.js?v=20260924b"></script>
-<script src="js/settings.js?v=20260924b"></script>
-<script src="js/fx.js?v=20260924b"></script>
-<script src="js/mode.js?v=20260924b"></script>
-<script src="js/audio.js?v=20260924b"></script>
-<script src="js/cine/voice.js?v=20260924b"></script>
-<script src="js/svg.js?v=20260924b"></script>
-<script src="js/backdrop.js?v=20260924b"></script>
-<script src="js/modules/cards.js?v=20260924b"></script>
-<script src="js/modules/sequences.js?v=20260924b"></script>
-<script src="js/modules/mutex.js?v=20260924b"></script>
-<script src="js/modules/rationality.js?v=20260924b"></script>
-<script src="js/modules/parallel.js?v=20260924b"></script>
-<script src="js/modules/venn.js?v=20260924b"></script>
-<script src="js/modules/triangles.js?v=20260924b"></script>
-<script src="js/modules/angles.js?v=20260924b"></script>
-<script src="js/modules/units.js?v=20260924b"></script>
-<script src="js/modules/units-render.js?v=20260924b"></script>
-<script src="manual/rules.js?v=20260924b"></script>
-<script src="manual/render.js?v=20260924b"></script>
-<script src="js/zoom.js?v=20260924b"></script>
-<script src="js/manual-view.js?v=20260924b"></script>
-<script src="js/cutscene.js?v=20260924b"></script>
-<script src="js/selftest.js?v=20260924b"></script>
-<script src="js/game.js?v=20260924b"></script>
-<script src="js/main.js?v=20260924b"></script>
+<script src="js/core.js?v=20261008a"></script>
+<script src="js/settings.js?v=20261008a"></script>
+<script src="js/fx.js?v=20261008a"></script>
+<script src="js/mode.js?v=20261008a"></script>
+<script src="js/audio.js?v=20261008a"></script>
+<script src="js/cine/voice.js?v=20261008a"></script>
+<script src="js/svg.js?v=20261008a"></script>
+<script src="js/backdrop.js?v=20261008a"></script>
+<script src="js/modules/cards.js?v=20261008a"></script>
+<script src="js/modules/sequences.js?v=20261008a"></script>
+<script src="js/modules/mutex.js?v=20261008a"></script>
+<script src="js/modules/rationality.js?v=20261008a"></script>
+<script src="js/modules/parallel.js?v=20261008a"></script>
+<script src="js/modules/venn.js?v=20261008a"></script>
+<script src="js/modules/triangles.js?v=20261008a"></script>
+<script src="js/modules/angles.js?v=20261008a"></script>
+<script src="js/modules/units.js?v=20261008a"></script>
+<script src="js/modules/units-render.js?v=20261008a"></script>
+<script src="manual/rules.js?v=20261008a"></script>
+<script src="manual/render.js?v=20261008a"></script>
+<script src="js/zoom.js?v=20261008a"></script>
+<script src="js/manual-view.js?v=20261008a"></script>
+<script src="js/cine/kit.js?v=20261008a"></script>
+<script src="js/cine/kit-space.js?v=20261008a"></script>
+<script src="js/cine/kit-places.js?v=20261008a"></script>
+<script src="js/cine/kit-props.js?v=20261008a"></script>
+<script src="js/cine/script.js?v=20261008a"></script>
+<script src="js/cine/player.js?v=20261008a"></script>
+<script src="js/selftest.js?v=20261008a"></script>
+<script src="js/game.js?v=20261008a"></script>
+<script src="js/main.js?v=20261008a"></script>
 
 <script>
 /* Service workers need a real origin, so this simply does not run when the
