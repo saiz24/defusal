@@ -233,6 +233,83 @@
     host.appendChild(svg);
   }
 
+  /* ---- the same module, as a 3D object (js/module3d.js) -----------------
+     A raised plate carrying the number, four domed keys on a diamond. Same
+     presses, same rules: only the picture and the way a press is found
+     changed. */
+  function mount3d(host, inst) {
+    var p = inst.puzzle, s = inst.solution, M = D.module3d, P = M.parts;
+    var W = 268, H = 262;
+    var view = M.stage(host, W, H);
+    if (!view) { mount(host, inst); return; }
+    var T = M.THREE();
+
+    /* the readout: a cream plate, the number printed on it */
+    var plateW = 200, plateH = 62;
+    var pl = view.at(P.plate(plateW, plateH, 12, '#f6f0e2', 12), W / 2, 36, 6);
+    function printNumber() {
+      var tex = P.textTexture(p.num.display, { w: 640, h: 200, font: '600 120px "Plex Sans Condensed", "Plex Sans", sans-serif', dy: 8 });
+      if (face.material.map) face.material.map.dispose();
+      face.material.map = tex; face.material.needsUpdate = true;
+      view.invalidate();
+    }
+    var face = new T.Mesh(new T.PlaneGeometry(plateW - 14, plateH - 10), new T.MeshBasicMaterial({ transparent: true }));
+    face.position.z = 6.2; pl.add(face);
+    printNumber();
+    if (document.fonts && document.fonts.load) {
+      document.fonts.load('600 120px "Plex Sans Condensed"').then(printNumber, function () {});
+    }
+
+    /* the diamond the keys sit on */
+    var cx = W / 2, cy = 160, R = 58, r = 27;
+    var pts = { top: [cx, cy - R], right: [cx + R, cy], bottom: [cx, cy + R], left: [cx - R, cy] };
+    view.at(P.line([pts.top, pts.right, pts.bottom, pts.left, pts.top], 4), 0, 0, 0);
+
+    var pressed = 0, keys = [];
+    p.arrangement.forEach(function (color, i) {
+      var pt = pts[POSITIONS[i]];
+      var key = view.at(P.domeKey(HEX[color], r), pt[0], pt[1], 0);
+      key.userData.colour = color;
+      /* COLOUR LABELS: the letter on the dome, shown with body.cb */
+      var tag = new T.Mesh(new T.PlaneGeometry(r * 1.1, r * 1.1), new T.MeshBasicMaterial({
+        map: P.textTexture(color.charAt(0).toUpperCase(), { w: 128, h: 128, color: '#ffffff', font: '700 96px "Plex Sans Condensed", sans-serif', dy: 4 }),
+        transparent: true, depthTest: false }));
+      tag.position.z = r * 0.95; key.userData.cap.add(tag); key.userData.tag = tag;
+      view.hit(key, function () {
+        if (inst.isSolved()) return;
+        key.userData.pressedAt = performance.now();
+        view.animate(300);
+        D.audio.press();
+        if (color === s.sequence[pressed]) {
+          pressed++;
+          inst.progress(pressed);
+          if (pressed === s.sequence.length) inst.solve();
+        } else {
+          pressed = 0;
+          inst.progress(0);
+          inst.strike();
+        }
+      });
+      keys.push(key);
+    });
+
+    view.beforeDraw = function (now) {
+      var cb = document.body && document.body.classList.contains('cb');
+      keys.forEach(function (k) {
+        var d = P.pressDepth(now - (k.userData.pressedAt || -1e9));
+        k.userData.cap.position.z = k.userData.rest - d * r * 0.24;
+        k.userData.dome.material.emissive.setRGB(0, 0, 0).addScalar(view.hover === k ? 0.12 : 0);
+        k.userData.tag.visible = cb;
+      });
+    };
+    if (D.prefs) D.prefs.onChange(function (key) { if (key === 'colorblind' || key === '*') view.invalidate(); });
+    /* the tests reach the keys through this */
+    view.canvas.__keys = function (colour) {
+      var k = keys.filter(function (x) { return x.userData.colour === colour; })[0];
+      return k ? view.screenOf(k) : null;
+    };
+  }
+
   D.register({
     id: 'rationality',
     name: 'RATIONALITY',
@@ -241,6 +318,7 @@
     solve: solve,
     debugText: debugText,
     validate: validate,
-    mount: mount
+    mount: mount,
+    mount3d: mount3d
   });
 })(DEFUSAL);

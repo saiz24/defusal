@@ -1296,6 +1296,7 @@ body.cutscene-open .backdrop .bd-cloud { opacity: .34 !important; }
 .bay.module .hit,      .bay.module .hit *,
 .bay.module button,    .bay.module button *,
 .bay.module input,
+.bay.module canvas.m3d,          /* a 3D module finds its own parts in a click */
 .zoom, .zoom *,
 .panel .abort { pointer-events: auto; }
 
@@ -2649,7 +2650,8 @@ body.cb .swatch-word {
    and takes every press; the room only matches it. With the room on, the
    CSS rims and the painted drop shadow give way to the real ones.
    ========================================================================== */
-canvas.room3d { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; }
+canvas.room3d { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; display: block;
+                 pointer-events: none; }   /* scenery: it never takes a click */
 body.room3d .edge { display: none; }
 body.room3d .casing {
   box-shadow:
@@ -2664,3 +2666,7 @@ body.room3d .casing {
   position: absolute; inset: 0; z-index: 70; pointer-events: none;
   border-radius: inherit; background: #05080b; opacity: 0;
 }
+
+/* a module rebuilt in 3D (js/module3d.js): its canvas sits in the bay like
+   any panel and takes the presses itself */
+canvas.m3d { display: block; touch-action: manipulation; }

@@ -349,8 +349,31 @@ Without WebGL it is OFF and the game looks as it always did. Measured in the
 desktop app while tilting, turning and zooming: 60 fps, no frame over 17.7 ms,
 in all three.
 
-The modules on the case are still the 2D panels; they will be rebuilt as 3D
-objects one at a time and swapped in as each is done.
+**Modules, rebuilt in 3D one at a time** (`js/module3d.js`). A 3D module
+still lives in its bay: it renders into a small canvas mounted inside the bay,
+so it rides along with everything the case does — tilt, turning over, zoom,
+leaning in, arming — and a click on it is turned back into a ray and tested
+against its parts (the canvas is on the case's short list of things that take
+a pointer). One shared WebGL renderer draws every 3D module in turn, only when
+something about it changed — a key springing back, the pointer moving over a
+key, a zoom close enough to need sharper pixels — measured on the canvas's
+height so turning the case over does not redraw it at every step. Toon-shaded,
+a dark outline round every part, the same look as the room.
+
+A module is ported by giving its definition a `mount3d`; the game uses it
+wherever 3D is available and the plain `mount` otherwise. Rules, generators,
+solvers and the manual never change.
+
+| module | 3D |
+|---|---|
+| Rationality | yes: a raised plate carrying the number, four domed keys on a diamond that sink and spring back, the colour letter on each dome with COLOUR LABELS |
+| the other eight | 2D panel, for now |
+
+`CDP_GL=1 node tools/check-module3d.js` deals devices until one carries a 3D
+module, checks the 3D version is the one mounted and drawn, then plays it with
+real mouse clicks: a wrong key strikes, and leaning in on it and pressing the
+right order solves it. Measured in the desktop app while hovering keys and
+turning the case over three times: 60 fps, no frame over 18.7 ms.
 
 ## The bomb
 
@@ -720,6 +743,7 @@ node tools/check-zoom.js          # real wheel/drag/key/Ctrl+wheel input
                                   # through headless Chrome against the
                                   # case and manual zoom
 node tools/measure-audio.js [vol] # peak and loudness of every sound
+CDP_GL=1 node tools/check-module3d.js  # the 3D modules, played with real clicks
 CDP_GL=1 node tools/check-zoom.js # any of the headless checks with WebGL
                                   # (software), so the 3D room is on
 node tools/check-cine.js          # every cutscene shot drawn, the lines,

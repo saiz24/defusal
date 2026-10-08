@@ -1846,7 +1846,9 @@
       if (focused !== inst) toggleFocus(inst);
     });
 
-    def.mount(body, inst);
+    /* a module rebuilt in 3D uses that version wherever 3D is available */
+    if (def.mount3d && D.module3d && D.module3d.available()) def.mount3d(body, inst);
+    else def.mount(body, inst);
     /* debug builds only: the headless harness drives real games through this */
     if (debug) bay.__instance = inst;
     state.instances.push(inst);
