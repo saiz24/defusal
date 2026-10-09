@@ -27,7 +27,7 @@
 (function (D) {
   'use strict';
 
-  var T = null, renderer = null, views = [], raf = 0;
+  var T = null, renderer = null, views = [], raf = 0, BUF = { w: 0, h: 0 };
   var INK = '#1a2429';
 
   function ok() {
@@ -39,6 +39,7 @@
       renderer = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
       renderer.setClearColor(0x000000, 0);
       renderer.toneMapping = T.NoToneMapping;
+      prewarm();
       return true;
     } catch (e) { renderer = null; return false; }
   }
@@ -82,6 +83,51 @@
     var t = new T.CanvasTexture(c);
     t.colorSpace = T.SRGBColorSpace; t.anisotropy = 8;
     return t;
+  }
+
+  /* Compile the shaders every module uses once, when the game has loaded,
+     rather than the first time a device arms — compiling them then was part
+     of a 130 ms stall as eight modules appeared at once. */
+  function prewarm() {
+    var go = function () {
+      if (!renderer) return;
+      var sc = new T.Scene(), cam = new T.PerspectiveCamera(20, 1, 1, 100);
+      cam.position.z = 50;
+      sc.add(new T.DirectionalLight('#ffffff', 1)); sc.add(new T.HemisphereLight('#fff', '#000', 1));
+      var g = new T.BoxGeometry(1, 1, 1), tex = new T.CanvasTexture(document.createElement('canvas'));
+      [toon('#888888'), toon('#888888', { map: tex }), new T.MeshBasicMaterial({ color: '#000', side: T.BackSide }),
+       new T.MeshBasicMaterial({ map: tex, transparent: true }), new T.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false }),
+       new T.MeshBasicMaterial({ map: tex }), new T.MeshBasicMaterial({ color: '#fff', transparent: true, opacity: 0.5 }),
+       new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false })]
+        .forEach(function (m) { sc.add(new T.Mesh(g, m)); });
+      renderer.setSize(8, 8, false);
+      renderer.compile(sc, cam);
+      renderer.render(sc, cam);
+    };
+    if (window.requestIdleCallback) window.requestIdleCallback(go, { timeout: 3000 }); else setTimeout(go, 500);
+  }
+
+  /* Work that can wait a frame: building a module's 3D view. A device arms
+     with up to eight of them, and building them all in one frame stalls the
+     arming animation; one per frame, under it, is invisible. */
+  var later = [], laterRaf = 0;
+  function defer(fn) {
+    later.push(fn);
+    if (!laterRaf) laterRaf = window.requestAnimationFrame(runLater);
+  }
+  var lastTick = 0;
+  function runLater(ts) {
+    laterRaf = 0;
+    /* only after a calm frame: the round's own start-up is one long frame,
+       and a build landing right behind it made that frame longer still */
+    var calm = lastTick && ts - lastTick < 24;
+    lastTick = ts;
+    if (!calm) { laterRaf = window.requestAnimationFrame(runLater); return; }
+    var fn = later.shift(), t0 = performance.now();
+    if (fn) { try { fn(); } catch (e) { if (window.console) console.error(e); } }
+    prof('build', t0);
+    if (later.length) laterRaf = window.requestAnimationFrame(runLater);
+    else lastTick = 0;
   }
 
   /* ---- a view: one module's scene, camera and canvas -------------------- */
@@ -175,34 +221,63 @@
     return Math.min(3, Math.max(0.75, Math.ceil(k * 4) / 4));
   }
 
+  /* timings, only when a test asks for them: window.__m3dProf = [] */
+  function prof(what, t0) { if (window.__m3dProf) window.__m3dProf.push([what, Math.round((performance.now() - t0) * 10) / 10, Math.round(t0)]); }
+
   function draw(view) {
+    var t0 = performance.now();
     var k = wantScale(view);
     if (!view.scale || k > view.scale || k < view.scale - 0.5) view.scale = k;
     k = view.scale;
     var pw = Math.round(view.w * k), ph = Math.round(view.h * k);
     if (view.canvas.width !== pw || view.canvas.height !== ph) { view.canvas.width = pw; view.canvas.height = ph; }
-    renderer.setPixelRatio(1);
-    renderer.setSize(pw, ph, false);
+    /* One drawing buffer, only ever grown: wide and square modules take
+       turns, and resizing it for each was a reallocation on every draw. The
+       module is rendered into its bottom-left corner and copied from there. */
+    var bw = Math.max(BUF.w, pw), bh = Math.max(BUF.h, ph);
+    if (bw !== BUF.w || bh !== BUF.h) { renderer.setPixelRatio(1); renderer.setSize(bw, bh, false); BUF.w = bw; BUF.h = bh; }
+    renderer.setViewport(0, 0, pw, ph);
+    renderer.setScissor(0, 0, pw, ph); renderer.setScissorTest(true);
     if (view.beforeDraw) view.beforeDraw(performance.now());
+    renderer.clear();
     renderer.render(view.scene, view.camera);
     var x = view.canvas.getContext('2d');
     x.clearRect(0, 0, pw, ph);
-    x.drawImage(renderer.domElement, 0, 0);
+    x.drawImage(renderer.domElement, 0, BUF.h - ph, pw, ph, 0, 0, pw, ph);
     view.dirty = false;
+    prof('draw' + (view.drawn ? '' : '-first'), t0);
+    view.drawn = true;
   }
 
+  /* Each frame draws only what fits in a few milliseconds. A zoom asks
+     every module on the case to redraw sharper at once — eight renders in
+     one frame was a 117 ms stall in the desktop app — so the work is spread:
+     whatever is moving or under the pointer first, then the rest, a few per
+     frame. Meanwhile the browser simply scales the picture it already has. */
+  var BUDGET_MS = 6;
   function loop() {
     raf = 0;
     var now = performance.now(), more = false;
     views = views.filter(function (v) { return v.canvas.isConnected; });
+    /* while the case is arming it grows on screen every frame; sharpening
+       the modules at each step of that is work nobody can see, so it waits
+       for the arming to finish (first drawings still happen) */
+    var arming = !!document.querySelector('.bomb.arming-zoom, .casing.arming');
     views.forEach(function (v) {
       var want = wantScale(v);
-      if (want > v.scale || want < v.scale - 0.5) v.dirty = true;
+      if ((want > v.scale || want < v.scale - 0.5) && (!arming || !v.drawn)) v.dirty = true;
       if (v.animating > now) { v.dirty = true; more = true; }
-      if (v.dirty) draw(v);
     });
+    var queue = views.filter(function (v) { return v.dirty; });
+    queue.sort(function (a, b) { return urgency(b, now) - urgency(a, now); });
+    var t0 = performance.now();
+    for (var i = 0; i < queue.length; i++) {
+      if (i > 0 && performance.now() - t0 > BUDGET_MS) { more = true; break; }
+      draw(queue[i]);
+    }
     if (more || views.length) raf = window.requestAnimationFrame(loop);
   }
+  function urgency(v, now) { return (v.animating > now ? 2 : 0) + (v.hover ? 1 : 0); }
   function kick() { if (!raf && typeof window !== 'undefined') raf = window.requestAnimationFrame(loop); }
 
   /* ---- parts ------------------------------------------------------------ */
@@ -261,6 +336,7 @@
 
   D.module3d = {
     available: function () { return ok(); },
+    defer: defer,
     stage: stage,
     parts: { toon: toon, outline: outline, textTexture: textTexture, domeKey: domeKey,
              pressDepth: pressDepth, plate: plate, line: line },

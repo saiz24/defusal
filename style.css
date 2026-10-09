@@ -2670,3 +2670,19 @@ body.room3d .casing {
 /* a module rebuilt in 3D (js/module3d.js): its canvas sits in the bay like
    any panel and takes the presses itself */
 canvas.m3d { display: block; touch-action: manipulation; }
+/* the 2D view a 3D module presents: still mounted, still the source of
+   truth, never shown */
+.m3d-src { display: none !important; }
+.body.m3d-host { position: relative; }
+/* the original text boxes, set into the module's 3D slots */
+.m3d-layer { position: absolute; pointer-events: none; }
+.bay.module .m3d-input {
+  position: absolute; margin: 0; padding: 0 8px; box-sizing: border-box;
+  background: transparent; border: 0; border-radius: 6px; outline: none;
+  font-family: var(--seg); font-size: 34px; line-height: 1; text-align: center;
+  color: rgb(255,200,97); caret-color: rgb(255,200,97);
+  text-shadow: 0 0 10px rgba(255,190,80,.7);
+  pointer-events: auto;
+}
+.bay.module .m3d-input:focus { box-shadow: 0 0 0 2px rgba(111,215,232,.7), 0 0 16px rgba(111,215,232,.45); }
+.bay.module .m3d-input:disabled { color: #5fae74; text-shadow: none; background: transparent; }

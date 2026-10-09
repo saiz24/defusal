@@ -174,7 +174,11 @@
   function place() {
     var bw = bombEl.offsetWidth, bh = bombEl.offsetHeight;
     var key = bw + 'x' + bh;
-    if (key !== built) { buildRoom(bw, bh, D.caseDepth || 150); built = key; }
+    if (key !== built) {
+      var t0 = performance.now();
+      buildRoom(bw, bh, D.caseDepth || 150); built = key;
+      if (window.__m3dProf) window.__m3dProf.push(['room build', Math.round(performance.now() - t0), Math.round(t0)]);
+    }
     /* where the bomb's transform origin sits, in camera space */
     var ox = W / 2 + bw / 2 - W / 2, oy = -(H / 2 + bh / 2 - H * ORIGIN_Y);
     var base = new T.Matrix4().makeTranslation(ox, oy, 0);
@@ -207,7 +211,9 @@
     if (key === lastKey) return;
     lastKey = key;
     place();
+    var r0 = performance.now();
     if (composer) composer.render(); else renderer.render(scene, camera);
+    if (window.__m3dProf && performance.now() - r0 > 8) window.__m3dProf.push(['room render', Math.round(performance.now() - r0), Math.round(r0)]);
   }
 
   function setup() {

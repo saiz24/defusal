@@ -360,20 +360,56 @@ key, a zoom close enough to need sharper pixels — measured on the canvas's
 height so turning the case over does not redraw it at every step. Toon-shaded,
 a dark outline round every part, the same look as the room.
 
-A module is ported by giving its definition a `mount3d`; the game uses it
-wherever 3D is available and the plain `mount` otherwise. Rules, generators,
-solvers and the manual never change.
+**Every module is 3D.** Rationality was built by hand; the other seven use
+one approach (`js/module3d-kit.js`, `js/modules3d.js`) that cannot let the
+rules drift: each mounts the module's own 2D view, *hidden*, inside its bay
+and keeps it as the single source of truth — counters, strikes, the solve,
+timers, what is disabled — and lays a 3D object over it:
 
-| module | 3D |
+* **printed figures** (the triangle, two angles, the Venn diagram, the
+  parallel lines, playing cards, the ruler and cylinder) become panels
+  printed from the 2D view's own SVG, minus its buttons. An SVG drawn as an
+  image cannot reach the page's fonts, so the two Plex weights the figures
+  use are embedded (`js/vendor/plex-embed.js`, OFL);
+* **keys and domes** become real 3D parts that sink and spring back, and
+  forward each press to the original control — so its own handler runs, and
+  the press sound comes from the same place it always did;
+* **text boxes** keep the original `<input>` — the keyboard still works, and
+  Enter still submits — set into a recessed slot, typed in segment digits.
+
+| module | in 3D |
 |---|---|
-| Rationality | yes: a raised plate carrying the number, four domed keys on a diamond that sink and spring back, the colour letter on each dome with COLOUR LABELS |
-| the other eight | 2D panel, for now |
+| Rationality | the number on a raised plate; four domed keys on a diamond |
+| Triangles | the triangle and its side plate printed; three colour keys and a D-pad |
+| Parallel lines | the figure printed; the eight angles as numbered domes, the measured one blue |
+| Venn | the diagram printed; numbered domes that turn green when taken; the expression plate; an ∅ key |
+| Angles | the figure printed; a lit lamp in the cycling colour; PRESS |
+| Sequences | five tiles on a tray, the missing one blue; two slots; ENTER |
+| Mutually exclusive events | two playing cards as objects, dealt at an angle; a slot; ENTER |
+| Unit conversions | three indicator lamps; the instrument panes printed; a slot; ENTER |
 
-`CDP_GL=1 node tools/check-module3d.js` deals devices until one carries a 3D
-module, checks the 3D version is the one mounted and drawn, then plays it with
-real mouse clicks: a wrong key strikes, and leaning in on it and pressing the
-right order solves it. Measured in the desktop app while hovering keys and
-turning the case over three times: 60 fps, no frame over 18.7 ms.
+With 3D ROOM off, or without WebGL, every module is its 2D view as before.
+A module's 3D build that throws falls back to its 2D view on the spot.
+
+**Smooth with eight on the case.** Measured in the desktop app with an
+eight-module device while tilting, turning over, zooming and leaning in: no
+frame over 17.8 ms. Getting there, each measured before being fixed:
+a zoom asked all eight to redraw sharper in one frame (117 ms) — redraws now
+fit a 6 ms budget per frame, whatever is moving or hovered first; the shared
+drawing buffer was resized on every draw because wide and square modules
+alternate — it now only grows and each module renders into a corner of it;
+printed panels are capped at 2048 px; the modules no longer re-sharpen at
+every step of the arming pull-back; shaders are compiled once at load; and
+each module's 3D view is built on its own calm frame after the round starts.
+Arming an eight-module device now hitches exactly as the 2D game always did
+(one ~50 ms and one ~33 ms frame — the round's own start-up), and no more.
+
+`CDP_GL=1 node tools/check-module3d.js` plays all eight with real input: for
+each it deals a device carrying the module, turns the case over if it is on
+the back, checks the 3D version is mounted and drawn, leans in, gives a wrong
+answer (it must strike) and then the right one — real clicks on 3D keys, real
+typing in the slots — and it must solve. Close-ups go to
+`tools/shots/m3d-<module>.png`.
 
 ## The bomb
 

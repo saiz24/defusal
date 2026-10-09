@@ -1847,8 +1847,10 @@
     });
 
     /* a module rebuilt in 3D uses that version wherever 3D is available */
+    var mountAt = (typeof performance !== 'undefined') ? performance.now() : 0;
     if (def.mount3d && D.module3d && D.module3d.available()) def.mount3d(body, inst);
     else def.mount(body, inst);
+    if (typeof window !== 'undefined' && window.__m3dProf) window.__m3dProf.push(['mount ' + id, Math.round((performance.now() - mountAt) * 10) / 10, Math.round(mountAt)]);
     /* debug builds only: the headless harness drives real games through this */
     if (debug) bay.__instance = inst;
     state.instances.push(inst);
