@@ -2686,3 +2686,122 @@ canvas.m3d { display: block; touch-action: manipulation; }
 }
 .bay.module .m3d-input:focus { box-shadow: 0 0 0 2px rgba(111,215,232,.7), 0 0 16px rgba(111,215,232,.45); }
 .bay.module .m3d-input:disabled { color: #5fae74; text-shadow: none; background: transparent; }
+
+/* ==========================================================================
+   THE SHELL (js/shell.js, js/title3d.js): splash, title, main menu, pause
+   ========================================================================== */
+.shell-bg { position: fixed; inset: 0; z-index: -1; background: #0d1217; }
+.shell-bg canvas.title3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* over the 3D desk the 2D sky steps aside */
+body.shell-3d .backdrop { visibility: hidden; }
+
+/* the splash: the name, lit, on black */
+.splash {
+  position: fixed; inset: 0; z-index: 200; background: #000;
+  display: grid; place-items: center; cursor: pointer;
+}
+.splash-mark { text-align: center; opacity: 0; transform: scale(.97); }
+.splash.on .splash-mark { animation: splashIn 2.2s var(--ease-out) both; }
+.splash.off { animation: splashOut .7s ease both; }
+@keyframes splashIn { 0% { opacity: 0; transform: scale(.97); } 30% { opacity: 1; transform: none; }
+                      78% { opacity: 1; } 100% { opacity: 1; } }
+@keyframes splashOut { to { opacity: 0; } }
+.splash-mark b {
+  display: block; font-family: var(--seg); font-weight: 400;
+  font-size: clamp(36px, 7vw, 92px); letter-spacing: .14em; text-indent: .14em; color: #eaf7fb;
+  text-shadow: 0 0 6px rgba(255,255,255,.6), 0 0 30px rgba(111,215,232,.6), 0 0 80px rgba(111,215,232,.3);
+}
+.splash-mark small {
+  display: block; margin-top: 18px; font-family: var(--round); font-weight: 600;
+  font-size: 12px; letter-spacing: .5em; text-indent: .5em; color: var(--ink-2);
+}
+
+/* the title: the name over the desk, and the one instruction */
+.title-screen { display: grid; grid-template-rows: 1fr auto; padding: 8vh 6vw 9vh; cursor: pointer; }
+.title-block { align-self: start; text-align: center; }
+.title-logo {
+  margin: 0; font-family: var(--seg); font-weight: 400;
+  font-size: clamp(40px, 8vw, 110px); letter-spacing: .12em; text-indent: .12em; color: #f2fbfd;
+  text-shadow: 0 0 6px rgba(255,255,255,.55), 0 0 34px rgba(111,215,232,.55), 0 0 90px rgba(111,215,232,.3),
+               0 4px 24px rgba(0,0,0,.6);
+}
+.title-tag {
+  margin: 14px 0 0; font-family: var(--round); font-weight: 600; font-size: calc(13px * var(--ui-text, 1));
+  letter-spacing: .32em; text-indent: .32em; color: #d6e7ee; text-shadow: 0 2px 10px rgba(0,0,0,.9);
+}
+.press-any {
+  margin: 0; text-align: center; font-family: var(--round); font-weight: 700;
+  font-size: calc(15px * var(--ui-text, 1)); letter-spacing: .5em; text-indent: .5em; color: #ffd27a;
+  text-shadow: 0 0 14px rgba(255,190,80,.7), 0 2px 8px rgba(0,0,0,.9);
+  animation: pressAny 2.2s ease-in-out infinite;
+}
+@keyframes pressAny { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+.shell-version { position: absolute; right: 18px; bottom: 14px; font-family: var(--mono);
+                 font-size: 11px; color: rgba(220,235,240,.45); }
+
+/* the main menu: a column on the left, the desk on the right */
+.main-screen { display: flex; align-items: center; padding: 0 0 0 clamp(20px, 7vw, 120px); }
+.main-panel {
+  width: min(440px, 88vw); padding: 34px 30px 26px;
+  background: linear-gradient(90deg, rgba(5,9,12,.82), rgba(5,9,12,.55));
+  border-left: 3px solid var(--rim); border-radius: 0 16px 16px 0;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  zoom: var(--ui-text, 1);
+}
+.main-logo {
+  margin: 0 0 22px; font-family: var(--seg); font-weight: 400; font-size: 34px;
+  letter-spacing: .12em; color: #eaf7fb; text-shadow: 0 0 22px rgba(111,215,232,.5);
+}
+.main-menu { display: grid; gap: 6px; }
+.mm-item {
+  display: grid; text-align: left; gap: 3px;
+  padding: 12px 18px 12px 22px; border: 0; border-radius: 10px; cursor: pointer;
+  background: transparent; color: #cfe0e7; position: relative;
+  transition: background var(--t-quick) ease, color var(--t-quick) ease, transform var(--t-quick) var(--ease-out);
+}
+.mm-item b { font-family: var(--round); font-weight: 700; font-size: 22px; letter-spacing: .14em; }
+.mm-item i { font-style: normal; font-family: var(--round); font-weight: 600; font-size: 11px;
+             letter-spacing: .22em; color: var(--ink-3); }
+.mm-item::before {
+  content: ''; position: absolute; left: 6px; top: 14px; bottom: 14px; width: 4px; border-radius: 2px;
+  background: var(--rim); opacity: 0; transform: scaleY(.3);
+  transition: opacity var(--t-quick) ease, transform var(--t-quick) var(--ease-out);
+  box-shadow: 0 0 12px rgba(111,215,232,.8);
+}
+.mm-item.sel { background: rgba(111,215,232,.1); color: #ffffff; transform: translateX(6px); }
+.mm-item.sel::before { opacity: 1; transform: none; }
+.mm-item.sel i { color: #9fe3ef; }
+.mm-item.locked b { color: var(--ink-off); }
+.main-hint { margin: 18px 0 0 22px; font-family: var(--round); font-weight: 600; font-size: 11px;
+             letter-spacing: .26em; color: var(--ink-3); }
+@media (pointer: coarse) { .main-hint { display: none; } }
+
+/* back to the main menu, from the device carousel */
+.corner-back {
+  position: absolute; top: 18px; left: 20px; z-index: 5;
+  font-family: var(--round); font-weight: 700; font-size: 12px; letter-spacing: .2em;
+  color: var(--ink-2); background: rgba(6,10,13,.55); border: 1px solid #2b3d46;
+  border-radius: 10px; padding: 10px 16px; cursor: pointer;
+}
+.corner-back:hover { color: #fff; border-color: var(--rim); }
+
+/* pause */
+.pause-btn { top: 142px; }
+.pause-btn svg path { stroke-width: 3.2; }
+.pause {
+  position: fixed; inset: 0; z-index: 120; display: grid; place-items: center;
+  background: rgba(4,7,9,.72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.pause[hidden] { display: none; }
+.pause-sheet {
+  width: min(420px, 88vw); padding: 30px 26px 22px; display: grid; gap: 6px;
+  background: rgba(10,16,20,.92); border: 1px solid #2b3d46; border-top: 3px solid var(--amber);
+  border-radius: 16px; box-shadow: 0 30px 80px rgba(0,0,0,.6); zoom: var(--ui-text, 1);
+}
+.pause-title { margin: 0; font-family: var(--seg); font-weight: 400; font-size: 40px; letter-spacing: .2em;
+               color: #ffd27a; text-shadow: 0 0 22px rgba(255,190,80,.6); }
+.pause-note { margin: 4px 0 14px; font-family: var(--prose); font-size: 13px; color: var(--ink-2); }
+.pause .mm-item:focus-visible, .mm-item:focus-visible { outline: 2px solid var(--rim); outline-offset: 2px; }
+.pause .mm-item:hover { background: rgba(111,215,232,.1); color: #fff; }
+/* paused: the case is covered, and the manual is not */
+body.paused #screen-game { filter: blur(16px) brightness(.45); }

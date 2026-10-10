@@ -14,10 +14,47 @@
 <meta name="apple-mobile-web-app-title" content="MATHEMATICKS">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="style.css?v=20261009a">
+<link rel="stylesheet" href="style.css?v=20261010a">
 </head>
 <body>
 <div id="backdrop" class="backdrop"></div>
+<!-- the desk at night behind the title and the main menu (js/title3d.js) -->
+<div id="shell-bg" class="shell-bg" hidden></div>
+
+<!-- ======================= SPLASH ======================= -->
+<section id="splash" class="splash" hidden>
+  <div class="splash-mark">
+    <b>MATHEMATICKS</b>
+    <small>A TWO-PLAYER MATHEMATICS GAME</small>
+  </div>
+</section>
+
+<!-- ======================= TITLE ======================= -->
+<section id="screen-title" class="screen shell-screen title-screen" hidden>
+  <div class="title-block">
+    <h1 class="title-logo">MATHEMATICKS</h1>
+    <p class="title-tag">ONE OF YOU HOLDS THE DEVICE. ONE OF YOU HOLDS THE RULES.</p>
+  </div>
+  <p class="press-any">PRESS ANY KEY</p>
+  <span id="shell-version" class="shell-version"></span>
+</section>
+
+<!-- ======================= MAIN MENU ======================= -->
+<section id="screen-main" class="screen shell-screen main-screen" hidden>
+  <div class="main-panel">
+    <h2 class="main-logo">MATHEMATICKS</h2>
+    <nav id="main-menu" class="main-menu" aria-label="main menu">
+      <button type="button" class="mm-item" data-go="campaign"><b>CAMPAIGN</b><i id="mm-campaign-sub"></i></button>
+      <button type="button" class="mm-item" id="mm-practice" data-go="practice"><b>PRACTICE</b><i id="mm-practice-sub"></i></button>
+      <button type="button" class="mm-item" data-go="code"><b>ENTER CODE</b><i>REPLAY ANY DEVICE BY ITS CODE</i></button>
+      <button type="button" class="mm-item" data-go="mode"><b>MODE</b><i id="mm-mode-sub"></i></button>
+      <button type="button" class="mm-item" data-go="settings"><b>SETTINGS</b><i>SOUND · DISPLAY · ACCESS</i></button>
+      <button type="button" class="mm-item" id="mm-quit" data-go="quit" hidden><b>QUIT</b><i>CLOSE THE GAME</i></button>
+    </nav>
+    <p class="main-hint">↑ ↓ TO CHOOSE · ENTER TO OPEN</p>
+  </div>
+</section>
+
 <div id="flash" class="flash"></div>
 
 <!-- Shown only on a portrait handset while a round or the opening is running.
@@ -85,7 +122,8 @@
 </section>
 
 <!-- ======================= MENU ======================= -->
-<section id="screen-menu" class="screen menu">
+<section id="screen-menu" class="screen menu" hidden>
+  <button type="button" id="menu-back" class="corner-back" hidden>‹ MAIN MENU</button>
   <div class="sheet">
     <h1 class="title">MATHEMATICKS</h1>
 
@@ -265,6 +303,9 @@
     <svg class="w-out" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.5-4.5M8 11h6"></path></svg>
     <svg class="w-in" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.5-4.5M8 11h6M11 8v6"></path></svg>
   </button>
+  <button type="button" id="pause-btn" class="flip-btn pause-btn" title="pause (Esc)" aria-label="pause">
+    <svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"></path></svg>
+  </button>
   <button type="button" id="flip-btn" class="flip-btn" data-flip
           title="turn the case over">
     <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.6 5.9"></path><path d="M3 19v-6h6"></path></svg>
@@ -300,6 +341,17 @@
     </div>
   </div>
 </section>
+
+<!-- ======================= PAUSE ======================= -->
+<div id="pause" class="pause" hidden role="dialog" aria-label="paused">
+  <div class="pause-sheet">
+    <h2 class="pause-title">PAUSED</h2>
+    <p class="pause-note">The clock is stopped and the device is covered.</p>
+    <button type="button" id="pause-resume" class="mm-item sel"><b>RESUME</b><i>ESC</i></button>
+    <button type="button" id="pause-restart" class="mm-item"><b>RESTART DEVICE</b><i>THE SAME DEVICE, FROM FULL TIME</i></button>
+    <button type="button" id="pause-quit" class="mm-item"><b>QUIT TO MENU</b><i>THIS ROUND IS NOT RECORDED</i></button>
+  </div>
+</div>
 
 <!-- ============ THE MANUAL, BESIDE THE DEVICE (SOLO) ============
      Solo used to hide the case behind a full-screen manual and charge the
@@ -369,41 +421,43 @@
   </div>
 </section>
 
-<script src="js/core.js?v=20261009a"></script>
-<script src="js/settings.js?v=20261009a"></script>
-<script src="js/fx.js?v=20261009a"></script>
-<script src="js/mode.js?v=20261009a"></script>
-<script src="js/audio.js?v=20261009a"></script>
-<script src="js/cine/voice.js?v=20261009a"></script>
-<script src="js/svg.js?v=20261009a"></script>
-<script src="js/backdrop.js?v=20261009a"></script>
-<script src="js/modules/cards.js?v=20261009a"></script>
-<script src="js/modules/sequences.js?v=20261009a"></script>
-<script src="js/modules/mutex.js?v=20261009a"></script>
-<script src="js/modules/rationality.js?v=20261009a"></script>
-<script src="js/modules/parallel.js?v=20261009a"></script>
-<script src="js/modules/venn.js?v=20261009a"></script>
-<script src="js/modules/triangles.js?v=20261009a"></script>
-<script src="js/modules/angles.js?v=20261009a"></script>
-<script src="js/modules/units.js?v=20261009a"></script>
-<script src="js/modules/units-render.js?v=20261009a"></script>
-<script src="js/vendor/three.bundle.js?v=20261009a"></script>
-<script src="js/module3d.js?v=20261009a"></script>
-<script src="js/vendor/plex-embed.js?v=20261009a"></script>
-<script src="js/module3d-kit.js?v=20261009a"></script>
-<script src="js/modules3d.js?v=20261009a"></script>
-<script src="manual/rules.js?v=20261009a"></script>
-<script src="manual/render.js?v=20261009a"></script>
-<script src="js/zoom.js?v=20261009a"></script>
-<script src="js/manual-view.js?v=20261009a"></script>
-<script src="js/cine/kit.js?v=20261009a"></script>
-<script src="js/cine/kit-flat.js?v=20261009a"></script>
-<script src="js/cine/script.js?v=20261009a"></script>
-<script src="js/cine/player.js?v=20261009a"></script>
-<script src="js/selftest.js?v=20261009a"></script>
-<script src="js/room3d.js?v=20261009a"></script>
-<script src="js/game.js?v=20261009a"></script>
-<script src="js/main.js?v=20261009a"></script>
+<script src="js/core.js?v=20261010a"></script>
+<script src="js/settings.js?v=20261010a"></script>
+<script src="js/fx.js?v=20261010a"></script>
+<script src="js/mode.js?v=20261010a"></script>
+<script src="js/audio.js?v=20261010a"></script>
+<script src="js/cine/voice.js?v=20261010a"></script>
+<script src="js/svg.js?v=20261010a"></script>
+<script src="js/backdrop.js?v=20261010a"></script>
+<script src="js/modules/cards.js?v=20261010a"></script>
+<script src="js/modules/sequences.js?v=20261010a"></script>
+<script src="js/modules/mutex.js?v=20261010a"></script>
+<script src="js/modules/rationality.js?v=20261010a"></script>
+<script src="js/modules/parallel.js?v=20261010a"></script>
+<script src="js/modules/venn.js?v=20261010a"></script>
+<script src="js/modules/triangles.js?v=20261010a"></script>
+<script src="js/modules/angles.js?v=20261010a"></script>
+<script src="js/modules/units.js?v=20261010a"></script>
+<script src="js/modules/units-render.js?v=20261010a"></script>
+<script src="js/vendor/three.bundle.js?v=20261010a"></script>
+<script src="js/module3d.js?v=20261010a"></script>
+<script src="js/vendor/plex-embed.js?v=20261010a"></script>
+<script src="js/module3d-kit.js?v=20261010a"></script>
+<script src="js/modules3d.js?v=20261010a"></script>
+<script src="manual/rules.js?v=20261010a"></script>
+<script src="manual/render.js?v=20261010a"></script>
+<script src="js/zoom.js?v=20261010a"></script>
+<script src="js/manual-view.js?v=20261010a"></script>
+<script src="js/cine/kit.js?v=20261010a"></script>
+<script src="js/cine/kit-flat.js?v=20261010a"></script>
+<script src="js/cine/script.js?v=20261010a"></script>
+<script src="js/cine/player.js?v=20261010a"></script>
+<script src="js/selftest.js?v=20261010a"></script>
+<script src="js/room3d.js?v=20261010a"></script>
+<script src="js/title3d.js?v=20261010a"></script>
+<script src="js/shell.js?v=20261010a"></script>
+<script src="js/game.js?v=20261010a"></script>
+<script src="js/main.js?v=20261010a"></script>
 
 <script>
 /* Service workers need a real origin, so this simply does not run when the

@@ -1152,7 +1152,7 @@
     dom.modeBack.addEventListener('click', function (e) {
       D.audio.click();
       modeAfter = null;
-      D.showMenu(e);
+      if (modeFrom === 'main') goTo('main', e); else D.showMenu(e);
     });
 
     modeIndex = Math.max(0, MODE_ORDER.indexOf(D.mode.get()));
@@ -1259,7 +1259,9 @@
         show('reader');
         return;
       }
-      if (after) after(); else { paintMenu(); show('menu'); }
+      if (after) after();
+      else if (modeFrom === 'main') show('main');
+      else { paintMenu(); show('menu'); }
     });
   }
 
@@ -1270,7 +1272,7 @@
 
   /* ---------- screens --------------------------------------------------------- */
 
-  var SCREENS = ['mode', 'menu', 'settings', 'game', 'result', 'reader'];
+  var SCREENS = ['title', 'main', 'mode', 'menu', 'settings', 'game', 'result', 'reader'];
 
   /* How far in each screen is. A move to a higher number goes forward — the
      old screen is pushed left and the new one comes in from the right — and a
@@ -1283,9 +1285,10 @@
      transform into an invalid string that was silently dropped. The box lost
      its thickness, the two faces ended up coplanar, and the case z-fought
      with itself. */
-  var SCREEN_DEPTH = { mode: 0, menu: 1, reader: 1, settings: 2, game: 2,
+  var SCREEN_DEPTH = { title: -2, main: -1, mode: 0, menu: 1, reader: 1, settings: 2, game: 2,
                        result: 3 };
   var atScreen = null;
+  var modeFrom = 'menu';
 
   function show(screen) {
     var from = atScreen === null ? -1 : SCREEN_DEPTH[atScreen];
@@ -1324,6 +1327,7 @@
       }
     });
     document.body.classList.toggle('playing', screen === 'game');
+    if (D.shell) D.shell.onScreen(screen);
     document.body.classList.toggle('reading', screen === 'reader');
     if (screen === 'game') fit();
   }
@@ -1935,9 +1939,32 @@
     }
   }
 
+  /* ---- pause -----------------------------------------------------------
+     The clock stops, queued beeps are silenced, the case is hidden behind
+     the pause sheet (no solving while the clock is stopped), and on resume
+     the clock picks up exactly where it was. */
+  function togglePause(force) {
+    if (!state || !state.running) return;
+    var to = force === undefined ? !state.paused : !!force;
+    if (to === !!state.paused) return;
+    state.paused = to;
+    if (to) { D.audio.stopBeeps(); clearFocus(true); }
+    else { state.last = Date.now(); }
+    document.body.classList.toggle('paused', to);
+    var sheet = document.getElementById('pause');
+    if (sheet) {
+      sheet.hidden = !to;
+      if (to) { var first = sheet.querySelector('button'); if (first) first.focus(); }
+    }
+    D.audio.click();
+  }
+  D.pause = togglePause;
+  D.isPaused = function () { return !!(state && state.paused); };
+
   function tick() {
     if (!state || !state.running) return;
     var now = Date.now();
+    if (state.paused) { state.last = now; return; }
     if (now < state.armingUntil) {   /* still powering up */
       state.last = now;
       renderTimer();
@@ -2136,6 +2163,8 @@
 
   function teardown() {
     clearFocus(true);
+    document.body.classList.remove('paused');
+    var pz = document.getElementById('pause'); if (pz) pz.hidden = true;
     dom.bomb.classList.remove('arming', 'arming-zoom');
     armFactor = 1; armTilt = 0; tiltX = 0; tiltY = 0;
     if (dom.bomb) applyBombTransform();
@@ -2183,6 +2212,8 @@
 
   D.boot = function () {
     dom = {
+      'screen-title': q('screen-title'),
+      'screen-main': q('screen-main'),
       'screen-mode': q('screen-mode'),
       'screen-menu': q('screen-menu'),
       'screen-settings': q('screen-settings'),
@@ -2264,6 +2295,14 @@
     /* A screen that was told it is the manual has no menu: the menu is a list
        of devices, and this screen does not carry one. It goes to the manual
        and stays there until somebody changes what this screen is. */
+    D.goTo = goTo;
+    D.screenNow = function () { return atScreen; };
+    D.menuPage = function (kind) {
+      for (var i = 0; i < pages.length; i++) if (pages[i].kind === kind) return i;
+      return -1;
+    };
+    D.gotoPage = function (i) { gotoPage(i); };
+    D.progress = function () { return { cleared: cleared(), total: STAGES.length }; };
     D.showMenu = function (e) {
       if (D.mode.is('twodevice') && D.mode.getRole() === 'manual') {
         openReader(e);
@@ -2276,6 +2315,8 @@
     /* the mode screen, wherever it is reached from */
     D.showModeSelect = function (after, e) {
       modeAfter = after || null;
+      /* opened from the main menu, it goes back there */
+      modeFrom = (atScreen === 'main') ? 'main' : 'menu';
       dom.modeBack.hidden = !!after;   /* from the opening there is no back */
       modeIndex = Math.max(0, MODE_ORDER.indexOf(D.mode.get()));
       gotoMode(modeIndex);
@@ -2318,11 +2359,19 @@
     q('settings-open').addEventListener('click', function (e) {
       D.audio.click();
       paintMenu();
-      goTo('settings', e);
+      D.openSettings(e);
     });
+    /* settings go back to wherever they were opened from: the main menu or
+       the device carousel */
+    var settingsFrom = 'menu';
+    D.openSettings = function (e) {
+      settingsFrom = (atScreen === 'main') ? 'main' : 'menu';
+      paintMenu();
+      goTo('settings', e);
+    };
     q('settings-back').addEventListener('click', function (e) {
       D.audio.click();
-      D.showMenu(e);
+      if (settingsFrom === 'main') goTo('main', e); else D.showMenu(e);
     });
 
     q('reader-back').addEventListener('click', function (e) {
@@ -2557,6 +2606,24 @@
       D.audio.click(); teardown(); D.showMenu(e);
     });
 
+    /* the pause sheet: carry on, start this same device again from full
+       time, or leave it */
+    q('pause-resume').addEventListener('click', function () { togglePause(false); });
+    q('pause-restart').addEventListener('click', function (e) {
+      if (!state) return;
+      var cfg = {};
+      Object.keys(state.config).forEach(function (k) { cfg[k] = state.config[k]; });
+      cfg.seed = state.seed;
+      togglePause(false);
+      cutTo(e, '#0a1318', function () { start(cfg); });
+    });
+    q('pause-quit').addEventListener('click', function (e) {
+      togglePause(false);
+      D.audio.powerdown();
+      cutTo(e, '#070d11', function () { teardown(); D.showMenu(); });
+    });
+    q('pause-btn').addEventListener('click', function () { togglePause(); });
+
     [].forEach.call(document.querySelectorAll('[data-flip]'), function (b) {
       b.addEventListener('click', flip);
     });
@@ -2644,7 +2711,8 @@
       }
       if (e.key === 'Escape') {
         if (focused) clearFocus();
-        else if (state) { teardown(); D.showMenu(); }
+        else if (state && state.running && atScreen === 'game') togglePause();
+        else if (atScreen === 'menu' && D.shell && D.shell.active()) { e.preventDefault(); goTo('main'); }
       }
       var typing = e.target && e.target.tagName === 'INPUT';
       if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && state && !typing) {
@@ -2687,6 +2755,7 @@
       return;
     }
 
+    if (D.shell && D.shell.wanted()) return;   /* the shell opens the game */
     D.showMenu();
   };
 })(DEFUSAL);

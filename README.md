@@ -411,6 +411,41 @@ answer (it must strike) and then the right one — real clicks on 3D keys, real
 typing in the slots — and it must solve. Close-ups go to
 `tools/shots/m3d-<module>.png`.
 
+## The way in
+
+The game opens like a game now, not on its device list (`js/shell.js`):
+
+* **Splash** — the name, lit, for two seconds. A click skips it.
+* **The prologue**, on the very first visit only, as before.
+* **Title** — the desk at night, the device on it with its clock running down,
+  and PRESS ANY KEY. Esc is not "any key".
+* **Main menu** — CAMPAIGN (the device carousel, which is still where a round
+  returns to), PRACTICE (locked until device 1 is answered), ENTER CODE, MODE,
+  SETTINGS and, in the desktop app only, QUIT. Arrow keys and Enter, or the
+  mouse. Esc goes back one screen: carousel to main menu, main menu to title.
+  SETTINGS and MODE return to wherever they were opened from.
+
+The title and the main menu share one 3D scene (`js/title3d.js`): a modelled
+case on the desk, the lamp, the binder, a mug. The camera eases from the
+centred title shot to a menu shot with the case on the right. Only things
+that glow by themselves bloom. Without WebGL, or with 3D ROOM off, the 2D sky
+is behind them instead.
+
+**Pause.** Esc during a round, or the ‖ button, stops the clock and blurs the
+device: RESUME, RESTART DEVICE (the same device, full time again) and QUIT TO
+MENU.
+
+Any address that asks for something specific (`?intro=0`, `?start=`, `?cs=`,
+`?modes=`, `?page=`, a mode, a role, `?seed=`, `?debug=`) skips the shell and
+goes straight there as before, so the tests and bookmarks still land where they
+did.
+
+Measured in the desktop app on a fresh profile, every screen from splash to
+prologue, first device, pause, main menu, title and carousel: no frame over
+17.8 ms. `node tools/check-shell.js` (add `CDP_GL=1` for the 3D desk) walks the
+whole flow: splash, prologue once, title, menu keys, every menu entry and back,
+pause, restart and quit.
+
 ## The bomb
 
 **The case has two live sides and real thickness.** It is 150 units deep, so
