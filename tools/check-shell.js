@@ -68,6 +68,12 @@ function check(name, ok, info) {
   await ev("document.querySelector('[data-go=campaign]').click()"); await cdp.sleep(1400);
   await ev("document.querySelectorAll('#sel-track .card')[0].querySelector('.key.go, button.go, .go').click()"); await cdp.sleep(2500);
   if (await ev('DEFUSAL.cutscene.isActive()')) { await ev('DEFUSAL.cutscene.skip()'); }
+  check('ENGAGE opens the briefing first', await waitFor('brief'));
+  await key('Escape', 'Escape');
+  check('Esc on the briefing goes back to the carousel', await waitFor('menu'));
+  await ev("document.querySelectorAll('#sel-track .card')[0].querySelector('.key.go, button.go, .go').click()");
+  await waitFor('brief'); await cdp.sleep(700);
+  await key('Enter', 'Enter');
   await cdp.sleep(5500);
   check('a device is armed', (await at()) === 'game');
   const clock = () => ev("document.querySelector('.face.front .lcd').textContent");

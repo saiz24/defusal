@@ -824,12 +824,38 @@
     try { window.localStorage.setItem(STATS_KEY, JSON.stringify(t)); } catch (e) {}
   }
   function bumpStat(stage, field, value) {
-    var t = loadStats(), k = String(stage);
+    var t = loadStats(), k = String(stage), better = false;
     t[k] = t[k] || { a: 0, best: 0 };
     if (field === 'a') t[k].a++;
-    else t[k].best = Math.max(t[k].best || 0, value);
+    else if (field === 'rank') {
+      better = rankBeats(value, t[k].rank);
+      if (better) t[k].rank = value;
+    } else t[k].best = Math.max(t[k].best || 0, value);
     saveStats(t);
+    return better;
   }
+
+  /* ---------- rank ------------------------------------------------------------
+     A defused device earns a letter. Points are the share of the clock left,
+     less twenty for each strike; S also asks for a clean run. Measured
+     against the clock the device was given, so a letter means the same on
+     device 1 as on device 5. */
+  var RANKS = ['S', 'A', 'B', 'C'];
+  var RANK_LINE = {
+    S: 'NO STRIKES, HALF THE CLOCK TO SPARE',
+    A: 'QUICK AND STEADY',
+    B: 'ANSWERED',
+    C: 'ANSWERED, JUST'
+  };
+  function rankOf(left, total, strikes) {
+    var pts = 100 * left / Math.max(1, total) - 20 * strikes;
+    if (strikes === 0 && pts >= 50) return 'S';
+    if (pts >= 30) return 'A';
+    if (pts >= 12) return 'B';
+    return 'C';
+  }
+  function rankBeats(a, b) { return !!a && (!b || RANKS.indexOf(a) < RANKS.indexOf(b)); }
+  D.rankOf = rankOf;
 
   /* A glyph that visibly gains complexity stage by stage: a polygon with one
      more side each time, ringed by one more satellite. */
@@ -898,7 +924,7 @@
       var facts = el('div', 'facts', c);
       var fMod = fact(facts, 'MODULES');
       var fTime = fact(facts, 'TIME');
-      var fBest = fact(facts, 'BEST LEFT');
+      var fBest = fact(facts, 'BEST');
       var fTry = fact(facts, 'ATTEMPTS');
       var go = el('button', 'key go engage', c);
       go.type = 'button';
@@ -984,7 +1010,7 @@
         var st = STAGES[pg.i], rec = stats[String(pg.i + 1)] || {};
         pg.fMod.textContent = String(st.count);
         pg.fTime.textContent = mmss(st.seconds);
-        pg.fBest.textContent = rec.best ? mmss(rec.best) : '—';
+        pg.fBest.textContent = rec.best ? (rec.rank ? rec.rank + ' \u00b7 ' : '') + mmss(rec.best) : '—';
         pg.fTry.textContent = String(rec.a || 0);
         pg.go.disabled = locked;
         pg.go.querySelector('b').textContent = locked ? 'LOCKED'
@@ -1272,7 +1298,7 @@
 
   /* ---------- screens --------------------------------------------------------- */
 
-  var SCREENS = ['title', 'main', 'mode', 'menu', 'settings', 'game', 'result', 'reader'];
+  var SCREENS = ['title', 'main', 'mode', 'menu', 'brief', 'settings', 'game', 'result', 'reader'];
 
   /* How far in each screen is. A move to a higher number goes forward — the
      old screen is pushed left and the new one comes in from the right — and a
@@ -1285,7 +1311,7 @@
      transform into an invalid string that was silently dropped. The box lost
      its thickness, the two faces ended up coplanar, and the case z-fought
      with itself. */
-  var SCREEN_DEPTH = { title: -2, main: -1, mode: 0, menu: 1, reader: 1, settings: 2, game: 2,
+  var SCREEN_DEPTH = { title: -2, main: -1, mode: 0, menu: 1, reader: 1, brief: 1.5, settings: 2, game: 2,
                        result: 3 };
   var atScreen = null;
   var modeFrom = 'menu';
@@ -1611,10 +1637,57 @@
   function startStage(config) {
     var n = config.stage;
     if (n && !config.noRecord && n > cleared() && D.cutscene && D.cutscene.playOnce) {
-      D.cutscene.playOnce('pre' + n, function () { start(config); });
+      D.cutscene.playOnce('pre' + n, function () { brief(config); });
       return;
     }
-    start(config);
+    if (n && !config.noRecord) brief(config);
+    else start(config);
+  }
+
+  /* ---------- the briefing ----------------------------------------------------
+     Between the device's scene and the device itself: which one this is,
+     what it holds, how long it gives, and the best this pair has done on it.
+     A campaign device only — a retry, a typed code and practice go straight
+     to the case. */
+  var BRIEF_LINE = [
+    'The case has two faces. Turn it over to find every module.',
+    'Every strike makes the clock run faster.',
+    'Say which module you are on before you describe it.',
+    'Six modules. Solve what you can see while the expert reads.',
+    'Eight modules, ten minutes. The last device.'
+  ];
+  var briefing = null, briefAt = 0;
+
+  function brief(config) {
+    var i = config.stage - 1, st = STAGES[i];
+    var rec = loadStats()[String(config.stage)] || {};
+    briefing = config;
+    dom.briefIdx.textContent = 'DEVICE ' + config.stage + ' / ' + STAGES.length;
+    var meta = D.mode.META[D.mode.get()];
+    dom.briefMode.textContent = meta ? meta.label : '';
+    dom.briefName.textContent = st.name;
+    dom.briefLine.textContent = BRIEF_LINE[i] || '';
+    dom.briefEmblem.innerHTML = '';
+    dom.briefEmblem.appendChild(stageEmblem(i));
+    dom.briefMod.textContent = String(st.count);
+    dom.briefTime.textContent = mmss(st.seconds);
+    dom.briefBest.textContent = rec.best ? (rec.rank ? rec.rank + ' \u00b7 ' : '') + mmss(rec.best) : 'NONE YET';
+    dom['screen-brief'].style.setProperty('--accent', ACCENT[i]);
+    briefAt = Date.now();
+    show('brief');
+  }
+
+  function armBriefed(e) {
+    if (!briefing || atScreen !== 'brief') return;
+    var cfg = briefing; briefing = null;
+    D.audio.click();
+    cutTo(e, D.shade(ACCENT[cfg.stage - 1], -0.76), function () { start(cfg); });
+  }
+  function leaveBrief(e) {
+    if (atScreen !== 'brief') return;
+    briefing = null;
+    D.audio.click();
+    D.showMenu(e);
   }
 
   function start(config) {
@@ -2137,6 +2210,26 @@
         v.textContent = r[1];
       }
     });
+    /* the letter lands once the figures have finished counting */
+    dom.resultRank.hidden = !won;
+    dom.resultRank.classList.remove('on');
+    if (won) {
+      var rank = rankOf(left, state.total, state.strikes);
+      var newBest = !!(state.config.stage && !state.config.noRecord &&
+                       bumpStat(state.config.stage, 'rank', rank));
+      if (newBest) paintMenu();
+      dom.resultRankLetter.textContent = rank;
+      dom.resultRankLetter.className = 'rank-' + rank.toLowerCase();
+      dom.resultRankLine.textContent = RANK_LINE[rank];
+      dom.resultRankNew.hidden = !newBest;
+      var shownFor = state;
+      setTimeout(function () {
+        if (state !== shownFor || atScreen !== 'result') return;
+        dom.resultRank.classList.add('on');
+        if (D.audio.stamp) D.audio.stamp(rank === 'S');
+      }, (D.prefs && D.prefs.reducedMotion()) ? 200 : 1350);
+    }
+
     state.code = makeCode(state.config, state.seed);
     dom.resultSeed.textContent = state.code;
     dom.resultDetail.textContent = state.config.difficulty +
@@ -2220,6 +2313,7 @@
       'screen-reader': q('screen-reader'),
       'screen-game': q('screen-game'),
       'screen-result': q('screen-result'),
+      'screen-brief': q('screen-brief'),
       bomb: q('bomb'),
       flipper: q('flipper'),
       wideBtn: q('wide-btn'),
@@ -2266,6 +2360,18 @@
       focusClockTime: q('focus-clock-time'),
       focusClockCount: q('focus-clock-count'),
       resultSeed: q('result-seed'),
+      resultRank: q('result-rank'),
+      resultRankLetter: q('result-rank-letter'),
+      resultRankLine: q('result-rank-line'),
+      resultRankNew: q('result-rank-new'),
+      briefIdx: q('brief-idx'),
+      briefMode: q('brief-mode'),
+      briefName: q('brief-name'),
+      briefLine: q('brief-line'),
+      briefEmblem: q('brief-emblem'),
+      briefMod: q('brief-mod'),
+      briefTime: q('brief-time'),
+      briefBest: q('brief-best'),
       faces: [].map.call(document.querySelectorAll('[data-face]'), function (casing) {
         return {
           casing: casing,
@@ -2623,6 +2729,8 @@
       cutTo(e, '#070d11', function () { teardown(); D.showMenu(); });
     });
     q('pause-btn').addEventListener('click', function () { togglePause(); });
+    q('brief-arm').addEventListener('click', armBriefed);
+    q('brief-back').addEventListener('click', leaveBrief);
 
     [].forEach.call(document.querySelectorAll('[data-flip]'), function (b) {
       b.addEventListener('click', flip);
@@ -2695,6 +2803,13 @@
       D.startRound = start;
       D.makeCode = makeCode;
       D.parseCode = parseCode;
+      D.startStage = startStage;
+      /* tools/check-present.js: end the round as if it had played out */
+      D.debugFinish = function (won, left, strikes) {
+        if (!state || !state.running) return;
+        state.remaining = left; state.strikes = strikes || 0;
+        finish(won, 'debug');
+      };
     }
     document.addEventListener('keydown', function (e) {
       if (D.cutscene && D.cutscene.isActive()) return;   /* the opening owns keys */
@@ -2713,6 +2828,13 @@
         if (focused) clearFocus();
         else if (state && state.running && atScreen === 'game') togglePause();
         else if (atScreen === 'menu' && D.shell && D.shell.active()) { e.preventDefault(); goTo('main'); }
+        else if (atScreen === 'brief') { e.preventDefault(); leaveBrief(); }
+      }
+      /* a held key from skipping the scene must not arm the device too */
+      if (atScreen === 'brief' && (e.key === 'Enter' || e.key === ' ') && !e.repeat &&
+          Date.now() - briefAt > 450) {
+        e.preventDefault();
+        armBriefed();
       }
       var typing = e.target && e.target.tagName === 'INPUT';
       if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && state && !typing) {

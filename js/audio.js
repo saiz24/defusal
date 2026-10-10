@@ -630,6 +630,18 @@
              cutoffTo: 110, at: t + 0.10 });
     },
 
+    /* the rank letter landing on the result: a low thud and a scuff of
+       paper; an S gets a small rising chime on top */
+    stamp: function (best) {
+      if (!live()) return;
+      var t = now();
+      tone({ f: 130, to: 46, dur: 0.34, type: 'sine', gain: 0.34, at: t, glide: 'exp' });
+      hiss({ dur: 0.14, gain: 0.14, filter: 'lowpass', cutoff: 2600, cutoffTo: 380, at: t });
+      if (best) [784, 1047, 1319].forEach(function (f, i) {
+        tone({ f: f, dur: 0.55, type: 'triangle', gain: 0.07, at: t + 0.09 + i * 0.07 });
+      });
+    },
+
     /* every module down */
     defused: function () {
       if (!live()) return;

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="MATHEMATICKS">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="style.css?v=20261010a">
+<link rel="stylesheet" href="style.css?v=20261010b">
 </head>
 <body>
 <div id="backdrop" class="backdrop"></div>
@@ -296,6 +296,30 @@
 </section>
 
 <!-- ======================= BOMB ======================= -->
+<!-- the briefing: what this device is, before it is armed (campaign only) -->
+<section id="screen-brief" class="screen menu brief" hidden>
+  <div class="sheet brief-sheet">
+    <div class="brief-head">
+      <span id="brief-idx">DEVICE 1 / 5</span>
+      <span id="brief-mode"></span>
+    </div>
+    <div id="brief-emblem" class="brief-emblem"></div>
+    <h2 id="brief-name" class="brief-name">TRIVIAL</h2>
+    <p id="brief-line" class="brief-line"></p>
+    <div class="brief-facts">
+      <div><span>MODULES</span><b id="brief-mod"></b></div>
+      <div><span>TIME</span><b id="brief-time"></b></div>
+      <div><span>STRIKES ALLOWED</span><b>2</b></div>
+      <div><span>YOUR BEST</span><b id="brief-best"></b></div>
+    </div>
+    <div class="choices two">
+      <button type="button" id="brief-back" class="key"><b>BACK</b></button>
+      <button type="button" id="brief-arm" class="key go engage"><b>ARM DEVICE</b></button>
+    </div>
+    <p class="brief-hint">ENTER TO ARM · ESC TO GO BACK</p>
+  </div>
+</section>
+
 <section id="screen-game" class="screen deck" hidden>
   <p id="arming-line" class="voice arming-line"></p>
   <button type="button" id="wide-btn" class="flip-btn wide-btn" data-wide
@@ -399,6 +423,11 @@
   <div class="sheet result-sheet">
     <h2 id="result-title" class="verdict">DEFUSED</h2>
     <p id="result-cause" class="cause"></p>
+    <div id="result-rank" class="rank-stamp" hidden>
+      <b id="result-rank-letter">S</b>
+      <span id="result-rank-line"></span>
+      <em id="result-rank-new" hidden>NEW BEST</em>
+    </div>
 
     <div id="result-stats" class="stats"></div>
 
@@ -421,43 +450,43 @@
   </div>
 </section>
 
-<script src="js/core.js?v=20261010a"></script>
-<script src="js/settings.js?v=20261010a"></script>
-<script src="js/fx.js?v=20261010a"></script>
-<script src="js/mode.js?v=20261010a"></script>
-<script src="js/audio.js?v=20261010a"></script>
-<script src="js/cine/voice.js?v=20261010a"></script>
-<script src="js/svg.js?v=20261010a"></script>
-<script src="js/backdrop.js?v=20261010a"></script>
-<script src="js/modules/cards.js?v=20261010a"></script>
-<script src="js/modules/sequences.js?v=20261010a"></script>
-<script src="js/modules/mutex.js?v=20261010a"></script>
-<script src="js/modules/rationality.js?v=20261010a"></script>
-<script src="js/modules/parallel.js?v=20261010a"></script>
-<script src="js/modules/venn.js?v=20261010a"></script>
-<script src="js/modules/triangles.js?v=20261010a"></script>
-<script src="js/modules/angles.js?v=20261010a"></script>
-<script src="js/modules/units.js?v=20261010a"></script>
-<script src="js/modules/units-render.js?v=20261010a"></script>
-<script src="js/vendor/three.bundle.js?v=20261010a"></script>
-<script src="js/module3d.js?v=20261010a"></script>
-<script src="js/vendor/plex-embed.js?v=20261010a"></script>
-<script src="js/module3d-kit.js?v=20261010a"></script>
-<script src="js/modules3d.js?v=20261010a"></script>
-<script src="manual/rules.js?v=20261010a"></script>
-<script src="manual/render.js?v=20261010a"></script>
-<script src="js/zoom.js?v=20261010a"></script>
-<script src="js/manual-view.js?v=20261010a"></script>
-<script src="js/cine/kit.js?v=20261010a"></script>
-<script src="js/cine/kit-flat.js?v=20261010a"></script>
-<script src="js/cine/script.js?v=20261010a"></script>
-<script src="js/cine/player.js?v=20261010a"></script>
-<script src="js/selftest.js?v=20261010a"></script>
-<script src="js/room3d.js?v=20261010a"></script>
-<script src="js/title3d.js?v=20261010a"></script>
-<script src="js/shell.js?v=20261010a"></script>
-<script src="js/game.js?v=20261010a"></script>
-<script src="js/main.js?v=20261010a"></script>
+<script src="js/core.js?v=20261010b"></script>
+<script src="js/settings.js?v=20261010b"></script>
+<script src="js/fx.js?v=20261010b"></script>
+<script src="js/mode.js?v=20261010b"></script>
+<script src="js/audio.js?v=20261010b"></script>
+<script src="js/cine/voice.js?v=20261010b"></script>
+<script src="js/svg.js?v=20261010b"></script>
+<script src="js/backdrop.js?v=20261010b"></script>
+<script src="js/modules/cards.js?v=20261010b"></script>
+<script src="js/modules/sequences.js?v=20261010b"></script>
+<script src="js/modules/mutex.js?v=20261010b"></script>
+<script src="js/modules/rationality.js?v=20261010b"></script>
+<script src="js/modules/parallel.js?v=20261010b"></script>
+<script src="js/modules/venn.js?v=20261010b"></script>
+<script src="js/modules/triangles.js?v=20261010b"></script>
+<script src="js/modules/angles.js?v=20261010b"></script>
+<script src="js/modules/units.js?v=20261010b"></script>
+<script src="js/modules/units-render.js?v=20261010b"></script>
+<script src="js/vendor/three.bundle.js?v=20261010b"></script>
+<script src="js/module3d.js?v=20261010b"></script>
+<script src="js/vendor/plex-embed.js?v=20261010b"></script>
+<script src="js/module3d-kit.js?v=20261010b"></script>
+<script src="js/modules3d.js?v=20261010b"></script>
+<script src="manual/rules.js?v=20261010b"></script>
+<script src="manual/render.js?v=20261010b"></script>
+<script src="js/zoom.js?v=20261010b"></script>
+<script src="js/manual-view.js?v=20261010b"></script>
+<script src="js/cine/kit.js?v=20261010b"></script>
+<script src="js/cine/kit-flat.js?v=20261010b"></script>
+<script src="js/cine/script.js?v=20261010b"></script>
+<script src="js/cine/player.js?v=20261010b"></script>
+<script src="js/selftest.js?v=20261010b"></script>
+<script src="js/room3d.js?v=20261010b"></script>
+<script src="js/title3d.js?v=20261010b"></script>
+<script src="js/shell.js?v=20261010b"></script>
+<script src="js/game.js?v=20261010b"></script>
+<script src="js/main.js?v=20261010b"></script>
 
 <script>
 /* Service workers need a real origin, so this simply does not run when the

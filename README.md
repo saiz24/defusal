@@ -446,6 +446,29 @@ prologue, first device, pause, main menu, title and carousel: no frame over
 whole flow: splash, prologue once, title, menu keys, every menu entry and back,
 pause, restart and quit.
 
+## Before and after a device
+
+**The briefing.** A campaign device opens on a card after its scene, before
+the case: which device it is, its name and emblem in its own colour, how many
+modules, how long, two strikes allowed, the mode, the best this pair has done
+on it, and one line of advice. ARM DEVICE (Enter) or BACK (Esc). TRY AGAIN, a
+restart from the pause, a typed code and practice go straight to the case.
+
+**The rank.** A defused device earns a letter, stamped on once the figures
+have counted up. Points are the share of the clock left, less 20 for each
+strike: **S** is a clean run with at least half the clock left, **A** 30 or
+more, **B** 12 or more, **C** anything else that got answered. Measured
+against the clock the device was given, so a letter means the same on
+device 1 as on device 5. A loss has no letter. The best letter is kept per
+device, shown as NEW BEST when beaten, and on the device's carousel card and
+its briefing next to the best time.
+
+The rank and the device code are set in faces that tell S from 5: the
+segment face draws them the same, and a code is something people type back.
+
+`node tools/check-present.js` checks the thresholds, the briefing (and that
+retries and codes skip it), the stamp, NEW BEST and the record.
+
 ## The bomb
 
 **The case has two live sides and real thickness.** It is 150 units deep, so

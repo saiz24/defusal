@@ -1556,8 +1556,10 @@ body.rm #rotate-hint .rot-glyph { animation: none; transform: none; }
 .seed-note.bad { color: var(--red); }
 
 .seed-code {
-  font-family: var(--seg); font-size: 22px; font-weight: 400;
-  letter-spacing: .22em; color: var(--amber);
+  /* a code is read back and typed in: the segment face draws S as 5, B as 8
+     and O as 0, so it is set in the mono face instead */
+  font-family: var(--mono); font-size: 20px; font-weight: 500;
+  letter-spacing: .14em; color: var(--amber);
   text-shadow: 0 0 20px rgba(255,200,97,.35), 0 1px 8px rgba(0,0,0,.8);
   user-select: all; -webkit-user-select: all;
 }
@@ -2805,3 +2807,64 @@ body.shell-3d .backdrop { visibility: hidden; }
 .pause .mm-item:hover { background: rgba(111,215,232,.1); color: #fff; }
 /* paused: the case is covered, and the manual is not */
 body.paused #screen-game { filter: blur(16px) brightness(.45); }
+
+/* ======================= the briefing ===================================== */
+/* Between a campaign device's scene and the device: which one, what it holds,
+   the best so far. Tinted by the device's own accent, as its carousel card is. */
+.brief-sheet {
+  width: min(560px, 92vw); padding: 30px 34px 24px; text-align: center;
+  background: linear-gradient(180deg, rgba(10,18,23,.92), rgba(6,11,14,.92));
+  border: 1px solid #2c4048; border-top: 3px solid var(--accent, var(--rim));
+  border-radius: 16px; box-shadow: 0 30px 80px rgba(0,0,0,.55);
+  zoom: var(--ui-text, 1);
+}
+.brief-head { display: flex; justify-content: space-between; font-family: var(--round);
+  font-weight: 700; font-size: 11px; letter-spacing: .3em; color: var(--ink-2); }
+.brief-head #brief-idx { color: var(--accent, var(--rim)); }
+.brief-emblem { width: 96px; height: 96px; margin: 18px auto 6px; color: var(--accent, var(--rim));
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent, #6fd7e8) 55%, transparent)); }
+.brief-emblem svg { width: 100%; height: 100%; }
+.brief-name { margin: 0; font-family: var(--seg); font-weight: 400;
+  font-size: clamp(30px, 5.4vw, 48px); letter-spacing: .12em; text-indent: .12em; color: #f2fbfd;
+  text-shadow: 0 0 6px rgba(255,255,255,.5), 0 0 28px color-mix(in srgb, var(--accent, #6fd7e8) 60%, transparent); }
+.brief-line { margin: 12px auto 20px; max-width: 40ch; font-family: var(--prose); font-size: 15px;
+  line-height: 1.45; color: #cfe0e7; }
+.brief-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 22px; }
+.brief-facts div { display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px; background: #17242b; border: 1px solid #2c4048; border-radius: 9px; }
+.brief-facts span { font-family: var(--prose); font-size: var(--t-label); font-weight: 700;
+  letter-spacing: .1em; color: var(--ink-2); }
+.brief-facts b { font-family: var(--mono); font-weight: 400; font-size: 17px; color: #eaf6fa; }
+.brief-hint { margin: 14px 0 0; font-family: var(--round); font-weight: 600; font-size: 10px;
+  letter-spacing: .3em; color: var(--ink-3); }
+@media (max-width: 520px) { .brief-facts { grid-template-columns: 1fr; } }
+
+/* ======================= the rank ======================================== */
+/* The letter is stamped on once the figures have counted up. */
+.rank-stamp { display: grid; justify-items: center; gap: 6px; margin: -6px 0 18px;
+  opacity: 0; }
+.rank-stamp[hidden] { display: none; }
+.rank-stamp b {
+  display: grid; place-items: center; width: 92px; height: 92px;
+  /* not the segment face: its S is a 5 */
+  font-family: var(--round); font-weight: 700; font-size: 60px; line-height: 1;
+  border: 4px solid currentColor; border-radius: 14px; transform: rotate(-8deg);
+  text-shadow: 0 0 18px currentColor; box-shadow: 0 0 26px -6px currentColor, inset 0 0 18px -8px currentColor;
+}
+.rank-stamp .rank-s { color: #ffd27a; }
+.rank-stamp .rank-a { color: #8fe6f2; }
+.rank-stamp .rank-b { color: #a6e3b4; }
+.rank-stamp .rank-c { color: #b9c4c9; }
+.rank-stamp span { font-family: var(--round); font-weight: 700; font-size: 11px;
+  letter-spacing: .28em; color: var(--ink-2); }
+.rank-stamp em { font-style: normal; font-family: var(--round); font-weight: 700; font-size: 11px;
+  letter-spacing: .3em; color: #ffd27a; text-shadow: 0 0 12px rgba(255,190,80,.6); }
+.rank-stamp.on { opacity: 1; }
+.rank-stamp.on b { animation: rankStamp .42s cubic-bezier(.2,1.5,.4,1) both; }
+.rank-stamp.on span, .rank-stamp.on em { animation: riseIn .4s ease-out .25s both; }
+@keyframes rankStamp {
+  0%   { transform: scale(2.6) rotate(-20deg); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { transform: scale(1) rotate(-8deg); opacity: 1; }
+}
+.rm .rank-stamp.on b { animation: none; }

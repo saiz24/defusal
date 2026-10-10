@@ -87,6 +87,11 @@ function check(name, ok, info) {
     await cdp.sleep(2500);
     check('the first device is introduced by its scene', (await fe("DEFUSAL.cutscene.debug.state().seq")) === 'pre1' && await fe('DEFUSAL.cutscene.isActive()'));
     await hold();
+    check('then its briefing', (await fe('DEFUSAL.screenNow()')) === 'brief');
+    await cdp.sleep(600);
+    await f.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter' });
+    await f.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter' });
+    await cdp.sleep(1800);
     check('then the device arms', !(await fe("document.getElementById('screen-game').hidden")));
     await f.send('Page.reload'); await cdp.sleep(3000);
     check('the prologue does not play twice', !(await fe('DEFUSAL.cutscene.isActive()')));
