@@ -316,7 +316,7 @@
 
   /* a canvas the size of a bay's body: 268 square, or 580 wide */
   function stageFor(host, def) {
-    return M.stage(host, def.wide ? 580 : 268, 268);
+    return M.stage(host, def.wide ? 580 : 268, 268, true);
   }
 
   D.module3dKit = { source: source, panel: panel, svgTexture: svgTexture, shapeBox: shapeBox,

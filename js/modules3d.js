@@ -25,7 +25,7 @@
          two later, one module per frame, under the arming animation */
       M.defer(function () {
         if (!view.canvas.isConnected) return;
-        try { fn(view, src, inst, def); view.invalidate(); }
+        try { fn(view, src, inst, def); view.ready(); }
         catch (e) {
           /* a 3D view that fails falls back to the 2D one, which still works */
           if (window.console) console.error('module3d ' + id, e);

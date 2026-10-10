@@ -385,11 +385,34 @@ eight modules where they sit on the angled case, without leaning in.
 
 Measured in the desktop app with an eight-module device: idle, cursor lean,
 drag-turn and settle, turning over and back, leaning in and out all run at
-60 fps (no frame over 18.7 ms). Arming the device: worst frame 232–267 ms,
-against 269–285 ms on the build before — the round's own set-up (about 215
-ms of script) is most of it, and was there already. The room is now built
-and drawn once while the game idles at its menus, so its shaders are not
-compiled in the middle of arming.
+60 fps (no frame over 17.8 ms).
+
+**Arming, made seamless.** Recorded frame by frame in the desktop app and
+profiled, arming had three kinds of stall and two visible faults:
+
+* Shaders compiled on first draw (~100 ms): each module's shaders are now
+  compiled in the background (`compileAsync`, the GPU's parallel compile)
+  and the bay keeps its 2D view until the 3D one is ready, then fades it in
+  (about 0.4 s after arming, under the transition cover). three.js reading
+  back every shader's log, which makes each compile synchronous, is off
+  outside `?debug=1`. The room is built, sized and drawn once while idle.
+* Canvas reallocations (~60 ms): the room's warm-up now sizes its canvas
+  exactly as the game screen will be, pixel ratio included; the shared
+  module buffer is made big enough once instead of grown on first draws.
+* Style and layout reads (~50 ms): the module cameras keep the static part
+  of their transform chain and share the moving part per frame; the room
+  keeps the screen size from a `ResizeObserver` instead of reading it.
+* Modules popping in out of blank bays one by one: fixed by the above.
+* The edge of the world: the room scales with the case, so the arming
+  pull-back showed past the wall and desk into black. The room is far
+  bigger now, with a floor.
+
+The round's own set-up (dealing eight modules and building their 2D views,
+~100 ms) still runs in one frame, but the transition cover now stays shut
+until two quick frames in a row (at most 0.7 s), so that frame and the first
+3D draws fall on a still, covered screen and the reveal plays on free
+frames. Worst frame at arming: 100–117 ms, on a covered screen (it was
+230–285 ms, mid-reveal).
 
 It follows the cutscenes' rules — flat toon tones, haze with distance, glow
 only on the lamp — and redraws only when the case or the window actually

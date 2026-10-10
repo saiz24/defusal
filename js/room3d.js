@@ -104,16 +104,24 @@
     room = new T.Group();
     var deskY = -chh / 2 - RIM - FEET;
 
-    /* the desk: a long top and a front edge, wood in two flat tones */
-    var top = shadowed(new T.Mesh(new T.BoxGeometry(cw * 4, 40, cw * 1.6), toon('#9a6a44')));
-    top.position.set(0, deskY - 20, -cw * 0.3);
+    /* The desk: a long top and a front edge, wood in two flat tones. The
+       room is far bigger than the frame: the room scales with the case, and
+       when the case is pulled back as it arms, a smaller room showed its
+       edges and the black beyond them. */
+    var top = shadowed(new T.Mesh(new T.BoxGeometry(cw * 16, 40, cw * 6.5), toon('#9a6a44')));
+    top.position.set(0, deskY - 20, cw * 0.5 - cw * 3.25);
     room.add(top);
-    var lip = new T.Mesh(new T.BoxGeometry(cw * 4, 120, 30), toon('#6a4630'));
+    var lip = new T.Mesh(new T.BoxGeometry(cw * 16, 120, 30), toon('#6a4630'));
     lip.position.set(0, deskY - 100, cw * 0.5);
     room.add(lip);
+    /* the floor, a long way down, for when the view tips far enough to see it */
+    var floor = new T.Mesh(new T.PlaneGeometry(cw * 30, cw * 30), toon('#1d1712'));
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(0, deskY - cw * 0.45, 0);
+    room.add(floor);
 
     /* the wall behind, far enough back that the haze takes it */
-    var wall = new T.Mesh(new T.PlaneGeometry(cw * 8, cw * 4), toon('#43535f'));
+    var wall = new T.Mesh(new T.PlaneGeometry(cw * 30, cw * 14), toon('#43535f'));
     wall.position.set(0, deskY + cw * 1.2, -cw * 1.1);
     wall.receiveShadow = true;
     room.add(wall);
@@ -237,9 +245,21 @@
     camera.updateProjectionMatrix();
   }
 
+  /* The deck's size, kept by an observer: read from the page every frame it
+     forced a layout in the middle of the arming animation (~20 ms). */
+  var deckW = 0, deckH = 0, sizer = null;
+  function watchDeck() {
+    if (sizer || !window.ResizeObserver) return;
+    sizer = new ResizeObserver(function (list) {
+      var r = list[list.length - 1].contentRect;
+      deckW = Math.round(r.width); deckH = Math.round(r.height);
+    });
+    sizer.observe(deck);
+  }
   function resize() {
     if (!renderer) return;
-    var w = deck.clientWidth || window.innerWidth, h = deck.clientHeight || window.innerHeight;
+    var w = deckW || (sizer ? 0 : deck.clientWidth) || window.innerWidth;
+    var h = deckH || (sizer ? 0 : deck.clientHeight) || window.innerHeight;
     if (w === W && h === H) return;
     W = w; H = h;
     var dpr = Math.min(window.devicePixelRatio || 1, quality === 'lite' ? 1 : 2);
@@ -311,6 +331,7 @@
   function setup() {
     T = window.THREE;
     deck = document.getElementById('screen-game');
+    watchDeck();
     bombEl = document.getElementById('bomb');
     flipEl = document.getElementById('flipper');
     if (!deck || !bombEl || !flipEl) return false;
@@ -323,6 +344,7 @@
     } catch (e) { canvas.remove(); return false; }
     renderer.toneMapping = T.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
+    renderer.debug.checkShaderErrors = /[?&]debug=1/.test(location.search);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = quality === 'lite' ? T.PCFShadowMap : T.PCFSoftShadowMap;
     scene = new T.Scene();
@@ -376,13 +398,15 @@
     var go = function () {
       if (!renderer || built) return;
       var t0 = performance.now();
-      W = window.innerWidth || 1280; H = window.innerHeight || 720;
-      renderer.setSize(W, H, false);
-      fitCamera();
+      /* sized exactly as the game screen will be (its pixel ratio too), so
+         arming does not reallocate the canvas */
+      resize();
       buildRoom(1724, 938, D.caseDepth || 300);
       paintSerial('');
       if (composer) composer.render(); else renderer.render(scene, camera);
-      W = H = 0; built = ''; lastKey = '';
+      /* the size stays: the deck is the window's size, and setting it again
+         on arming reallocated the canvas in the middle of the zoom */
+      built = ''; lastKey = '';
       if (window.__m3dProf) window.__m3dProf.push(['room warm', Math.round(performance.now() - t0), Math.round(t0)]);
     };
     if (window.requestIdleCallback) window.requestIdleCallback(go, { timeout: 4000 }); else setTimeout(go, 1200);

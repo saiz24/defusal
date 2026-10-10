@@ -68,6 +68,7 @@
     document.getElementById('shell-bg').appendChild(canvas);
     var lite = D.prefs && D.prefs.get('room') === 'lite';
     renderer = new T.WebGLRenderer({ canvas: canvas, antialias: !lite });
+    renderer.debug.checkShaderErrors = /[?&]debug=1/.test(location.search);
     renderer.toneMapping = T.ACESFilmicToneMapping;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = lite ? T.PCFShadowMap : T.PCFSoftShadowMap;

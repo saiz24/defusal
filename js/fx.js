@@ -171,13 +171,29 @@
 
     var covered = false, ended = false, t1 = 0, t2 = 0;
 
+    /* The page changes behind the closed cover, and a change can be heavy
+       — arming a device builds its modules, draws them for the first time
+       and lights the room. Opening at once played those slow frames during
+       the reveal, which stuttered. So the cover stays shut until two frames
+       in a row come in quick (never more than 0.7 s), and the reveal then
+       plays on frames that are free. */
     function cover() {
       if (covered) return;
       covered = true;
       hold();
-      n.classList.remove('close');
-      void n.offsetWidth;
-      n.classList.add('open');
+      var last = 0, calm = 0, since = performance.now();
+      var open = function () {
+        if (ended) return;
+        n.classList.remove('close');
+        void n.offsetWidth;
+        n.classList.add('open');
+      };
+      (function settle(t) {
+        if (last && t - last < 24) calm++; else calm = 0;
+        last = t;
+        if (calm >= 2 || performance.now() - since > 700) open();
+        else window.requestAnimationFrame(settle);
+      })(0);
     }
 
     /* Every exit goes through here, exactly once, and it takes the listener

@@ -80,7 +80,10 @@ const ALL = ['rationality', 'triangles', 'parallel', 'venn', 'angles', 'sequence
     await cdp.sleep(4500);
     if (await ev("!!__bay.closest('.face.back')")) { await ev("document.querySelector('[data-flip]').click()"); await cdp.sleep(1400); }
     check(id + ': 3D version mounted', await ev("!!__bay.querySelector('canvas.m3d')"));
-    await cdp.sleep(600);
+    /* the 2D view shows until the 3D one is built and its shaders compiled
+       in the background — slow on software WebGL, so wait for it */
+    for (let i = 0; i < 60 && await ev("!!__bay.querySelector('.m3d-pending')"); i++) await cdp.sleep(200);
+    await cdp.sleep(300);
     const drawn = await ev(`(function(){var c=__bay.querySelector('canvas.m3d'); if(!c) return 0; var x=c.getContext('2d').getImageData(0,0,c.width,c.height).data,n=0;for(var i=3;i<x.length;i+=16)if(x[i]>0)n++;return n;})()`);
     check(id + ': drawn', drawn > 1000, drawn + ' samples');
     /* M3D_REST=1 plays it where it sits, on the case turned and tipped at

@@ -308,6 +308,7 @@
       var k = keys.filter(function (x) { return x.userData.colour === colour; })[0];
       return k ? view.screenOf(k) : null;
     };
+    view.ready();
   }
 
   D.register({

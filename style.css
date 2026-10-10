@@ -2710,8 +2710,11 @@ body.room3d .panel .strip {
    any panel and takes the presses itself */
 canvas.m3d { display: block; touch-action: manipulation; }
 /* the 2D view a 3D module presents: still mounted, still the source of
-   truth, never shown */
+   truth, shown only while the 3D view is being built over it */
 .m3d-src { display: none !important; }
+.m3d-pending > .m3d-src { display: block !important; position: absolute; left: 0; top: 0; right: 0; }
+.m3d-pending > canvas.m3d { opacity: 0; }
+canvas.m3d { transition: opacity .28s ease-out; }
 .body.m3d-host { position: relative; }
 /* the original text boxes, set into the module's 3D slots */
 .m3d-layer { position: absolute; pointer-events: none; }

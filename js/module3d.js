@@ -37,6 +37,9 @@
     try {
       T = window.THREE;
       renderer = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+      /* reading back each shader's log makes every compile synchronous;
+         only a debug run needs it */
+      renderer.debug.checkShaderErrors = /[?&]debug=1/.test(location.search);
       renderer.setClearColor(0x000000, 0);
       renderer.toneMapping = T.NoToneMapping;
       prewarm();
@@ -100,11 +103,16 @@
        new T.MeshBasicMaterial({ map: tex }), new T.MeshBasicMaterial({ color: '#fff', transparent: true, opacity: 0.5 }),
        new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false })]
         .forEach(function (m) { sc.add(new T.Mesh(g, m)); });
-      renderer.setSize(8, 8, false);
-      /* it can run after modules have drawn (it waits for an idle moment):
-         the buffer is 8x8 now, and every draw has to know that, or each
-         one renders into eight pixels and copies out nothing */
-      BUF.w = 8; BUF.h = 8;
+      /* The shared buffer is made the size a module needs drawn at up to
+         twice its size, once, here: grown on the first draws instead, it was
+         reallocated several times while a device armed. It can run after
+         modules have drawn (it waits for an idle moment), so the size it
+         leaves is recorded, or each draw would copy from the wrong place. */
+      var bw = Math.max(BUF.w, 1200), bh = Math.max(BUF.h, 600);
+      renderer.setPixelRatio(1);
+      renderer.setSize(bw, bh, false);
+      BUF.w = bw; BUF.h = bh;
+      renderer.setViewport(0, 0, 8, 8);
       renderer.compile(sc, cam);
       renderer.render(sc, cam);
       views.forEach(function (v) { v.dirty = true; });
@@ -142,8 +150,13 @@
      looks straight at the bay with a long lens, so the module's face plane
      (z = 0) maps exactly onto the canvas, x right and y DOWN as in the page,
      and anything raised off the face is seen with a little depth. */
-  function stage(host, w, h) {
+  function stage(host, w, h, deferred) {
     if (!ok()) return null;
+    /* Until the 3D view is built and drawn, the bay shows the module's 2D
+       view instead of an empty hole: a device arms with up to eight modules
+       and they are built one per frame, so they used to pop in one by one
+       out of blank bays. The 3D view fades in over the 2D one when ready. */
+    host.classList.add('m3d-host', 'm3d-pending');
     var canvas = document.createElement('canvas');
     canvas.className = 'm3d';
     canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
@@ -160,7 +173,17 @@
     var root = new T.Group(); scene.add(root);
 
     var view = {
-      canvas: canvas, scene: scene, camera: camera, root: root, w: w, h: h,
+      canvas: canvas, scene: scene, camera: camera, root: root, w: w, h: h, host: host, built: false,
+      /* The module says when its parts are in. Its shaders are then compiled
+         in the background (the GPU's parallel compile, where there is one)
+         and only then is it drawn and shown: compiling them on first draw
+         was ~100 ms of stall while a device armed. Until then the bay keeps
+         its 2D view. */
+      ready: function () {
+        var done = function () { view.built = true; view.invalidate(); };
+        if (renderer.compileAsync) renderer.compileAsync(scene, camera).then(done, done);
+        else done();
+      },
       dirty: true, animating: 0, scale: 0, hits: [], hover: null,
       /* place a part at page-style coordinates (x right, y down) */
       at: function (obj, x, y, z) { obj.position.set(x, -y, z || 0); root.add(obj); return obj; },
@@ -194,7 +217,7 @@
         var r = canvas.getBoundingClientRect();
         return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
       },
-      destroy: function () { views = views.filter(function (x) { return x !== view; }); canvas.remove(); }
+      destroy: function () { views = views.filter(function (x) { return x !== view; }); canvas.remove(); host.classList.remove('m3d-pending'); }
     };
 
     /* Pointer: offsetX/Y are in the canvas's own coordinates even when the
@@ -231,16 +254,28 @@
      canvas on the bay the parallax is exactly right. A press needs nothing
      new: the ray through a point of the canvas is the same ray it was drawn
      with. */
-  var sceneKey = '';
+  /* The chain from a canvas to the deck is long, and every link is a style
+     read. Most of it never moves: from the canvas up to its face is layout
+     and the bay's own transform (which changes only when it is leaned in on).
+     That part is kept per view; the three links that do move — the face, the
+     flipper, the case — are read once a frame for each face and shared. */
+  var sceneKey = '', frameFaces = null, frameEye = null, frameDeck = null;
   function portal(view) {
     var deck = view.canvas.closest('#screen-game');
     if (!deck) return false;
-    var bay = view.canvas.closest('.bay');
-    var key = sceneKey + '|' + (bay ? getComputedStyle(bay).transform : '');
+    var bay = view.canvas.closest('.bay'), face = view.canvas.closest('.face');
+    if (!face) return false;
+    var bayKey = bay ? getComputedStyle(bay).transform + bay.offsetLeft + ',' + bay.offsetTop : '';
+    var key = sceneKey + '|' + bayKey;
     if (key === view.portalKey) return false;
     view.portalKey = key;
-    var m = D.cssChain(view.canvas, deck), eye = D.cssEye(deck);
-    if (!m || !eye) return false;
+    if (view.innerKey !== bayKey || !view.inner) { view.inner = D.cssChain(view.canvas, face); view.innerKey = bayKey; }
+    if (frameDeck !== deck) { frameDeck = deck; frameFaces = new Map(); frameEye = D.cssEye(deck); }
+    var outer = frameFaces.get(face);
+    if (outer === undefined) { outer = D.cssChain(face, deck); frameFaces.set(face, outer); }
+    var eye = frameEye;
+    if (!view.inner || !outer || !eye) return false;
+    var m = outer.multiply(view.inner);
     view.toDeck = m; view.eye = eye;
     var e = m.inverse().transformPoint(new DOMPoint(eye.x, eye.y, eye.z, 1));
     if (!e.w) return false;
@@ -298,6 +333,7 @@
     view.dirty = false;
     prof('draw' + (view.drawn ? '' : '-first'), t0);
     view.drawn = true;
+    if (view.built && !view.shown) { view.shown = true; view.host.classList.remove('m3d-pending'); }
   }
 
   /* Each frame draws only what fits in a few milliseconds. A zoom asks
@@ -316,6 +352,7 @@
     var arming = !!document.querySelector('.bomb.arming-zoom, .casing.arming');
     var bomb = document.getElementById('bomb'), flipper = document.getElementById('flipper');
     sceneKey = bomb && flipper ? getComputedStyle(bomb).transform + '|' + getComputedStyle(flipper).transform : '';
+    frameDeck = null;            /* the shared outer links are read afresh each frame */
     views.forEach(function (v) {
       if (portal(v)) { v.dirty = true; more = true; }
       var want = wantScale(v);
