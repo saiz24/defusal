@@ -27,23 +27,61 @@ const INDEX = path.join(GAME_DIR, 'index.html');
 const MANUAL_PDF = path.join(GAME_DIR, 'manual', 'manual.pdf');
 
 let win = null;
+const isMac = process.platform === 'darwin';
+
+/* Where the window was and how big, so the game opens where it was left.
+   Kept in the app's own data folder beside the game's saved progress. */
+const BOUNDS_FILE = () => path.join(app.getPath('userData'), 'window.json');
+
+function loadBounds() {
+  try {
+    const b = JSON.parse(fs.readFileSync(BOUNDS_FILE(), 'utf8'));
+    /* only if it still lands on a display that is plugged in */
+    const onScreen = screen.getAllDisplays().some(d => {
+      const a = d.workArea;
+      return b.x >= a.x - 40 && b.y >= a.y - 40 &&
+             b.x + 200 <= a.x + a.width && b.y + 100 <= a.y + a.height;
+    });
+    if (onScreen && b.width >= 900 && b.height >= 600) return b;
+  } catch (e) { /* first run, or unreadable: fall back to the default size */ }
+  return null;
+}
+
+function saveBounds() {
+  if (!win || win.isDestroyed()) return;
+  try {
+    const b = win.getNormalBounds();
+    b.fullScreen = win.isFullScreen();
+    b.maximized = win.isMaximized();
+    fs.writeFileSync(BOUNDS_FILE(), JSON.stringify(b));
+  } catch (e) { /* not worth stopping a quit over */ }
+}
 
 function createWindow() {
   /* The casing is laid out at 1724x938 and scaled to fit, so open near that
      when the display allows and fall back gracefully on a small laptop. */
   const area = screen.getPrimaryDisplay().workAreaSize;
-  const width = Math.min(1440, Math.max(1024, area.width - 80));
-  const height = Math.min(900, Math.max(640, area.height - 80));
+  const saved = loadBounds();
+  const width = saved ? saved.width : Math.min(1440, Math.max(1024, area.width - 80));
+  const height = saved ? saved.height : Math.min(900, Math.max(640, area.height - 80));
 
   win = new BrowserWindow({
     width,
     height,
+    ...(saved ? { x: saved.x, y: saved.y } : {}),
     minWidth: 900,
     minHeight: 600,
-    backgroundColor: '#0b1115',
+    /* black, like the splash the game opens on, so launching is one fade */
+    backgroundColor: '#000000',
     title: 'MATHEMATICKS',
     show: false,
     autoHideMenuBar: true,
+    /* No title bar: the game is drawn edge to edge, and a strip along its
+       top drags the window. The Mac keeps its three lights, inset; Windows
+       and Linux keep the system's own buttons, drawn over the corner. */
+    titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
+    ...(isMac ? { trafficLightPosition: { x: 16, y: 14 } }
+              : { titleBarOverlay: { color: '#00000000', symbolColor: '#cfe0e7', height: 32 } }),
     icon: process.platform === 'linux'
       ? path.join(__dirname, 'build', 'icon.png')
       : undefined,
@@ -57,7 +95,18 @@ function createWindow() {
   });
 
   /* Avoid the white flash while the first paint happens. */
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => {
+    if (saved && saved.maximized) win.maximize();
+    if (saved && saved.fullScreen) win.setFullScreen(true);
+    win.show();
+  });
+  /* saved as it changes, not only on close: QUIT on the game's own menu
+     closes the window from the page, and that path skips 'close' */
+  let pending = null;
+  const later = () => { clearTimeout(pending); pending = setTimeout(saveBounds, 400); };
+  ['resize', 'move', 'maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']
+    .forEach(ev => win.on(ev, later));
+  win.on('close', saveBounds);
 
   win.loadFile(INDEX);
 
@@ -98,8 +147,16 @@ if (!app.requestSingleInstanceLock()) {
   });
 }
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+/* A game, not a document app: closing its window (or QUIT on its main
+   menu) ends it on every platform, rather than leaving it in the Mac's Dock
+   with nothing open. */
+app.on('window-all-closed', () => app.quit());
+
+app.setAboutPanelOptions({
+  applicationName: 'MATHEMATICKS',
+  applicationVersion: app.getVersion(),
+  version: '',
+  copyright: 'A two-player co-op mathematics game.'
 });
 
 /* ---------------------------------------------------------------------------
@@ -123,8 +180,6 @@ function openPrintedManual() {
 }
 
 function buildMenu() {
-  const isMac = process.platform === 'darwin';
-
   const template = [
     ...(isMac ? [{
       label: app.name,

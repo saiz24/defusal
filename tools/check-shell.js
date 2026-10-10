@@ -21,6 +21,8 @@ function check(name, ok, info) {
   /* wait for a screen rather than a fixed time: software WebGL is slow */
   const waitFor = async (name, ms) => { for (let t = 0; t < (ms || 9000); t += 200) { if ((await at()) === name) return true; await cdp.sleep(200); } return false; };
 
+  const pkg = require(path.join(__dirname, '..', 'desktop', 'package.json'));
+  check('the game and the desktop app carry the same version', (await ev('DEFUSAL.VERSION')) === pkg.version, pkg.version);
   check('a plain address opens on the splash', !(await ev("document.getElementById('splash').hidden")));
   await cdp.sleep(3200);
   check('first visit: the prologue plays', await ev('DEFUSAL.cutscene.isActive()'));

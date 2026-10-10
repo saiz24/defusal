@@ -8,6 +8,10 @@
 var DEFUSAL = (function () {
   var D = {};
 
+  /* The one place the version lives for the game. desktop/package.json must
+     carry the same number; tools/check-shell.js fails if they drift. */
+  D.VERSION = '1.2.0';
+
   /* ---------- seeded RNG (mulberry32) ------------------------------------ */
 
   D.makeRng = function (seed) {

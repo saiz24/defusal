@@ -57,7 +57,20 @@ judges. **Install and launch it once on the presentation machine beforehand.**
 `main.js` is deliberately small:
 
 - Opens one window sized to the display, minimum 900×600, and shows it only
-  once the first frame is painted so there is no white flash.
+  once the first frame is painted. Its background is black, like the splash
+  the game opens on, so launching is one fade rather than a flash.
+- **No title bar.** The game is drawn edge to edge. A 30 px strip along the
+  top drags the window; every button, key and module stays clickable (they
+  are styled `-webkit-app-region: no-drag`). On a Mac the three window lights
+  sit inset at the top left; on Windows and Linux the system's own buttons
+  are drawn over the top right. The game moves the controls that sat in
+  those corners (`body.desktop-mac` / `body.desktop-win` in `style.css`).
+- **Remembers the window**: size, position, maximised and fullscreen, saved
+  to `window.json` in the app's data folder as they change and restored on
+  the next launch if that spot is still on a connected display.
+- **Closing the window quits the app**, on every platform, including QUIT on
+  the game's main menu. It is a game, not a document app; on a Mac it no
+  longer lingers in the Dock with nothing open.
 - Loads `index.html` from disk. No server, no network, nothing to configure.
 - Runs the page with Node disabled, context isolation on, and the sandbox
   enabled. The game asks the network for nothing, so navigation away from the
@@ -94,7 +107,24 @@ moved, and then you relaunch it.
 
 ## Changing the version or the name
 
-Both live in `package.json`. `version` appears in the installer filename;
-`productName` is what the installed app is called. The icon is
-`build/icon.png` — replace that single 512×512 file and the build tools derive
-the Windows `.ico` and macOS `.icns` from it automatically.
+`version` lives in `package.json` **and** in `js/core.js` (`D.VERSION`, shown
+on the title screen and in About). They must match: `tools/check-shell.js`
+fails if they drift. `version` appears in the installer filename;
+`productName` is what the installed app is called.
+
+The icon is drawn by `tools/make-icons.sh`, which writes the web icons and
+`build/icon.png` (1024 px, on the macOS icon grid: a rounded square with a
+margin, so it sits right in the Dock). The build tools derive the Windows
+`.ico` and macOS `.icns` from that one file.
+
+## Installing a new build over the old one
+
+`npm run dist:mac` builds both Mac architectures; `npx electron-builder --mac
+dmg --arm64` builds only Apple silicon, faster. The app is in
+`dist/mac-arm64/`. Quit the old app and replace `/Applications/MATHEMATICKS.app`
+with it. Saved progress is kept: it lives in the app's data folder
+(`~/Library/Application Support/MATHEMATICKS`), not inside the app.
+
+If `npm install` warns that Electron's install script was not run (npm's
+`allowScripts` policy), packaging still works — electron-builder downloads
+its own copy. Only `npm start` needs it.

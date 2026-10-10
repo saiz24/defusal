@@ -2787,6 +2787,20 @@ body.shell-3d .backdrop { visibility: hidden; }
 }
 .corner-back:hover { color: #fff; border-color: var(--rim); }
 
+/* the desktop window: no title bar, a drag strip along the top, and the
+   corner controls kept clear of the window's own buttons */
+#drag-strip { display: none; }
+body.desktop #drag-strip { display: block; position: fixed; top: 0; left: 0; right: 0; height: 30px;
+  z-index: 2147483000; -webkit-app-region: drag; }
+body.desktop button, body.desktop input, body.desktop select, body.desktop a,
+body.desktop label, body.desktop canvas.m3d, body.desktop .bay, body.desktop .card,
+body.desktop .mm-item { -webkit-app-region: no-drag; }
+body.desktop-mac .corner-back { left: 92px; }
+/* the case's own buttons share .flip-btn, so each is moved down by name */
+body.desktop-win .flip-btn { top: 46px; }
+body.desktop-win .wide-btn { top: 106px; }
+body.desktop-win .pause-btn { top: 166px; }
+
 /* pause */
 .pause-btn { top: 142px; }
 .pause-btn svg path { stroke-width: 3.2; }

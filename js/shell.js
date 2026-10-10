@@ -29,6 +29,23 @@
 
   function q(id) { return document.getElementById(id); }
 
+  /* ---- the desktop window has no title bar ------------------------------
+     The app draws edge to edge. A strip along the top drags the window, and
+     every control keeps its clicks (styled no-drag). On a Mac the window's
+     three lights sit inset at the top left; on Windows and Linux the system's
+     own buttons sit at the top right — controls in those corners move out of
+     their way (style.css, body.desktop-*). */
+  function desktopChrome() {
+    if (!ELECTRON) return;
+    var mac = /Macintosh|Mac OS X/.test(navigator.userAgent);
+    document.body.classList.add('desktop', mac ? 'desktop-mac' : 'desktop-win');
+    var strip = document.createElement('div');
+    strip.id = 'drag-strip';
+    strip.setAttribute('aria-hidden', 'true');
+    /* first in the body: a later no-drag control wins over it */
+    document.body.insertBefore(strip, document.body.firstChild);
+  }
+
   /* ---- the backdrop behind title and menu ------------------------------ */
   function backdrop(which) {
     var on = which === 'title' || which === 'main';
@@ -155,8 +172,9 @@
       node.quit = q('mm-quit');
       node.carouselBack = q('menu-back');
       if (!node.menu) return;
+      desktopChrome();
       node.version = q('shell-version');
-      if (node.version) node.version.textContent = 'v' + (D.VERSION || '1.2');
+      if (node.version) node.version.textContent = 'v' + D.VERSION;
 
       [].forEach.call(node.menu.querySelectorAll('.mm-item'), function (b) {
         b.addEventListener('mouseenter', function () { var i = items.indexOf(b); if (i >= 0 && i !== sel) select(i); });

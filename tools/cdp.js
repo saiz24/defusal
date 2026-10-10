@@ -31,6 +31,10 @@ async function open(url, opts) {
     '--remote-debugging-port=' + port, '--user-data-dir=' + dir,
     '--window-size=' + (opts.w || 1440) + ',' + (opts.h || 900), 'about:blank'
   ], { stdio: 'ignore' });
+  /* a check that throws never reaches close(): without this its browser
+     outlives it, burns a core on software WebGL, and the next 3D check on
+     the machine fails for want of frames */
+  process.on('exit', () => { try { proc.kill(); } catch (e) {} });
 
   let target;
   for (let i = 0; i < 80 && !target; i++) {
