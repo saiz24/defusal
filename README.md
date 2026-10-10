@@ -506,9 +506,9 @@ centred title shot to a menu shot with the case on the right. Only things
 that glow by themselves bloom. Without WebGL, or with 3D ROOM off, the 2D sky
 is behind them instead.
 
-**Pause.** Esc during a round, or the ‖ button, stops the clock and blurs the
-device: RESUME, RESTART DEVICE (the same device, full time again) and QUIT TO
-MENU.
+**No pause.** A device does not stop for anybody: there is no pause button,
+and Esc during a round only leans back out of a module. ABORT on the control
+strip leaves the round.
 
 Any address that asks for something specific (`?intro=0`, `?start=`, `?cs=`,
 `?modes=`, `?page=`, a mode, a role, `?seed=`, `?debug=`) skips the shell and
@@ -516,10 +516,10 @@ goes straight there as before, so the tests and bookmarks still land where they
 did.
 
 Measured in the desktop app on a fresh profile, every screen from splash to
-prologue, first device, pause, main menu, title and carousel: no frame over
+prologue, first device, main menu, title and carousel: no frame over
 17.8 ms. `node tools/check-shell.js` (add `CDP_GL=1` for the 3D desk) walks the
 whole flow: splash, prologue once, title, menu keys, every menu entry and back,
-pause, restart and quit.
+that Esc does not pause a round, and ABORT.
 
 ## Before and after a device
 
@@ -527,7 +527,7 @@ pause, restart and quit.
 the case: which device it is, its name and emblem in its own colour, how many
 modules, how long, two strikes allowed, the mode, the best this pair has done
 on it, and one line of advice. ARM DEVICE (Enter) or BACK (Esc). TRY AGAIN, a
-restart from the pause, a typed code and practice go straight to the case.
+typed code and practice go straight to the case.
 
 **The rank.** A defused device earns a letter, stamped on once the figures
 have counted up. Points are the share of the clock left, less 20 for each

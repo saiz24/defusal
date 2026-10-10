@@ -2,9 +2,8 @@
    The way into the game and back out of it: the splash, the prologue on a
    first visit only, the title, PRESS ANY KEY, the main menu with the
    keyboard, each of its doors and the way back from them, settings
-   returning where they were opened from, and the pause: Esc stops the
-   clock and covers the device, RESUME runs it again, RESTART deals the same
-   device, QUIT goes to the menu. Run with CDP_GL=1 for the 3D desk. */
+   returning where they were opened from, and a round: Esc does not pause
+   it (there is no pause), ABORT leaves it. Run with CDP_GL=1 for the 3D desk. */
 'use strict';
 const cdp = require('./cdp.js'), path = require('path');
 const URL = 'file://' + path.join(__dirname, '..', 'index.html');
@@ -27,8 +26,7 @@ function check(name, ok, info) {
   await cdp.sleep(3200);
   check('first visit: the prologue plays', await ev('DEFUSAL.cutscene.isActive()'));
   await ev('DEFUSAL.cutscene.skip()');
-  await cdp.sleep(1500);
-  check('...and hands over the mode screen', (await at()) === 'mode');
+  check('...and hands over the mode screen', await waitFor('mode'));
 
   /* a returning player: reload, splash, title */
   await p.send('Page.reload'); await cdp.sleep(1500);
@@ -66,7 +64,7 @@ function check(name, ok, info) {
   await ev("document.getElementById('mode-confirm').click()");
   check('...and CONTINUE returns to the main menu', await waitFor('main'));
 
-  /* the pause, on a real device: CAMPAIGN, then ENGAGE on device 1 */
+  /* a real device: CAMPAIGN, then ENGAGE on device 1 */
   await ev("document.querySelector('[data-go=campaign]').click()"); await cdp.sleep(1400);
   await ev("document.querySelectorAll('#sel-track .card')[0].querySelector('.key.go, button.go, .go').click()"); await cdp.sleep(2500);
   if (await ev('DEFUSAL.cutscene.isActive()')) { await ev('DEFUSAL.cutscene.skip()'); }
@@ -79,20 +77,13 @@ function check(name, ok, info) {
   await cdp.sleep(5500);
   check('a device is armed', (await at()) === 'game');
   const clock = () => ev("document.querySelector('.face.front .lcd').textContent");
-  await key('Escape', 'Escape'); await cdp.sleep(300);
-  check('Esc pauses', await ev('DEFUSAL.isPaused()') && !(await ev("document.getElementById('pause').hidden")));
-  const c0 = await clock(); await cdp.sleep(2600); const c1 = await clock();
-  check('the clock is stopped while paused', c0 === c1, c0 + ' / ' + c1);
+  /* there is no pause: Esc does not stop the clock, and there is no button */
+  const c0 = await clock();
   await key('Escape', 'Escape'); await cdp.sleep(2300);
-  check('Esc again resumes, and the clock runs', !(await ev('DEFUSAL.isPaused()')) && (await clock()) !== c1);
-  await ev("document.getElementById('pause-btn').click()"); await cdp.sleep(300);
-  check('the pause button pauses too', await ev('DEFUSAL.isPaused()'));
-  const serial0 = await ev("document.querySelector('.face.front .plate').textContent");
-  await ev("document.getElementById('pause-restart').click()"); await cdp.sleep(6500);
-  check('RESTART deals the same device again', (await ev("document.querySelector('.face.front .plate').textContent")) === serial0 && !(await ev('DEFUSAL.isPaused()')));
-  await ev("document.getElementById('pause-btn').click()"); await cdp.sleep(300);
-  await ev("document.getElementById('pause-quit').click()"); await cdp.sleep(2000);
-  check('QUIT TO MENU leaves the round', (await at()) === 'menu' && !(await ev("document.body.classList.contains('paused')")));
+  check('Esc does not pause: the clock runs on', (await clock()) !== c0, c0 + ' / ' + await clock());
+  check('no pause button, no pause sheet', await ev("!document.getElementById('pause-btn') && !document.getElementById('pause')"));
+  await ev("document.querySelector('.face.front .abort').click()"); await cdp.sleep(2500);
+  check('ABORT leaves the round', (await at()) === 'menu');
 
   const ex = p.logs.filter(l => /EXCEPTION/.test(l));
   check('no exceptions', ex.length === 0, ex.slice(0, 3).join(' | '));

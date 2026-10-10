@@ -2138,32 +2138,9 @@
     }
   }
 
-  /* ---- pause -----------------------------------------------------------
-     The clock stops, queued beeps are silenced, the case is hidden behind
-     the pause sheet (no solving while the clock is stopped), and on resume
-     the clock picks up exactly where it was. */
-  function togglePause(force) {
-    if (!state || !state.running) return;
-    var to = force === undefined ? !state.paused : !!force;
-    if (to === !!state.paused) return;
-    state.paused = to;
-    if (to) { D.audio.stopBeeps(); clearFocus(true); }
-    else { state.last = Date.now(); }
-    document.body.classList.toggle('paused', to);
-    var sheet = document.getElementById('pause');
-    if (sheet) {
-      sheet.hidden = !to;
-      if (to) { var first = sheet.querySelector('button'); if (first) first.focus(); }
-    }
-    D.audio.click();
-  }
-  D.pause = togglePause;
-  D.isPaused = function () { return !!(state && state.paused); };
-
   function tick() {
     if (!state || !state.running) return;
     var now = Date.now();
-    if (state.paused) { state.last = now; return; }
     if (now < state.armingUntil) {   /* still powering up */
       state.last = now;
       renderTimer();
@@ -2382,8 +2359,6 @@
 
   function teardown() {
     clearFocus(true);
-    document.body.classList.remove('paused');
-    var pz = document.getElementById('pause'); if (pz) pz.hidden = true;
     dom.bomb.classList.remove('arming', 'arming-zoom');
     armFactor = 1; armTilt = 0; tiltX = 0; tiltY = 0; turnX = 0; turnY = 0;
     if (dom.bomb) applyBombTransform();
@@ -2839,23 +2814,6 @@
       D.audio.click(); teardown(); D.showMenu(e);
     });
 
-    /* the pause sheet: carry on, start this same device again from full
-       time, or leave it */
-    q('pause-resume').addEventListener('click', function () { togglePause(false); });
-    q('pause-restart').addEventListener('click', function (e) {
-      if (!state) return;
-      var cfg = {};
-      Object.keys(state.config).forEach(function (k) { cfg[k] = state.config[k]; });
-      cfg.seed = state.seed;
-      togglePause(false);
-      cutTo(e, '#0a1318', function () { start(cfg); });
-    });
-    q('pause-quit').addEventListener('click', function (e) {
-      togglePause(false);
-      D.audio.powerdown();
-      cutTo(e, '#070d11', function () { teardown(); D.showMenu(); });
-    });
-    q('pause-btn').addEventListener('click', function () { togglePause(); });
     q('brief-arm').addEventListener('click', armBriefed);
     q('brief-back').addEventListener('click', leaveBrief);
 
@@ -2953,7 +2911,7 @@
       }
       if (e.key === 'Escape') {
         if (focused) clearFocus();
-        else if (state && state.running && atScreen === 'game') togglePause();
+        /* no pause: a device does not stop for anybody (ABORT leaves it) */
         else if (atScreen === 'menu' && D.shell && D.shell.active()) { e.preventDefault(); goTo('main'); }
         else if (atScreen === 'brief') { e.preventDefault(); leaveBrief(); }
       }
