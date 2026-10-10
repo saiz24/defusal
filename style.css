@@ -269,7 +269,7 @@ body { background: transparent; }
 
 /* Named for itself, not "stage": a generic class here once collided with a
    menu button rule and made every mousedown scale the whole screen. */
-.deck { overflow: hidden; perspective: 2200px; perspective-origin: 50% 46%; }
+.deck { overflow: hidden; perspective: 1700px; perspective-origin: 50% 46%; }
 
 /* a scaled element that overflows the viewport cannot be centred by grid or
    flex alignment, so it is placed absolutely */
@@ -287,7 +287,12 @@ body { background: transparent; }
   transform-style: preserve-3d;
   transition: transform 1s cubic-bezier(.45,.05,.3,1);
 }
-.bomb.flipped .flipper { transform: rotateY(180deg); }
+.bomb { --turn: translateY(0px); }
+.flipper { transform: var(--turn); }
+.bomb.flipped .flipper { transform: var(--turn) rotateY(180deg); }
+/* the player's drag turns the case at once; letting go settles it */
+body.case-turning .flipper { transition: none; }
+.bomb.posing .flipper { transition: transform .62s cubic-bezier(.3,.7,.2,1); }
 
 /* six pieces of a real box: two faces and four rims, so turning it over
    shows the thickness instead of a flat card */
@@ -322,6 +327,7 @@ body { background: transparent; }
 .strip.plate-only { flex-direction: column; gap: 6px; padding: 16px 34px; }
 .stamp { font-family: var(--seg); font-size: 30px; letter-spacing: .3em;
          text-indent: .3em; color: var(--rim); }
+.plate-only .stamp { font-family: var(--mono); font-weight: 600; font-size: 26px; }
 .stamp-sub { font-size: 11px; letter-spacing: .34em; color: var(--ink-off); }
 
 .key.locked, .key.locked:hover {
@@ -540,8 +546,10 @@ body { background: transparent; }
 
 .plate {
   padding: 6px 18px;
-  font-size: 30px; letter-spacing: .15em; text-indent: .15em;
-  color: var(--rim); background: #0b1418; font-family: var(--seg);
+  /* the serial is read character by character against the rules, and the
+     segment face cannot tell G from 6, S from 5, B from 8 or Z from 2 */
+  font-size: 26px; font-weight: 600; letter-spacing: .15em; text-indent: .15em;
+  color: var(--rim); background: #0b1418; font-family: var(--mono);
   border: 2px solid #0e1519; border-radius: 7px;
 }
 .panel .count { font-size: 28px; color: #74c98c; font-family: var(--seg); }
@@ -1281,6 +1289,17 @@ body.cutscene-open .screen { visibility: hidden; }
 .screen[hidden] *, .screen[hidden] { animation-play-state: paused !important; }
 body.cutscene-open .backdrop .bd-cloud { opacity: .34 !important; }
 .bomb { will-change: transform; }
+/* the 3D case turns under a drag on anything that is not a control */
+body.room3d.playing #screen-game { cursor: grab; }
+body.case-turning, body.case-turning * { cursor: grabbing !important; }
+.turn-hint {
+  position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 60; margin: 0;
+  font-family: var(--round); font-weight: 700; font-size: 11px; letter-spacing: .28em; white-space: nowrap;
+  color: #cfe0e7; background: rgba(6,10,13,.6); border: 1px solid #2b3d46; border-radius: 999px;
+  padding: 9px 18px; pointer-events: none; animation: riseIn .5s ease-out 1.2s both;
+}
+/* squaring up to read a module, or settling back to rest on the desk */
+.bomb.posing { transition: transform .62s cubic-bezier(.3,.7,.2,1); }
 
 /* ==========================================================================
    WHAT IS CLICKABLE
@@ -2663,6 +2682,24 @@ body.room3d .casing {
     inset 0 -4px 0 rgba(0,0,0,.5),
     inset 0 0 0 1px rgba(111,215,232,.12);
 }
+/* The 3D case (test shot B): the face is a plain plate in the body's own
+   colour, set into the solid frame the room draws round it. The painted
+   chassis — screws, looms, stripes, a drawn handle — gives way to the real
+   handle and feet, and the serial moves to the case's two sides, where a
+   player turns the case to read it. */
+body.room3d .chassis { display: none; }
+body.room3d .casing {
+  background: linear-gradient(180deg, #44555d 0%, #3a4a52 55%, #33424a 100%);
+  border: 2px solid #1b2428; border-radius: 22px;
+  box-shadow: inset 0 3px 0 rgba(255,255,255,.09), inset 0 -3px 0 rgba(0,0,0,.25);
+}
+body.room3d .panel .plate, body.room3d .strip.plate-only { display: none; }
+body.room3d .panel .strip {
+  background: linear-gradient(180deg, #121b20, #18232a);
+  border: 2px solid #0b1115; border-radius: 18px;
+  box-shadow: inset 0 6px 14px rgba(0,0,0,.55), 0 2px 0 rgba(255,255,255,.08);
+}
+
 /* the lamp's light on a CSS face: darker as it turns away, in one flat step */
 .room-shade {
   position: absolute; inset: 0; z-index: 70; pointer-events: none;

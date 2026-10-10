@@ -24,6 +24,36 @@ var DEFUSAL = (function () {
     };
   };
 
+  /* An element's full CSS 3D transform into an ancestor's frame, composed
+     from each layer's layout offset and its transform about its origin. Used
+     where the 3D case needs to know exactly where something on it is: the
+     modules' cameras (js/module3d.js) and a zoom from the angled case. Every
+     layer between must be the next one's offsetParent (true in the case),
+     or this returns null. DOM only at call time. */
+  D.cssChain = function (el, stop) {
+    var list = [], m = new DOMMatrix(), e, i;
+    for (e = el; e && e !== stop; e = e.offsetParent) list.push(e);
+    if (!list.length || list[list.length - 1].offsetParent !== stop) return null;
+    for (i = list.length - 1; i >= 0; i--) {
+      var n = list[i], cs = getComputedStyle(n);
+      m.translateSelf(n.offsetLeft, n.offsetTop);
+      if (cs.transform && cs.transform !== 'none') {
+        var o = cs.transformOrigin.split(' ').map(parseFloat);
+        m.translateSelf(o[0], o[1], o[2] || 0);
+        m.multiplySelf(new DOMMatrix(cs.transform));
+        m.translateSelf(-o[0], -o[1], -(o[2] || 0));
+      }
+    }
+    return m;
+  };
+  /* where the viewer's eye is for an element with a CSS perspective */
+  D.cssEye = function (deck) {
+    var cs = getComputedStyle(deck), p = parseFloat(cs.perspective);
+    if (!p) return null;
+    var o = cs.perspectiveOrigin.split(' ').map(parseFloat);
+    return { x: o[0], y: o[1], z: p };
+  };
+
   D.rint = function (rng, lo, hi) { return lo + Math.floor(rng() * (hi - lo + 1)); };
 
   D.pick = function (rng, arr) { return arr[D.rint(rng, 0, arr.length - 1)]; };

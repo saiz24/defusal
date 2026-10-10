@@ -4,7 +4,8 @@
    over if it is on the back, check the 3D version is the one mounted and
    that it is drawn, lean in on it, give one wrong answer (it must strike),
    then the right one — real clicks on its 3D keys, real typing in its boxes
-   — and it must solve. A close-up of each goes to tools/shots/m3d-<id>.png. */
+   — and it must solve. A close-up of each goes to tools/shots/m3d-<id>.png.
+   M3D_REST=1 does the same without leaning in, on the angled case. */
 'use strict';
 process.env.CDP_GL = process.env.CDP_GL || '1';
 const cdp = require('./cdp.js'), path = require('path'), fs = require('fs');
@@ -82,9 +83,11 @@ const ALL = ['rationality', 'triangles', 'parallel', 'venn', 'angles', 'sequence
     await cdp.sleep(600);
     const drawn = await ev(`(function(){var c=__bay.querySelector('canvas.m3d'); if(!c) return 0; var x=c.getContext('2d').getImageData(0,0,c.width,c.height).data,n=0;for(var i=3;i<x.length;i+=16)if(x[i]>0)n++;return n;})()`);
     check(id + ': drawn', drawn > 1000, drawn + ' samples');
-    await ev("__bay.querySelector('.zoom').click()");
-    await cdp.sleep(1000);
-    await p.shot(path.join(OUT, 'm3d-' + id + '.png'));
+    /* M3D_REST=1 plays it where it sits, on the case turned and tipped at
+       rest: every click goes through the module's off-axis camera */
+    if (!process.env.M3D_REST) { await ev("__bay.querySelector('.zoom').click()"); await cdp.sleep(1000); }
+    else await cdp.sleep(900);
+    await p.shot(path.join(OUT, 'm3d-' + id + (process.env.M3D_REST ? '-rest' : '') + '.png'));
     const s = await ev('__bay.__instance.solution'), pz = await ev('__bay.__instance.puzzle');
     const s0 = await strikes();
     await PLAY[id].lose(s, pz);

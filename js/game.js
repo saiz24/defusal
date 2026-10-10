@@ -26,7 +26,7 @@
   var STRIKE_RATE = [1, 1.08, 1.2];
 
   var CELL = 300, GAP = 12, STEP = CELL + GAP;
-  var DEPTH = 150;                 /* how thick the case is, for the turn */
+  var DEPTH = 300;                 /* how thick the case is: a box, not a slab */
   D.caseDepth = DEPTH;             /* the room (js/room3d.js) builds its body to match */
   var RAIL_X = 88, RAIL_TOP = 208, RAIL_BOT = 118;
 
@@ -111,13 +111,51 @@
   var focusBoost = 1;                  /* touch only: fill the screen on focus */
   var focusShiftY = 0;                 /* ...and re-centre it while we are there */
 
+  /* ---- the case at rest, as an object on the desk (3D room only) ------
+     Turned to show its left side and tipped to show its top, as in test
+     shot B. Leaning in on a module or zooming squares it up to be read; a drag turns
+     it further, to look at its sides, where the serial is. On a phone it
+     stays square: there, every pixel of the face is needed. */
+  var REST_X = -20, REST_Y = 24;
+  var turnX = 0, turnY = 0;            /* the player's drag (dragTurn) */
+  var restWas = -1, poseTimer = 0;
+  function restAmount() {
+    if (!document.body.classList.contains('room3d') || coarse()) return 0;
+    /* leaning in on a module, or zooming in, is asking to read: square up */
+    return (focused || viewScale > 1.001) ? 0 : 1;
+  }
+  D.casePose = function () {
+    var r = restAmount();
+    return { x: tiltX + armTilt + r * REST_X, y: tiltY + r * REST_Y, turnX: turnX, turnY: turnY };
+  };
+
+  /* The drag turns the case itself, not the view: it goes on the flipper,
+     inside the room's frame, so the desk and the lamp stay put while the
+     case turns in place. Tipped forward or back it is lifted just enough to
+     clear the desk with its lower edge. */
+  function applyTurn() {
+    var a = Math.abs(turnX) * Math.PI / 180;
+    var lift = turnX ? Math.sin(a) * DEPTH / 2 + (1 - Math.cos(a)) * BOMB_H / 2 : 0;
+    dom.bomb.style.setProperty('--turn', 'translateY(' + (-lift).toFixed(1) + 'px) rotateX(' +
+      turnX.toFixed(2) + 'deg) rotateY(' + turnY.toFixed(2) + 'deg)');
+  }
+
   function applyBombTransform() {
+    var r = restAmount();
+    /* a change of pose eases over longer than the cursor's lean does */
+    if (restWas !== -1 && r !== restWas) {
+      dom.bomb.classList.add('posing');
+      clearTimeout(poseTimer);
+      poseTimer = setTimeout(function () { dom.bomb.classList.remove('posing'); }, 700);
+    }
+    restWas = r;
     dom.bomb.style.transform =
       'translate(calc(-50% + ' + panX.toFixed(1) + 'px), calc(-50% + ' +
         (focusShiftY + panY).toFixed(1) + 'px)) scale(' +
         (scaleNow * armFactor * viewScale * focusBoost).toFixed(4) + ')' +
-      ' rotateX(' + (tiltX + armTilt).toFixed(2) + 'deg)' +
-      ' rotateY(' + tiltY.toFixed(2) + 'deg)';
+      ' rotateX(' + (tiltX + armTilt + r * REST_X).toFixed(2) + 'deg)' +
+      ' rotateY(' + (tiltY + r * REST_Y).toFixed(2) + 'deg)';
+    applyTurn();
   }
 
   /* The case is fitted to the PANE it is in, not to the window. In Solo the
@@ -143,7 +181,7 @@
     var own = D.prefs ? D.prefs.get('scale') : 1;
     /* With the room on, the case is an object in it: pulled back so the desk,
        the lamp and the wall have somewhere to be. */
-    if (document.body && document.body.classList.contains('room3d') && box.w >= 700) own *= 0.8;
+    if (document.body && document.body.classList.contains('room3d') && box.w >= 700) own *= coarse() ? 0.8 : 0.62;
     scaleNow = own * Math.min((box.w - pad) / (BOMB_W || 1724),
                               (box.h - pad) / (BOMB_H || 938));
     /* a new size can put the view past its limits, or give a case at rest
@@ -1418,6 +1456,7 @@
     if (dom.focusClock) dom.focusClock.hidden = true;
     dom.faces[focused.faceIndex].casing.classList.remove('focusing');
     focused = null;
+    applyBombTransform();
     if (!silent) D.audio.zoom(false);
   }
 
@@ -1466,6 +1505,7 @@
       }
     }
 
+    applyBombTransform();
     D.audio.zoom(true);
   }
 
@@ -1558,14 +1598,63 @@
     var next = D.clamp(old * factor, VIEW_MIN, VIEW_MAX);
     if (Math.abs(next - old) < 1e-4) return;
     var c = paneCentre();
-    /* hold the point under the pointer still: it sits (p - pan) from the
-       case's centre at the old scale and must sit (p - pan') at the new */
-    var px = cx - c.x, py = cy - c.y;
-    panX = px - (px - panX) * (next / old);
-    panY = py - (py - panY) * (next / old);
+    var a = anchorAt(cx, cy);
     viewScale = next;
+    if (a && restAmount() === 0) placeAnchor(a, cx, cy);
+    else {
+      /* no geometry to hand: the old flat model */
+      var px = cx - c.x, py = cy - c.y;
+      panX = px - (px - panX) * (next / old);
+      panY = py - (py - panY) * (next / old);
+    }
     clampPan();
     paintView();
+  }
+
+  /* ---- the point a zoom holds still -------------------------------------
+     A zoom keeps the spot under the pointer under the pointer. With the
+     case square-on that is a closed form, once the perspective is counted:
+     the face sits half the case's depth (times its scale) nearer the eye
+     than the deck, and is magnified about the eye's point by P / (P - z).
+     From the angled rest the spot is found by meeting the ray from the eye
+     through the pointer with the face's plane. Both work from the view as
+     it is MEANT to be, not as it is mid-ease, so a run of wheel steps does
+     not drift. */
+  function viewGeom() {
+    var deck = dom['screen-game'];
+    var eye = D.cssEye && D.cssEye(deck);
+    if (!eye) return null;
+    var r = deck.getBoundingClientRect();
+    return { deck: deck, ex: r.left + eye.x, ey: r.top + eye.y, P: eye.z, eye: eye, r: r };
+  }
+  function anchorAt(sx, sy) {
+    var g = viewGeom();
+    if (!g || !BOMB_W) return null;
+    var back = dom.bomb.classList.contains('flipped');
+    if (restAmount() > 0) {
+      var face = dom.faceNodes[back ? 1 : 0];
+      var m = D.cssChain && D.cssChain(face, g.deck);
+      if (!m) return null;
+      var inv = m.inverse();
+      var o = inv.transformPoint(new DOMPoint(g.eye.x, g.eye.y, g.eye.z, 1));
+      var q = inv.transformPoint(new DOMPoint(sx - g.r.left, sy - g.r.top, 0, 1));
+      var ox = o.x / o.w, oy = o.y / o.w, oz = o.z / o.w;
+      var dx = q.x / q.w - ox, dy = q.y / q.w - oy, dz = q.z / q.w - oz;
+      if (Math.abs(dz) < 1e-6) return null;
+      var t = -oz / dz;
+      var u = ox + t * dx, v = oy + t * dy;
+      return { x: back ? BOMB_W / 2 - u : u - BOMB_W / 2, y: v - BOMB_H / 2 };
+    }
+    var c = paneCentre(), k = scaleNow * viewScale, f = g.P / (g.P - DEPTH / 2 * k);
+    return { x: ((sx - g.ex) / f + g.ex - c.x - panX) / k,
+             y: ((sy - g.ey) / f + g.ey - c.y - panY) / k };
+  }
+  function placeAnchor(a, sx, sy) {
+    var g = viewGeom();
+    if (!g) return;
+    var c = paneCentre(), k = scaleNow * viewScale, f = g.P / (g.P - DEPTH / 2 * k);
+    panX = (sx - g.ex) / f + g.ex - c.x - a.x * k;
+    panY = (sy - g.ey) / f + g.ey - c.y - a.y * k;
   }
 
   function setView(scale) {
@@ -1595,14 +1684,21 @@
   var NOT_A_HANDLE = 'button, input, select, textarea, a, .hit, .zoom, ' +
                      '.flip-btn, .layout-bar, .split-grip, .focus-clock';
 
+  /* With the view at rest and the 3D case on, the same drag TURNS the
+     case instead: sideways to see its sides (the serial is on both), up and
+     down to see its top or underside. Let go and it settles back. A drag
+     that starts on a module is left to the module. */
+  var TURN_Y = 75, TURN_UP = 32, TURN_DOWN = 24;
   function onPanDown(e) {
     if (!state || state.arming || focused) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (drag && e.pointerType === 'touch') { drag = null; return; }  /* 2nd finger: a pinch */
     if (e.target && e.target.closest && e.target.closest(NOT_A_HANDLE)) return;
-    if (viewScale <= 1.001 && !overhangs()) return;
+    var turn = restAmount() > 0 && viewScale <= 1.001 && !overhangs();
+    if (turn && e.target.closest && e.target.closest('.bay.module')) return;
+    if (!turn && viewScale <= 1.001 && !overhangs()) return;
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY,
-             px: panX, py: panY, live: false };
+             px: panX, py: panY, live: false, turn: turn };
   }
   function onPanMove(e) {
     if (!drag || e.pointerId !== drag.id) return;
@@ -1610,7 +1706,14 @@
     if (!drag.live) {
       if (Math.hypot(dx, dy) < 6) return;
       drag.live = true;
-      document.body.classList.add('view-panning');
+      document.body.classList.add(drag.turn ? 'case-turning' : 'view-panning');
+    }
+    if (drag.turn) {
+      turnY = D.clamp(dx * 0.22, -TURN_Y, TURN_Y);
+      turnX = D.clamp(-dy * 0.18, -TURN_UP, TURN_DOWN);
+      applyBombTransform();
+      if (Math.abs(turnY) > 30) turnSeen();
+      return;
     }
     panX = drag.px + dx; panY = drag.py + dy;
     clampPan();
@@ -1619,9 +1722,31 @@
   function onPanUp(e) {
     if (!drag || e.pointerId !== drag.id) return;
     if (drag.live) eatClick = true;
+    if (drag.turn) settleTurn();
     drag = null;
-    document.body.classList.remove('view-panning');
+    document.body.classList.remove('view-panning', 'case-turning');
   }
+  function settleTurn() {
+    if (!turnX && !turnY) return;
+    turnX = 0; turnY = 0;
+    dom.bomb.classList.add('posing');
+    clearTimeout(poseTimer);
+    poseTimer = setTimeout(function () { dom.bomb.classList.remove('posing'); }, 700);
+    applyBombTransform();
+  }
+  /* the hint about turning the case goes once it has been done */
+  var TURN_KEY = 'defusal.turned';
+  function turnSeen() {
+    if (dom.turnHint && !dom.turnHint.hidden) dom.turnHint.hidden = true;
+    try { window.localStorage.setItem(TURN_KEY, '1'); } catch (e) {}
+  }
+  function paintTurnHint() {
+    if (!dom.turnHint) return;
+    var done = false;
+    try { done = window.localStorage.getItem(TURN_KEY) === '1'; } catch (e) {}
+    dom.turnHint.hidden = done || restAmount() === 0;
+  }
+  D.turnCase = function (y, x) { turnY = y || 0; turnX = x || 0; applyBombTransform(); };
 
   function flip() {
     clearFocus(true);
@@ -1822,6 +1947,7 @@
     dom.armingLine.classList.add('on');
 
     show('game');
+    paintTurnHint();
     state.last = Date.now();
     state.timer = setInterval(tick, 100);
   }
@@ -2259,7 +2385,7 @@
     document.body.classList.remove('paused');
     var pz = document.getElementById('pause'); if (pz) pz.hidden = true;
     dom.bomb.classList.remove('arming', 'arming-zoom');
-    armFactor = 1; armTilt = 0; tiltX = 0; tiltY = 0;
+    armFactor = 1; armTilt = 0; tiltX = 0; tiltY = 0; turnX = 0; turnY = 0;
     if (dom.bomb) applyBombTransform();
     clearFocus(true);
     if (state) {
@@ -2360,6 +2486,7 @@
       focusClockTime: q('focus-clock-time'),
       focusClockCount: q('focus-clock-count'),
       resultSeed: q('result-seed'),
+      turnHint: q('turn-hint'),
       resultRank: q('result-rank'),
       resultRankLetter: q('result-rank-letter'),
       resultRankLine: q('result-rank-line'),

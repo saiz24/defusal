@@ -331,13 +331,65 @@ network).
 **It does not replace the case.** The case has always been a true CSS 3D
 object, and every module, press, turn, zoom and the arming are built on it
 and tested. The room is drawn *around* it in WebGL, through a camera built to
-match the CSS perspective exactly (2200px from 50%/46% of the deck, one unit
+match the CSS perspective exactly (1700px from 50%/46% of the deck, one unit
 one CSS pixel), and every frame it reads the case's live transform from the
 page. Measured: the WebGL body's projected corners land on the CSS face to
 the pixel, at rest, tilted, and halfway through a turn. With the room on, the
-case is pulled back to 80% so the desk and the lamp have somewhere to be; the
+case is pulled back to 62% so the desk and the lamp have somewhere to be; the
 painted rims and drop shadow give way to the real ones, and a face turned
 away from the lamp darkens in one flat step.
+
+**The case is a 3D object, as in test shot B.** It is 300 px deep (it was a
+150 px slab) and rests turned 24° and tipped 20° toward the viewer, so its
+top and a side show; the room turns with that view, so it is a camera angle
+on the desk, not a case floating at a slant. The WebGL body is a rounded box
+a little bigger than the face, so each face sits in a frame of solid case,
+with a carrying handle and a red button on top, rubber feet, a seam round the
+middle, and lighting matched to the test shot (a camera-riding fill, so the
+face toward the player is never in the dark, and a cool rim light). In 3D the
+CSS face drops its painted chassis — screws, looms, hazard stripes, a drawn
+handle — for a plain plate and a recessed control strip.
+
+* **The serial is on the case's two sides**, on lit plates, and gone from the
+  faces. It is set in Plex Mono, not the segment face: the serial runs A–Z and
+  0–9, and segments draw G as 6, S as 5, B as 8 and Z as 2 (the old front
+  plate showed "B64G7E" as "B6467E"). With the room off the serial stays on
+  the control strip, in the same mono face.
+* **Drag the case to turn it**: on anything that is not a control or a
+  module, sideways up to 75° to read a side, up and down to see the top or
+  underside. The drag turns the case itself (on the flipper), not the view,
+  so the desk and lamp stay put; tipped, it is lifted just clear of the desk;
+  let go and it settles back. Zoomed in, the same drag still pans. A hint at
+  the bottom says so until the case has been turned once.
+* **Reading squares it up**: leaning in on a module or zooming in turns the
+  case square-on; leaning back out returns it to rest. A zoom from the angled
+  rest holds the point actually under the cursor (a ray from the eye met with
+  the face's plane), and the zoom maths now counts the perspective — the face
+  sits half the case's depth nearer the eye — so the anchor holds to under 1%
+  of the case, in 3D and in 2D.
+* **Modules are seen from the player's eye.** Each module's camera sits where
+  the eye really is in its bay's frame, looking through the bay's rectangle
+  (an off-axis frustum), so once the page lays the canvas on the angled bay
+  the keys have true depth instead of being a flat picture. A press uses the
+  same camera, so picking needs nothing new; `D.cssChain` composes the CSS
+  transforms from a canvas to the deck for this.
+* Found on the way: the shader warm-up shrank the shared module buffer to 8×8
+  without saying so, and any module drawn before it ran rendered empty until
+  something forced a bigger buffer. It now records the size it leaves.
+
+`CDP_GL=1 node tools/check-case3d.js` checks the pose, the serial on the
+sides and off the faces, a real drag turning and settling, a drag on a module
+not turning, the hint, squaring up on lean-in, and the plain square case with
+the room off. `M3D_REST=1 CDP_GL=1 node tools/check-module3d.js` plays all
+eight modules where they sit on the angled case, without leaning in.
+
+Measured in the desktop app with an eight-module device: idle, cursor lean,
+drag-turn and settle, turning over and back, leaning in and out all run at
+60 fps (no frame over 18.7 ms). Arming the device: worst frame 232–267 ms,
+against 269–285 ms on the build before — the round's own set-up (about 215
+ms of script) is most of it, and was there already. The room is now built
+and drawn once while the game idles at its menus, so its shaders are not
+compiled in the middle of arming.
 
 It follows the cutscenes' rules — flat toon tones, haze with distance, glow
 only on the lamp — and redraws only when the case or the window actually

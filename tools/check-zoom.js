@@ -13,20 +13,25 @@ let fails=0; function check(name, ok, info){ console.log((ok?'ok   ':'FAIL ')+na
   const r = JSON.parse(await p.eval("JSON.stringify(document.getElementById('screen-game').getBoundingClientRect())"));
   const cx = r.x + r.width/2, cy = r.y + r.height/2;
   const t0 = await T(); const s0 = scaleOf(t0);
-  // point under cursor: find bay module element rect before
-  const probe = async (x,y) => p.eval(`(function(){var bs=document.querySelectorAll('.face.front .bay');for(var i=0;i<bs.length;i++){var r=bs[i].getBoundingClientRect();if(${x}>=r.left&&${x}<=r.right&&${y}>=r.top&&${y}<=r.bottom)return i+'@'+((${x}-r.left)/r.width).toFixed(2)+','+((${y}-r.top)/r.height).toFixed(2);}return 'none'})()`);
+  /* the point under the cursor, as a point ON THE FACE: with the 3D room the
+     case rests turned and tipped, so a fraction of a bay's on-screen box is
+     not a place on the case. Met by a ray from the eye with the face plane. */
+  const facePt = (x, y) => p.eval(`(function(){ var deck = document.getElementById('screen-game'), face = document.querySelector('.face.front');
+    var m = DEFUSAL.cssChain(face, deck), e = DEFUSAL.cssEye(deck), r = deck.getBoundingClientRect(), inv = m.inverse();
+    var o = inv.transformPoint(new DOMPoint(e.x, e.y, e.z, 1)), q = inv.transformPoint(new DOMPoint(${x} - r.left, ${y} - r.top, 0, 1));
+    var ox=o.x/o.w, oy=o.y/o.w, oz=o.z/o.w, dx=q.x/q.w-ox, dy=q.y/q.w-oy, dz=q.z/q.w-oz, t=-oz/dz; return [ox+t*dx, oy+t*dy]; })()`);
   /* a point on a module, not in the gap between two: the case's fitted size
      depends on settings (the 3D room pulls it back) */
   const [px, py] = JSON.parse(await p.eval(`(function(){var b=document.querySelectorAll('.face.front .bay')[1].getBoundingClientRect();return JSON.stringify([b.left+b.width*0.6,b.top+b.height*0.55]);})()`));
-  const before = await probe(px,py);
+  const before = await facePt(px,py);
   for (let i=0;i<4;i++){ await wheel(px,py,-100); await cdp.sleep(60); }
-  await cdp.sleep(300);
+  await cdp.sleep(1000);              /* from the angled rest it squares up: let it settle */
   const t1 = await T(); const s1 = scaleOf(t1); 
   check('plain wheel zooms case in', s1 > s0*1.5, s0.toFixed(3)+' -> '+s1.toFixed(3));
-  const after = await probe(px,py);
-  const fr = t => t.split('@'); const [b0,f0]=fr(before), [b1,f1]=fr(after);
-  const d = f0&&f1 ? Math.max(...f0.split(',').map((v,i)=>Math.abs(Number(v)-Number(f1.split(',')[i])))) : 1;
-  check('point under cursor stays put (same bay, <4% drift)', b0===b1 && b0!=='none' && d<0.04, before+' / '+after);
+  const after = await facePt(px,py);
+  const caseW = await p.eval("document.getElementById('bomb').offsetWidth");
+  const d = Math.hypot(after[0]-before[0], after[1]-before[1]) / caseW;
+  check('point under cursor stays put (<1.5% of the case)', d < 0.015, before.map(Math.round)+' / '+after.map(Math.round)+'  '+(d*100).toFixed(2)+'%');
   check('zoom button shows reset state', await p.eval("document.getElementById('wide-btn').classList.contains('on')"));
   // drag pan
   const pan0 = panOf(t1);

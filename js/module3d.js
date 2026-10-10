@@ -101,8 +101,14 @@
        new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false })]
         .forEach(function (m) { sc.add(new T.Mesh(g, m)); });
       renderer.setSize(8, 8, false);
+      /* it can run after modules have drawn (it waits for an idle moment):
+         the buffer is 8x8 now, and every draw has to know that, or each
+         one renders into eight pixels and copies out nothing */
+      BUF.w = 8; BUF.h = 8;
       renderer.compile(sc, cam);
       renderer.render(sc, cam);
+      views.forEach(function (v) { v.dirty = true; });
+      kick();
     };
     if (window.requestIdleCallback) window.requestIdleCallback(go, { timeout: 3000 }); else setTimeout(go, 500);
   }
@@ -176,6 +182,15 @@
          linearly onto its bounding box */
       screenOf: function (obj) {
         var v = new T.Vector3(); obj.getWorldPosition(v); v.project(camera);
+        if (view.toDeck) {
+          /* the point on the canvas, then the canvas onto the screen */
+          var cx = (v.x + 1) / 2 * w, cy = (1 - v.y) / 2 * h;
+          var d = view.toDeck.transformPoint(new DOMPoint(cx, cy, 0, 1));
+          var dx = d.x / d.w, dy = d.y / d.w, dz = d.z / d.w, ey = view.eye;
+          var f = ey.z / (ey.z - dz);
+          var deck = canvas.closest('#screen-game').getBoundingClientRect();
+          return [deck.left + ey.x + (dx - ey.x) * f, deck.top + ey.y + (dy - ey.y) * f];
+        }
         var r = canvas.getBoundingClientRect();
         return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
       },
@@ -203,6 +218,42 @@
     views.push(view);
     kick();
     return view;
+  }
+
+  /* ---- seen from where the player is -------------------------------------
+     The case rests turned and tipped on the desk, and the player can turn it
+     further. A module drawn by a camera square-on to its bay and then laid on
+     that turned bay is a flat picture of a 3D thing: its keys have no depth.
+     So each module is drawn as a window: the camera is put where the
+     player's eye actually is, in the bay's own frame, looking through the
+     bay's rectangle (an off-axis frustum). What lands on each point of the
+     canvas is what the eye would see through it, so after the page lays the
+     canvas on the bay the parallax is exactly right. A press needs nothing
+     new: the ray through a point of the canvas is the same ray it was drawn
+     with. */
+  var sceneKey = '';
+  function portal(view) {
+    var deck = view.canvas.closest('#screen-game');
+    if (!deck) return false;
+    var bay = view.canvas.closest('.bay');
+    var key = sceneKey + '|' + (bay ? getComputedStyle(bay).transform : '');
+    if (key === view.portalKey) return false;
+    view.portalKey = key;
+    var m = D.cssChain(view.canvas, deck), eye = D.cssEye(deck);
+    if (!m || !eye) return false;
+    view.toDeck = m; view.eye = eye;
+    var e = m.inverse().transformPoint(new DOMPoint(eye.x, eye.y, eye.z, 1));
+    if (!e.w) return false;
+    var ex = e.x / e.w, ey = e.y / e.w, ez = e.z / e.w;
+    if (!(ez > 20)) return false;              /* edge-on, or turned away */
+    var cam = view.camera, w = view.w, h = view.h;
+    cam.position.set(ex, -ey, ez);
+    cam.quaternion.identity();
+    cam.updateMatrixWorld(true);
+    var near = 1, far = ez + 4000, k = near / ez;
+    cam.projectionMatrix.makePerspective((0 - ex) * k, (w - ex) * k, (0 + ey) * k, (-h + ey) * k, near, far);
+    cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
+    return true;
   }
 
   /* ---- drawing ---------------------------------------------------------- */
@@ -263,7 +314,10 @@
        the modules at each step of that is work nobody can see, so it waits
        for the arming to finish (first drawings still happen) */
     var arming = !!document.querySelector('.bomb.arming-zoom, .casing.arming');
+    var bomb = document.getElementById('bomb'), flipper = document.getElementById('flipper');
+    sceneKey = bomb && flipper ? getComputedStyle(bomb).transform + '|' + getComputedStyle(flipper).transform : '';
     views.forEach(function (v) {
+      if (portal(v)) { v.dirty = true; more = true; }
       var want = wantScale(v);
       if ((want > v.scale || want < v.scale - 0.5) && (!arming || !v.drawn)) v.dirty = true;
       if (v.animating > now) { v.dirty = true; more = true; }
